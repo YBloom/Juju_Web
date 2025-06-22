@@ -64,10 +64,10 @@ class Hulaquan(BasePlugin):
         self.register_admin_func(
             name="开启/关闭呼啦圈定时查询更新数据",
             handler=self._on_switch_scheduled_check_task_for_users,
-            prefix="/关闭呼啦圈检测",
+            prefix="/呼啦圈检测",
             description="开启/关闭呼啦圈定时查询更新数据",
-            usage="/关闭呼啦圈检测",
-            examples=["/关闭呼啦圈检测"],
+            usage="/呼啦圈检测",
+            examples=["/呼啦圈检测"],
             metadata={"category": "utility"}
         )
         task_time = str(self.data['config']['scheduled_task_time'])
