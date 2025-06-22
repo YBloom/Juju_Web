@@ -129,11 +129,11 @@ class Hulaquan(BasePlugin):
         message = "\n".join(results)
         for user_id, user in self.users_manager.users().items():
             mode = user.get("attention_to_hulaquan")
-            if mode==2 or (mode==1 and is_updated):
+            if mode=="2" or (mode=="1" and is_updated):
                 await self.api.post_private_msg(user_id, message)
         for group_id, group in self.groups_manager.groups().items():
             mode = group.get("attention_to_hulaquan")
-            if mode==2 or (mode==1 and is_updated):
+            if mode=="2" or (mode=="1" and is_updated):
                 await self.api.post_group_msg(group_id, message)
     
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
