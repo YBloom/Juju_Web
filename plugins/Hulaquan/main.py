@@ -45,11 +45,11 @@ class Hulaquan(BasePlugin):
         if "scheduled_task_switch" not in self.data:
             self.data["scheduled_task_switch"] = False
         self.register_user_func(
-            name="打开/关闭呼啦圈上新推送",
+            name="切换呼啦圈上新推送模式",
             handler=self.on_switch_scheduled_check_task,
             prefix="/上新",
-            description="打开/关闭呼啦圈上新推送",
-            usage="/上新",
+            description="切换呼啦圈上新推送模式\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送",
+            usage="/上新 (模式编号)",
             examples=["/上新"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
@@ -66,11 +66,10 @@ class Hulaquan(BasePlugin):
         self.register_admin_func(
             name="开启/关闭呼啦圈定时查询更新数据",
             handler=self._on_switch_scheduled_check_task_for_users,
-            prefix="/schedule",
+            prefix="/关闭呼啦圈检测",
             description="开启/关闭呼啦圈定时查询更新数据",
-            usage="/schedule",
-            examples=["/schedule"],
-            tags=["呼啦圈", "学生票", "查询", "hlq"],
+            usage="/关闭呼啦圈检测",
+            examples=["/关闭呼啦圈检测"],
             metadata={"category": "utility"}
         )
         task_time = str(self.data['config']['scheduled_task_time'])
@@ -119,9 +118,9 @@ class Hulaquan(BasePlugin):
         flag = not self.data["scheduled_task_switch"]
         self.data["scheduled_task_switch"] = flag
         if flag:
-            await msg.reply("已开启呼啦圈上新提醒功能")
+            await msg.reply("(管理员）已开启呼啦圈上新检测功能")
         else:
-            await msg.reply("已关闭呼啦圈上新提醒功能")
+            await msg.reply("（管理员）已关闭呼啦圈上新检测功能")
         
     async def on_hulaquan_announcer(self):
         is_updated, results = self.hlq_data_manager.message_update_data()
@@ -137,20 +136,25 @@ class Hulaquan(BasePlugin):
                 await self.api.post_group_msg(group_id, message)
     
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
-        print(lambda: self.data["scheduled_task_switch"],  self.data["scheduled_task_switch"])
+        #print(lambda: self.data["scheduled_task_switch"],  self.data["scheduled_task_switch"])
         user_id = msg.user_id
         group_id = None
+        mode = msg.raw_message.split(" ")[1]
+        if mode not in ["0", "1", "2"]:
+            return await msg.reply("请输入存在的模式：\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送")
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
             if self.users_manager.is_op(user_id):
-                flag = self.groups_manager.switch_attention_to_hulaquan(group_id)
+                self.groups_manager.switch_attention_to_hulaquan(group_id, mode)
             else:
-                await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
+                return await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
         else:
-            flag = self.users_manager.switch_attention_to_hulaquan(user_id)
-        if flag:
-            await msg.reply("已关注呼啦圈上新推送！")
-        else:
+            self.users_manager.switch_attention_to_hulaquan(user_id, mode)
+        if mode == "2":
+            await msg.reply("已关注呼啦圈上新检测的全部推送！")
+        elif mode == "1":
+            await msg.reply("已关注呼啦圈的上新推送（仅上新时推送）")
+        elif mode == "0":
             await msg.reply("已关闭呼啦圈上新推送。")
 
     async def on_hlq_search(self, msg: BaseMessage):

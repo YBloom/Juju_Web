@@ -26,7 +26,7 @@ class GroupsManager:
         self.data["groups"][group_id] = {
             "activate": True,
             "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "attention_to_hulaquan": False,
+            "attention_to_hulaquan": 0,
         }
     
     def delete_group(self, group_id):
@@ -36,14 +36,14 @@ class GroupsManager:
             self.data["groups_list"].remove(group_id)
             del self.data["groups"][group_id]
             
-    def switch_attention_to_hulaquan(self, group_id):
+    def switch_attention_to_hulaquan(self, group_id, mode=0):
+        # mode = 0: 取消推送，mode = 1: 关注更新，mode = 2：关注一切推送（更新或无更新）
         if not isinstance(group_id, str):
             group_id = str(group_id)
         try:
-            flag = self.data["groups"][group_id]["attention_to_hulaquan"]
+            self.data["groups"][group_id]["attention_to_hulaquan"] = mode
         except KeyError:
             self.add_group(group_id)
-            flag = self.data["groups"][group_id]["attention_to_hulaquan"]
-        self.data["groups"][group_id]["attention_to_hulaquan"] = not flag
-        return (not flag)
+            self.data["groups"][group_id]["attention_to_hulaquan"] = mode
+        return mode
             

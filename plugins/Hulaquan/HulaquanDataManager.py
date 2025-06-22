@@ -20,7 +20,7 @@ class HulaquanDataManager(BaseDataManager):
     2.根据卡司数据有效期刷新
     """
     def __init__(self, file_path=None, file_type=None):
-        file_path = file_path or "plugins/Hulaquan/hulaquan_events_data.json"
+        file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path, file_type)
         
     def _check_data(self):
@@ -110,10 +110,10 @@ class HulaquanDataManager(BaseDataManager):
         return data_dic
 
     def get_all_events(self):
-        count = self.get_recommendation(1,0,False)[0]  # Test the connection and the count
+        #count = self.get_recommendation(1,0,False)[0]  # Test the connection and the count
         #print(f"Total recommendations available: {count}")
         data = []
-        data += self.get_recommendation(count//4, 0, True)[1]
+        data += self.get_recommendation(100, 0, True)[1]
         return data
     
     def return_events_data(self):
