@@ -25,8 +25,8 @@ class Hulaquan(BasePlugin):
         self.users_manager: UsersManager = None
         self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager(file_type="json")
         self.saoju_data_manager: SaojuDataManager = SaojuDataManager(file_type="json")
-        await self.hlq_data_manager.aload()
-        await self.saoju_data_manager.aload()
+        self.hlq_data_manager.on_load()
+        self.saoju_data_manager.on_load()
         self.register_handler("AdminPlugin.pass_managers", self.get_managers)
         self.load_event = Event("Hulaquan.load_plugin", data={})
         await self._event_bus.publish_async(self.load_event)
@@ -37,8 +37,8 @@ class Hulaquan(BasePlugin):
     async def on_close(self, *arg, **kwd):
         self.remove_scheduled_task("呼啦圈上新提醒")
         self.users_manager.is_get_managers = False
-        self.hlq_data_manager.save()
-        self.saoju_data_manager.save()
+        self.hlq_data_manager.on_close()
+        self.saoju_data_manager.on_close()
         return await super().on_close(*arg, **kwd)
 
     def register_hulaquan_announcement_tasks(self):

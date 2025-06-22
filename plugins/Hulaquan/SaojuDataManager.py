@@ -84,10 +84,12 @@ class SaojuDataManager(BaseDataManager):
     def __init__(self, file_path, file_type=None):
         file_path = file_path or "plugins/Hulaquan/saoju_data.json"
         super().__init__(file_path, file_type)
+
+    def _check_data(self):
         self.data.setdefault("date_dict", {})  # 确保有一个日期字典来存储数据
         self.data.setdefault("update_time_dict", {})  # 确保有一个更新时间字典来存储数据
         self.data["update_time_dict"].setdefault("date_dict", {})  # 确保有一个更新时间字典来存储数据
-        self.data_check()
+        self.refresh_expired_data()
 
     def search_day(self, date):
         """
@@ -139,7 +141,7 @@ class SaojuDataManager(BaseDataManager):
                 return data[i]
         return None
     
-    def data_check(self):
+    def refresh_expired_data(self):
         """
         检查数据是否过期
         如果过期则刷新数据

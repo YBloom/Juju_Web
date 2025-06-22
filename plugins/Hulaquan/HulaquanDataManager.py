@@ -15,9 +15,11 @@ class HulaquanDataManager(BaseDataManager):
     def __init__(self, file_path=None, file_type=None):
         file_path = file_path or "plugins/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path, file_type)
+        
+    def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
 
-    def update_data(self):
+    def fetch_and_update_data(self):
         """更新数据
 
         Returns:
@@ -159,7 +161,7 @@ class HulaquanDataManager(BaseDataManager):
             new_data_all = self.get_events_dict()
             old_data_all = self.data
         else:
-            old_data_all, new_data_all = self.update_data()
+            old_data_all, new_data_all = self.fetch_and_update_data()
         new_data = new_data_all["events"]
         old_data, update_time = old_data_all["events"], old_data_all["update_time"]
         for eid, event in new_data.items():

@@ -37,3 +37,14 @@ class BaseDataManager(UniversalLoader):
                 self.data.load()
             else:
                 raise RuntimeError(self.name, f"加载持久化数据时出错: {e}")
+            
+    async def aload(self):
+        await super().aload()
+        self._check_data()
+        
+    def load(self):
+        super().load()
+        self._check_data()
+    
+    def _check_data(self):
+        pass
