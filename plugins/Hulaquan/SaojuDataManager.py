@@ -1,4 +1,5 @@
 import requests
+import unicodedata
 import pandas as pd
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
