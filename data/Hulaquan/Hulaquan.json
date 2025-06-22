@@ -1,0 +1,6 @@
+{
+    "config": {
+        "scheduled_task_time": "int-30"
+    },
+    "scheduled_task_switch": true
+}

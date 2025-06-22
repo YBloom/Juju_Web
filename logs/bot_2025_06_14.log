@@ -1,0 +1,475 @@
+[2025-06-14 00:00:03,535.535] DEBUG    [ThreadPoolExecutor-0_0|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): ghfast.top:443
+[2025-06-14 00:00:03,537.537] DEBUG    [ThreadPoolExecutor-0_1|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): github.7boe.top:443
+[2025-06-14 00:00:03,537.537] DEBUG    [ThreadPoolExecutor-0_6|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): ghproxy.net:443
+[2025-06-14 00:00:03,538.538] DEBUG    [ThreadPoolExecutor-0_9|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): gh-proxy.com:443
+[2025-06-14 00:00:03,538.538] DEBUG    [ThreadPoolExecutor-0_7|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): fastgit.cc:443
+[2025-06-14 00:00:03,538.538] DEBUG    [ThreadPoolExecutor-0_2|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): cdn.moran233.xyz:443
+[2025-06-14 00:00:03,539.539] DEBUG    [ThreadPoolExecutor-0_5|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): proxy.yaoyaoling.net:443
+[2025-06-14 00:00:03,539.539] DEBUG    [ThreadPoolExecutor-0_8|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): git.886.be:443
+[2025-06-14 00:00:03,539.539] DEBUG    [ThreadPoolExecutor-0_4|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): github.whrstudio.top:443
+[2025-06-14 00:00:03,539.539] DEBUG    [ThreadPoolExecutor-0_3|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): gh-proxy.ygxz.in:443
+[2025-06-14 00:00:03,678.678] INFO     [MainThread|MainProcess] Logger (config.py:validate_config:174) | [BOTQQ]: 3044829389 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]:  | [ROOT]: 3022402752 | [WEBUI]: http://localhost:6099
+[2025-06-14 00:00:03,680.680] INFO     [MainThread|MainProcess] Logger (config.py:validate_config:186) | 未启用插件白名单或黑名单，将加载所有插件
+[2025-06-14 00:00:03,681.681] DEBUG    [MainThread|MainProcess] AccessController (access_controller.py:_load_access:172) | 加载权限
+[2025-06-14 00:00:03,682.682] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:03,724.724] DEBUG    [ThreadPoolExecutor-0_5|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://proxy.yaoyaoling.net:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:00:03,724.724] DEBUG    [ThreadPoolExecutor-0_2|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://cdn.moran233.xyz:443 "GET / HTTP/1.1" 404 19
+[2025-06-14 00:00:04,289.289] DEBUG    [ThreadPoolExecutor-0_4|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://github.whrstudio.top:443 "GET / HTTP/1.1" 200 11155
+[2025-06-14 00:00:04,459.459] DEBUG    [ThreadPoolExecutor-0_9|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://gh-proxy.com:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:00:04,865.865] DEBUG    [ThreadPoolExecutor-0_7|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://fastgit.cc:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:00:06,171.171] DEBUG    [ThreadPoolExecutor-0_8|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://git.886.be:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:00:06,291.291] DEBUG    [ThreadPoolExecutor-0_0|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://ghfast.top:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:00:07,793.793] INFO     [MainThread|MainProcess] adapter.nc.launcher (launcher.py:ncatbot_service_remote_start:82) | NapCat 服务器离线, 启动本地 NapCat 服务中...
+[2025-06-14 00:00:07,818.818] INFO     [MainThread|MainProcess] adapter.nc.start (start.py:read_webui_config:220) | Token: napcat, Webui port: 6099
+[2025-06-14 00:00:07,818.818] INFO     [MainThread|MainProcess] adapter.nc.start (start.py:get_launcher_name:95) | 当前操作系统为: Windows 10
+[2025-06-14 00:00:07,819.819] INFO     [MainThread|MainProcess] adapter.nc.start (start.py:start_napcat_windows:112) | 正在启动QQ, 启动器路径: F:\MusicalBot\napcat\launcher-win10.bat
+[2025-06-14 00:00:07,827.827] INFO     [MainThread|MainProcess] adapter.nc.launcher (launcher.py:connect_napcat:39) | 正在连接 napcat websocket 服务器...
+[2025-06-14 00:00:07,828.828] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:08,098.098] DEBUG    [ThreadPoolExecutor-0_6|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://ghproxy.net:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:00:11,980.980] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:16,154.154] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:20,323.323] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:24,465.465] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:28,637.637] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:32,802.802] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:36,947.947] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:41,111.111] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:45,240.240] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:49,402.402] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:53,547.547] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:00:57,713.713] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:01:01,862.862] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:01:06,018.018] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:01:08,069.069] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:01:08,070.070] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET / HTTP/1.1
+[2025-06-14 00:01:08,070.070] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:01:08,070.070] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:01:08,071.071] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:01:08,071.071] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: /WIgM8Bt7RWduaECsgfwvg==
+[2025-06-14 00:01:08,072.072] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:01:08,072.072] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:01:08,072.072] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:01:08,072.072] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:01:08,074.074] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:01:08,074.074] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:01:08,075.075] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:01:08,075.075] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: sNU1zALQQ2I0F0K7pnXNafAD1ic=
+[2025-06-14 00:01:08,075.075] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:01:08,077.077] DEBUG    [MainThread|MainProcess] Logger (wsroute.py:check_websocket:29) | WebSocket ws://localhost:3001 可用.
+[2025-06-14 00:01:08,077.077] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830468,"self_id":3044829389,"post_t...","sub_type":"connect"}' [116 bytes]
+[2025-06-14 00:01:08,078.078] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:01:08,078.078] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:01:08,079.079] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:01:08,080.080] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:01:08,082.082] INFO     [MainThread|MainProcess] adapter.nc.launcher (launcher.py:connect_napcat:45) | 连接 napcat websocket 服务器成功!
+[2025-06-14 00:01:08,082.082] INFO     [MainThread|MainProcess] Logger (client.py:run:319) | NapCat 服务启动登录完成
+[2025-06-14 00:01:08,083.083] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:01:08,083.083] DEBUG    [MainThread|MainProcess] Logger (client.py:info_subscribe_message_types:250) | 已订阅消息类型:[群聊]全部消息类型
+[2025-06-14 00:01:08,083.083] DEBUG    [MainThread|MainProcess] Logger (client.py:info_subscribe_message_types:251) | 已订阅消息类型:[私聊]全部消息类型
+[2025-06-14 00:01:08,084.084] INFO     [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:455) | 插件加载目录: F:\MusicalBot\plugins
+[2025-06-14 00:01:08,431.431] INFO     [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:464) | 准备加载插件 [2]......
+[2025-06-14 00:01:08,431.431] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:fix_plugin_dependencies:389) | 正在修复插件依赖关系
+[2025-06-14 00:01:08,432.432] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:397) | 正在检查插件合法性
+[2025-06-14 00:01:08,433.433] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:410) | 正在构建插件依赖图
+[2025-06-14 00:01:08,433.433] ERROR    [MainThread|MainProcess] PluginLoader (loader.py:_resolve_load_order:204) | 插件 Hulaquan 的依赖项 AdminPlugin 不存在
+[2025-06-14 00:01:08,433.433] ERROR    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:414) | 构造插件依赖图时出错: 插件 'AdminPlugin' 未找到
+[2025-06-14 00:01:08,434.434] ERROR    [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:471) | 加载插件 Hulaquan 时出错: 插件 'AdminPlugin' 未找到
+[2025-06-14 00:01:08,436.436] ERROR    [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:472) | Traceback (most recent call last):
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\loader\loader.py", line 465, in load_plugins
+    await self.from_class_load_plugins(plugins, **kwargs)
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\loader\loader.py", line 415, in from_class_load_plugins
+    raise e
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\loader\loader.py", line 412, in from_class_load_plugins
+    load_order = self._resolve_load_order()
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\loader\loader.py", line 205, in _resolve_load_order
+    raise PluginNotFoundError(dep)
+ncatbot.utils.assets.plugin_custom_err.PluginNotFoundError: 插件 'AdminPlugin' 未找到
+
+[2025-06-14 00:01:08,437.437] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:01:08,438.438] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /event HTTP/1.1
+[2025-06-14 00:01:08,438.438] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:01:08,439.439] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:01:08,439.439] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:01:08,439.439] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: 0YYbe+Zy+I+1jU6XhHThsw==
+[2025-06-14 00:01:08,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:01:08,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:01:08,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:01:08,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:01:08,441.441] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:01:08,441.441] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:01:08,442.442] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:01:08,442.442] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: SgEUAMpzLICOkmC4drno/UCGxi0=
+[2025-06-14 00:01:08,443.443] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:01:08,444.444] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830468,"self_id":3044829389,"post_t...","sub_type":"connect"}' [116 bytes]
+[2025-06-14 00:01:08,444.444] INFO     [MainThread|MainProcess] Logger (connect.py:on_message:43) | 机器人 3044829389 成功启动
+[2025-06-14 00:01:37,676.676] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830497,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:01:37,677.677] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830497, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:02:06,508.508] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [416 bytes]
+[2025-06-14 00:02:06,509.509] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '2058390358', 'user_id': '3022402752', 'message_seq': '2058390358', 'real_id': '2058390358', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '测试', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '测试'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:06,510.510] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '2058390358', 'user_id': '3022402752', 'message_seq': '2058390358', 'real_id': '2058390358', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '测试', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '测试'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:06,513.513] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:02:06,513.513] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:02:06,513.513] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:02:06,514.514] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:02:06,514.514] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:02:06,514.514] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: vS4pDqxfY0DnSpkGl7Xt6A==
+[2025-06-14 00:02:06,514.514] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:02:06,516.516] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:02:06,516.516] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:02:06,516.516] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:02:06,517.517] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:02:06,517.517] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:02:06,517.517] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:02:06,517.517] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: rBxLSuB4kUGuK+c4Mu8vh2ffmYs=
+[2025-06-14 00:02:06,518.518] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:02:06,518.518] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749830526}' [177 bytes]
+[2025-06-14 00:02:06,850.850] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749830526}' [104 bytes]
+[2025-06-14 00:02:06,851.851] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:02:06,851.851] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:06,852.852] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:06,852.852] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:02:06,852.852] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 1192418981}, 'message': '', 'wording': '', 'echo': 1749830526}
+[2025-06-14 00:02:07,685.685] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830527,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:02:07,685.685] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830527, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:02:11,278.278] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [412 bytes]
+[2025-06-14 00:02:11,278.278] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1516122572', 'user_id': '3022402752', 'message_seq': '1516122572', 'real_id': '1516122572', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/cfg', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/cfg'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:11,280.280] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1516122572', 'user_id': '3022402752', 'message_seq': '1516122572', 'real_id': '1516122572', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/cfg', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/cfg'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:11,282.282] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:02:11,282.282] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:02:11,283.283] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:02:11,284.284] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:02:11,284.284] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:02:11,284.284] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: LsKdtL9KyRku+KDyhqskqA==
+[2025-06-14 00:02:11,285.285] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:02:11,285.285] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:02:11,285.285] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:02:11,285.285] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:02:11,286.286] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:02:11,286.286] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:02:11,286.286] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:02:11,286.286] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: rYrkHAnPMGQTtO5aQV8tNt2qcqE=
+[2025-06-14 00:02:11,286.286] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:02:11,288.288] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749830531}' [406 bytes]
+[2025-06-14 00:02:11,590.590] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749830531}' [103 bytes]
+[2025-06-14 00:02:11,591.591] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:02:11,592.592] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:11,592.592] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:11,593.593] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:02:11,593.593] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 627159236}, 'message': '', 'wording': '', 'echo': 1749830531}
+[2025-06-14 00:02:13,922.922] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [412 bytes]
+[2025-06-14 00:02:13,922.922] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1337196775', 'user_id': '3022402752', 'message_seq': '1337196775', 'real_id': '1337196775', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/plg', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/plg'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:13,923.923] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1337196775', 'user_id': '3022402752', 'message_seq': '1337196775', 'real_id': '1337196775', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/plg', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/plg'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:13,924.924] WARNING  [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:78) | {'code': 0, 'msg': '消息不能为空'}
+[2025-06-14 00:02:16,690.690] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [418 bytes]
+[2025-06-14 00:02:16,691.691] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1396216059', 'user_id': '3022402752', 'message_seq': '1396216059', 'real_id': '1396216059', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/plugin', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/plugin'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:16,692.692] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1396216059', 'user_id': '3022402752', 'message_seq': '1396216059', 'real_id': '1396216059', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/plugin', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/plugin'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:19,178.178] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [414 bytes]
+[2025-06-14 00:02:19,179.179] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1986112326', 'user_id': '3022402752', 'message_seq': '1986112326', 'real_id': '1986112326', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/help', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/help'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:19,179.179] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1986112326', 'user_id': '3022402752', 'message_seq': '1986112326', 'real_id': '1986112326', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/help', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/help'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:19,181.181] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:02:19,182.182] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:02:19,182.182] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:02:19,182.182] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:02:19,182.182] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:02:19,183.183] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: fQLL9EMW3ubpVRHqnuYfcA==
+[2025-06-14 00:02:19,183.183] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:02:19,183.183] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:02:19,184.184] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:02:19,184.184] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:02:19,185.185] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:02:19,185.185] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:02:19,186.186] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:02:19,186.186] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: y11tWgCMSU5SgG+bcK/kNne/5JE=
+[2025-06-14 00:02:19,187.187] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:02:19,187.187] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749830539}' [500 bytes]
+[2025-06-14 00:02:19,478.478] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749830539}' [102 bytes]
+[2025-06-14 00:02:19,479.479] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:02:19,479.479] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:19,481.481] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:19,482.482] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:02:19,482.482] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 94759083}, 'message': '', 'wording': '', 'echo': 1749830539}
+[2025-06-14 00:02:23,027.027] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [412 bytes]
+[2025-06-14 00:02:23,029.029] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1349064444', 'user_id': '3022402752', 'message_seq': '1349064444', 'real_id': '1349064444', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/plg', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/plg'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:23,029.029] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1349064444', 'user_id': '3022402752', 'message_seq': '1349064444', 'real_id': '1349064444', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/plg', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/plg'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:23,031.031] WARNING  [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:78) | {'code': 0, 'msg': '消息不能为空'}
+[2025-06-14 00:02:37,690.690] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830557,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:02:37,691.691] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830557, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:02:38,755.755] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [436 bytes]
+[2025-06-14 00:02:38,756.756] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1276256154', 'user_id': '3022402752', 'message_seq': '1276256154', 'real_id': '1276256154', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/reload Hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/reload Hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:38,757.757] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1276256154', 'user_id': '3022402752', 'message_seq': '1276256154', 'real_id': '1276256154', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/reload Hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/reload Hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:38,758.758] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:02:38,759.759] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:02:38,759.759] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:02:38,760.760] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:02:38,760.760] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:02:38,760.760] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: 0UYQBkWlv9PM7m4c+9Bhbw==
+[2025-06-14 00:02:38,760.760] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:02:38,761.761] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:02:38,761.761] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:02:38,761.761] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:02:38,763.763] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:02:38,763.763] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:02:38,763.763] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:02:38,764.764] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: eOxUOFQk8RNpQwCsBf5RIw6C+wk=
+[2025-06-14 00:02:38,764.764] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:02:38,764.764] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749830558}' [178 bytes]
+[2025-06-14 00:02:39,074.074] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749830558}' [104 bytes]
+[2025-06-14 00:02:39,075.075] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:02:39,076.076] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:39,076.076] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:39,077.077] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:02:39,077.077] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 1491163474}, 'message': '', 'wording': '', 'echo': 1749830558}
+[2025-06-14 00:02:52,717.717] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [434 bytes]
+[2025-06-14 00:02:52,718.718] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1150859194', 'user_id': '3022402752', 'message_seq': '1150859194', 'real_id': '1150859194', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/hello hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/hello hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:52,719.719] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1150859194', 'user_id': '3022402752', 'message_seq': '1150859194', 'real_id': '1150859194', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/hello hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/hello hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:59,432.432] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [429 bytes]
+[2025-06-14 00:02:59,434.434] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '587968408', 'user_id': '3022402752', 'message_seq': '587968408', 'real_id': '587968408', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/help Hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/help Hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:59,434.434] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '587968408', 'user_id': '3022402752', 'message_seq': '587968408', 'real_id': '587968408', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/help Hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/help Hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:02:59,436.436] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:02:59,436.436] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:02:59,437.437] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:02:59,437.437] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:02:59,438.438] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:02:59,438.438] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: rRVQamleKv0vVfd3S8/DZA==
+[2025-06-14 00:02:59,438.438] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:02:59,438.438] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:02:59,439.439] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:02:59,439.439] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:02:59,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:02:59,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:02:59,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:02:59,440.440] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: cmc0S6gc/NBXXUXhTgBPHgMuL78=
+[2025-06-14 00:02:59,441.441] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:02:59,441.441] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749830579}' [178 bytes]
+[2025-06-14 00:02:59,735.735] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749830579}' [104 bytes]
+[2025-06-14 00:02:59,736.736] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:02:59,736.736] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:59,737.737] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:02:59,737.737] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:02:59,738.738] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 2077573543}, 'message': '', 'wording': '', 'echo': 1749830579}
+[2025-06-14 00:03:07,699.699] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830587,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:03:07,700.700] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830587, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:03:37,707.707] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830617,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:03:37,707.707] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830617, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:04:07,712.712] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830647,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:04:07,713.713] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830647, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:04:37,723.723] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830677,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:04:37,724.724] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830677, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:05:07,736.736] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830707,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:05:07,737.737] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830707, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:05:37,747.747] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830737,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:05:37,748.748] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830737, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:06:07,753.753] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830767,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:06:07,754.754] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830767, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:06:37,768.768] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830797,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:06:37,769.769] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830797, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:07:07,769.769] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830827,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:07:07,769.769] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830827, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:07:37,780.780] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830857,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:07:37,781.781] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830857, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:08:07,794.794] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830887,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:08:07,794.794] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830887, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:08:37,805.805] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830917,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:08:37,806.806] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830917, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:09:07,811.811] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830947,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:09:07,812.812] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830947, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:09:37,816.816] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830977,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:09:37,817.817] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749830977, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:09:41,199.199] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:09:41,200.200] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:fail_connection:1429) | ! failing connection with code 1006
+[2025-06-14 00:09:41,200.200] ERROR    [MainThread|MainProcess] Logger (connect.py:on_connect:64) | Websocket error: no close frame received or sent
+[2025-06-14 00:09:41,202.202] INFO     [MainThread|MainProcess] Logger (client.py:_run_async:275) | 正在尝试重连服务器...
+[2025-06-14 00:09:41,204.204] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:09:41,205.205] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET / HTTP/1.1
+[2025-06-14 00:09:41,205.205] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:09:41,206.206] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:09:41,206.206] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:09:41,207.207] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: CBCT+ASPRtQW8qfkn7hPpQ==
+[2025-06-14 00:09:41,207.207] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:09:41,208.208] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:09:41,208.208] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:09:41,209.209] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:09:41,209.209] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:09:41,210.210] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:fail_connection:1429) | ! failing connection with code 1006
+[2025-06-14 00:09:41,210.210] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:close_connection:1334) | x half-closing TCP connection
+[2025-06-14 00:09:41,211.211] INFO     [MainThread|MainProcess] Logger (client.py:_run_async:279) | 正在尝试重连服务器...第 1 s
+[2025-06-14 00:09:48,754.754] DEBUG    [ThreadPoolExecutor-0_0|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): ghfast.top:443
+[2025-06-14 00:09:48,754.754] DEBUG    [ThreadPoolExecutor-0_1|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): github.7boe.top:443
+[2025-06-14 00:09:48,754.754] DEBUG    [ThreadPoolExecutor-0_4|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): github.whrstudio.top:443
+[2025-06-14 00:09:48,755.755] DEBUG    [ThreadPoolExecutor-0_7|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): fastgit.cc:443
+[2025-06-14 00:09:48,755.755] DEBUG    [ThreadPoolExecutor-0_8|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): git.886.be:443
+[2025-06-14 00:09:48,755.755] DEBUG    [ThreadPoolExecutor-0_3|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): gh-proxy.ygxz.in:443
+[2025-06-14 00:09:48,756.756] DEBUG    [ThreadPoolExecutor-0_2|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): cdn.moran233.xyz:443
+[2025-06-14 00:09:48,756.756] DEBUG    [ThreadPoolExecutor-0_5|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): proxy.yaoyaoling.net:443
+[2025-06-14 00:09:48,757.757] DEBUG    [ThreadPoolExecutor-0_6|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): ghproxy.net:443
+[2025-06-14 00:09:48,758.758] DEBUG    [ThreadPoolExecutor-0_9|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): gh-proxy.com:443
+[2025-06-14 00:09:48,915.915] INFO     [MainThread|MainProcess] Logger (config.py:validate_config:174) | [BOTQQ]: 3044829389 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]:  | [ROOT]: 3022402752 | [WEBUI]: http://localhost:6099
+[2025-06-14 00:09:48,916.916] INFO     [MainThread|MainProcess] Logger (config.py:validate_config:186) | 未启用插件白名单或黑名单，将加载所有插件
+[2025-06-14 00:09:48,917.917] DEBUG    [MainThread|MainProcess] AccessController (access_controller.py:_load_access:172) | 加载权限
+[2025-06-14 00:09:48,918.918] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:09:48,978.978] DEBUG    [ThreadPoolExecutor-0_2|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://cdn.moran233.xyz:443 "GET / HTTP/1.1" 404 19
+[2025-06-14 00:09:49,077.077] DEBUG    [ThreadPoolExecutor-0_5|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://proxy.yaoyaoling.net:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:09:49,547.547] DEBUG    [ThreadPoolExecutor-0_4|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://github.whrstudio.top:443 "GET / HTTP/1.1" 200 11155
+[2025-06-14 00:09:49,857.857] DEBUG    [ThreadPoolExecutor-0_9|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://gh-proxy.com:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:09:50,053.053] DEBUG    [ThreadPoolExecutor-0_7|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://fastgit.cc:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:09:50,327.327] DEBUG    [ThreadPoolExecutor-0_0|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://ghfast.top:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:09:50,883.883] DEBUG    [ThreadPoolExecutor-0_8|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://git.886.be:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:09:52,992.992] INFO     [MainThread|MainProcess] adapter.nc.launcher (launcher.py:ncatbot_service_remote_start:82) | NapCat 服务器离线, 启动本地 NapCat 服务中...
+[2025-06-14 00:09:53,014.014] INFO     [MainThread|MainProcess] adapter.nc.start (start.py:read_webui_config:220) | Token: napcat, Webui port: 6099
+[2025-06-14 00:09:53,014.014] INFO     [MainThread|MainProcess] adapter.nc.start (start.py:get_launcher_name:95) | 当前操作系统为: Windows 10
+[2025-06-14 00:09:53,015.015] INFO     [MainThread|MainProcess] adapter.nc.start (start.py:start_napcat_windows:112) | 正在启动QQ, 启动器路径: F:\MusicalBot\napcat\launcher-win10.bat
+[2025-06-14 00:09:53,022.022] INFO     [MainThread|MainProcess] adapter.nc.launcher (launcher.py:connect_napcat:39) | 正在连接 napcat websocket 服务器...
+[2025-06-14 00:09:53,023.023] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:09:57,156.156] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:09:57,158.158] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:09:57,158.158] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET / HTTP/1.1
+[2025-06-14 00:09:57,159.159] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:09:57,159.159] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:09:57,159.159] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:09:57,160.160] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: jhYxJt0zJyOz/ykOFiBIEA==
+[2025-06-14 00:09:57,160.160] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:09:57,160.160] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:09:57,160.160] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:09:57,160.160] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:09:57,163.163] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:09:57,163.163] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:09:57,163.163] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:09:57,164.164] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: MpUyysl43HZcofs2yD8I70urbd8=
+[2025-06-14 00:09:57,165.165] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:09:57,165.165] DEBUG    [MainThread|MainProcess] Logger (wsroute.py:check_websocket:29) | WebSocket ws://localhost:3001 可用.
+[2025-06-14 00:09:57,166.166] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830997,"self_id":3044829389,"post_t...","sub_type":"connect"}' [116 bytes]
+[2025-06-14 00:09:57,166.166] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:09:57,166.166] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:09:57,169.169] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:09:57,169.169] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:09:57,170.170] INFO     [MainThread|MainProcess] adapter.nc.launcher (launcher.py:connect_napcat:45) | 连接 napcat websocket 服务器成功!
+[2025-06-14 00:09:57,171.171] INFO     [MainThread|MainProcess] Logger (client.py:run:319) | NapCat 服务启动登录完成
+[2025-06-14 00:09:57,171.171] DEBUG    [MainThread|MainProcess] asyncio (proactor_events.py:__init__:626) | Using proactor: IocpProactor
+[2025-06-14 00:09:57,172.172] DEBUG    [MainThread|MainProcess] Logger (client.py:info_subscribe_message_types:250) | 已订阅消息类型:[群聊]全部消息类型
+[2025-06-14 00:09:57,172.172] DEBUG    [MainThread|MainProcess] Logger (client.py:info_subscribe_message_types:251) | 已订阅消息类型:[私聊]全部消息类型
+[2025-06-14 00:09:57,173.173] INFO     [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:455) | 插件加载目录: F:\MusicalBot\plugins
+[2025-06-14 00:09:57,541.541] INFO     [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:464) | 准备加载插件 [2]......
+[2025-06-14 00:09:57,542.542] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:fix_plugin_dependencies:389) | 正在修复插件依赖关系
+[2025-06-14 00:09:57,542.542] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:397) | 正在检查插件合法性
+[2025-06-14 00:09:57,542.542] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:410) | 正在构建插件依赖图
+[2025-06-14 00:09:57,544.544] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:420) | 正在初始化插件 AdminPlugin
+[2025-06-14 00:09:57,546.546] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:from_class_load_plugins:420) | 正在初始化插件 Hulaquan
+[2025-06-14 00:09:57,548.548] DEBUG    [MainThread|MainProcess] Logger (event_bus.py:set_plugin_funcs:144) | 加载插件 AdminPlugin 的功能 op
+[2025-06-14 00:09:57,549.549] DEBUG    [MainThread|MainProcess] Logger (event_bus.py:set_plugin_funcs:144) | 加载插件 AdminPlugin 的功能 deop
+[2025-06-14 00:09:57,550.550] ERROR    [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:471) | 加载插件 Hulaquan 时出错: 'Hulaquan' object has no attribute 'on_scheduled_task_time_change'
+[2025-06-14 00:09:57,552.552] ERROR    [MainThread|MainProcess] PluginLoader (loader.py:load_plugins:472) | Traceback (most recent call last):
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\loader\loader.py", line 465, in load_plugins
+    await self.from_class_load_plugins(plugins, **kwargs)
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\loader\loader.py", line 439, in from_class_load_plugins
+    await self.plugins[name].__onload__()
+  File "C:\Users\yyb\AppData\Local\Programs\Python\Python310\lib\site-packages\ncatbot\plugin\base_plugin\base_plugin.py", line 254, in __onload__
+    await self.on_load()
+  File "F:\MusicalBot\plugins\Hulaquan\main.py", line 24, in on_load
+    self.register_hulaquan_announcement_tasks()
+  File "F:\MusicalBot\plugins\Hulaquan\main.py", line 42, in register_hulaquan_announcement_tasks
+    on_change=self.on_scheduled_task_time_change,
+AttributeError: 'Hulaquan' object has no attribute 'on_scheduled_task_time_change'
+
+[2025-06-14 00:09:57,553.553] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:09:57,553.553] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /event HTTP/1.1
+[2025-06-14 00:09:57,553.553] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:09:57,555.555] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:09:57,555.555] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:09:57,555.555] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: rM7OJq229KUwTEoZvSy5zQ==
+[2025-06-14 00:09:57,555.555] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:09:57,556.556] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:09:57,556.556] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:09:57,556.556] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:09:57,557.557] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:09:57,557.557] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:09:57,557.557] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:09:57,557.557] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: hT/o9kWzwq1/OzOp4/La4uP+JtA=
+[2025-06-14 00:09:57,558.558] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:09:57,558.558] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749830997,"self_id":3044829389,"post_t...","sub_type":"connect"}' [116 bytes]
+[2025-06-14 00:09:57,558.558] INFO     [MainThread|MainProcess] Logger (connect.py:on_message:43) | 机器人 3044829389 成功启动
+[2025-06-14 00:10:27,006.006] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749831027,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:10:27,007.007] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749831027, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:10:42,033.033] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [436 bytes]
+[2025-06-14 00:10:42,034.034] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1084788593', 'user_id': '3022402752', 'message_seq': '1084788593', 'real_id': '1084788593', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/reload Hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/reload Hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:10:42,034.034] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1084788593', 'user_id': '3022402752', 'message_seq': '1084788593', 'real_id': '1084788593', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/reload Hulaquan', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/reload Hulaquan'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:10:42,037.037] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:10:42,038.038] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:10:42,038.038] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:10:42,039.039] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:10:42,039.039] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:10:42,039.039] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: b6l18U/21K7bblk1Oovl5w==
+[2025-06-14 00:10:42,040.040] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:10:42,040.040] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:10:42,040.040] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:10:42,041.041] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:10:42,041.041] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:10:42,041.041] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:10:42,042.042] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:10:42,042.042] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: 9LaDTWNZLCfUMi+bmwLj1GcM9/o=
+[2025-06-14 00:10:42,042.042] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:10:42,043.043] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749831042}' [178 bytes]
+[2025-06-14 00:10:42,334.334] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749831042}' [103 bytes]
+[2025-06-14 00:10:42,335.335] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:10:42,335.335] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:10:42,335.335] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:10:42,336.336] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:10:42,336.336] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 480159341}, 'message': '', 'wording': '', 'echo': 1749831042}
+[2025-06-14 00:10:52,709.709] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"self_id":3044829389,"user_id":3022402752,"tim..."target_id":3022402752}' [442 bytes]
+[2025-06-14 00:10:52,710.710] DEBUG    [MainThread|MainProcess] Logger (client.py:handle_private_event:182) | {'message_id': '1946730144', 'user_id': '3022402752', 'message_seq': '1946730144', 'real_id': '1946730144', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/reload AdminPlugin', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/reload AdminPlugin'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:10:52,710.710] INFO     [MainThread|MainProcess] Logger (main.py:on_private_message:19) | {'message_id': '1946730144', 'user_id': '3022402752', 'message_seq': '1946730144', 'real_id': '1946730144', 'sender': "{'user_id': 3022402752, 'nickname': '似杯奶昔', 'card': ''}", 'raw_message': '/reload AdminPlugin', 'font': '14', 'sub_type': 'friend', 'message': "[{'type': 'text', 'data': {'text': '/reload AdminPlugin'}}]", 'message_format': 'array', 'target_id': '3022402752', 'message_type': 'private'}
+[2025-06-14 00:10:52,711.711] INFO     [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:516) | 开始重载插件: AdminPlugin
+[2025-06-14 00:10:52,712.712] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:526) | 卸载插件: AdminPlugin
+[2025-06-14 00:10:52,713.713] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:532) | 导入模块: AdminPlugin.main
+[2025-06-14 00:10:52,713.713] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:536) | 重新加载模块: AdminPlugin.main
+[2025-06-14 00:10:52,714.714] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:560) | 创建新插件实例: AdminPlugin
+[2025-06-14 00:10:52,715.715] DEBUG    [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:570) | 加载插件: AdminPlugin
+[2025-06-14 00:10:52,716.716] DEBUG    [MainThread|MainProcess] Logger (event_bus.py:set_plugin_funcs:144) | 加载插件 AdminPlugin 的功能 op
+[2025-06-14 00:10:52,716.716] DEBUG    [MainThread|MainProcess] Logger (event_bus.py:set_plugin_funcs:144) | 加载插件 AdminPlugin 的功能 deop
+[2025-06-14 00:10:52,716.716] INFO     [MainThread|MainProcess] PluginLoader (loader.py:reload_plugin:577) | 插件 AdminPlugin 重载成功
+[2025-06-14 00:10:52,719.719] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:__init__:256) | = connection is CONNECTING
+[2025-06-14 00:10:52,720.720] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:114) | > GET /api HTTP/1.1
+[2025-06-14 00:10:52,721.721] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Host: localhost:3001
+[2025-06-14 00:10:52,722.722] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Upgrade: websocket
+[2025-06-14 00:10:52,722.722] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Connection: Upgrade
+[2025-06-14 00:10:52,723.723] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Key: 0bsTfIszq8NfEPWZ5CyJrA==
+[2025-06-14 00:10:52,723.723] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Version: 13
+[2025-06-14 00:10:52,724.724] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+[2025-06-14 00:10:52,724.724] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > Content-Type: application/json
+[2025-06-14 00:10:52,725.725] DEBUG    [MainThread|MainProcess] websockets.client (client.py:write_http_request:116) | > User-Agent: Python/3.10 websockets/10.4
+[2025-06-14 00:10:52,726.726] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:147) | < HTTP/1.1 101 Switching Protocols
+[2025-06-14 00:10:52,727.727] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Upgrade: websocket
+[2025-06-14 00:10:52,728.728] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Connection: Upgrade
+[2025-06-14 00:10:52,728.728] DEBUG    [MainThread|MainProcess] websockets.client (client.py:read_http_response:149) | < Sec-WebSocket-Accept: 15wG6+K9bjxjLjAtnSZpmLzEmUM=
+[2025-06-14 00:10:52,729.729] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_open:357) | = connection is OPEN
+[2025-06-14 00:10:52,730.730] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > TEXT '{"action": "send_private_msg", "params": {"user...]}, "echo": 1749831052}' [194 bytes]
+[2025-06-14 00:10:53,026.026] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"status":"ok","retcode":0,"data":{"message_id"...":"","echo":1749831052}' [101 bytes]
+[2025-06-14 00:10:53,027.027] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_close_frame:1232) | = connection is CLOSING
+[2025-06-14 00:10:53,027.027] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:write_frame_sync:1183) | > CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:10:53,028.028] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < CLOSE 1000 (OK) [2 bytes]
+[2025-06-14 00:10:53,028.028] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:10:53,029.029] DEBUG    [MainThread|MainProcess] Logger (function_enhance.py:check_and_log:76) | {'status': 'ok', 'retcode': 0, 'data': {'message_id': 2252058}, 'message': '', 'wording': '', 'echo': 1749831052}
+[2025-06-14 00:10:57,018.018] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749831057,"self_id":3044829389,"post_t...true},"interval":30000}' [149 bytes]
+[2025-06-14 00:10:57,019.019] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749831057, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': True, 'good': True}, 'interval': 30000}
+[2025-06-14 00:11:07,988.988] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-14 00:11:07,988.988] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:fail_connection:1429) | ! failing connection with code 1006
+[2025-06-14 00:11:07,989.989] ERROR    [MainThread|MainProcess] Logger (connect.py:on_connect:64) | Websocket error: no close frame received or sent
+[2025-06-14 00:11:07,990.990] INFO     [MainThread|MainProcess] Logger (client.py:_run_async:275) | 正在尝试重连服务器...
+[2025-06-14 00:11:12,089.089] INFO     [MainThread|MainProcess] Logger (client.py:_run_async:279) | 正在尝试重连服务器...第 1 s
+[2025-06-14 00:11:15,964.964] DEBUG    [ThreadPoolExecutor-0_1|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): github.7boe.top:443
+[2025-06-14 00:11:15,964.964] DEBUG    [ThreadPoolExecutor-0_2|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): cdn.moran233.xyz:443
+[2025-06-14 00:11:15,964.964] DEBUG    [ThreadPoolExecutor-0_4|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): github.whrstudio.top:443
+[2025-06-14 00:11:15,965.965] DEBUG    [ThreadPoolExecutor-0_0|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): ghfast.top:443
+[2025-06-14 00:11:15,965.965] DEBUG    [ThreadPoolExecutor-0_3|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): gh-proxy.ygxz.in:443
+[2025-06-14 00:11:15,966.966] DEBUG    [ThreadPoolExecutor-0_7|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): fastgit.cc:443
+[2025-06-14 00:11:15,966.966] DEBUG    [ThreadPoolExecutor-0_6|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): ghproxy.net:443
+[2025-06-14 00:11:15,966.966] DEBUG    [ThreadPoolExecutor-0_5|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): proxy.yaoyaoling.net:443
+[2025-06-14 00:11:15,967.967] DEBUG    [ThreadPoolExecutor-0_8|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): git.886.be:443
+[2025-06-14 00:11:15,968.968] DEBUG    [ThreadPoolExecutor-0_9|MainProcess] urllib3.connectionpool (connectionpool.py:_new_conn:1022) | Starting new HTTPS connection (1): gh-proxy.com:443
+[2025-06-14 00:11:16,171.171] DEBUG    [ThreadPoolExecutor-0_2|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://cdn.moran233.xyz:443 "GET / HTTP/1.1" 404 19
+[2025-06-14 00:11:16,208.208] DEBUG    [ThreadPoolExecutor-0_5|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://proxy.yaoyaoling.net:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:11:16,691.691] DEBUG    [ThreadPoolExecutor-0_4|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://github.whrstudio.top:443 "GET / HTTP/1.1" 200 11155
+[2025-06-14 00:11:17,351.351] DEBUG    [ThreadPoolExecutor-0_0|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://ghfast.top:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:11:17,910.910] DEBUG    [ThreadPoolExecutor-0_9|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://gh-proxy.com:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:11:18,852.852] DEBUG    [ThreadPoolExecutor-0_8|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://git.886.be:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:11:19,104.104] DEBUG    [ThreadPoolExecutor-0_6|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://ghproxy.net:443 "GET / HTTP/1.1" 200 None
+[2025-06-14 00:11:19,926.926] DEBUG    [ThreadPoolExecutor-0_7|MainProcess] urllib3.connectionpool (connectionpool.py:_make_request:475) | https://fastgit.cc:443 "GET / HTTP/1.1" 200 None

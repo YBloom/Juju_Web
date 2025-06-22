@@ -1,0 +1,153 @@
+import os
+import html
+
+from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
+from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
+from ncatbot.core import Request
+from .UsersManager import UsersManager
+from .GroupsManager import GroupsManager
+from ncatbot.utils.logger import get_log
+
+bot = CompatibleEnrollment  # 兼容回调函数注册器
+log = get_log()
+
+class AdminPlugin(BasePlugin):
+    name = "AdminPlugin"  # 插件名称
+    version = "0.0.1"  # 插件版本
+    author = "摇摇杯"  # 插件作者
+    info = "Users Administration"  # 插件描述
+    dependencies = {}  # 插件依赖，格式: {"插件名": "版本要求"}
+
+    async def on_load(self):
+        # 插件加载时执行的操作
+        print(f"{self.name} 插件已加载")
+        print(f"插件版本: {self.version}")
+        # 注册功能示例
+        self.users_manager = UsersManager(self.data)
+        self.groups_manager = GroupsManager(self.data)
+        self.pass_managers_event = Event("AdminPlugin.pass_managers", {"managers": (self.users_manager, self.groups_manager)})
+          # 异步发布不等待结果
+        await self.on_send_pass_managers_event()
+        self.register_handler("Hulaquan.load_plugin", self.add_send_managers_task)
+        await self.add_send_managers_task()
+        
+        self.register_admin_func(
+            name="op",
+            handler=self._on_add_op,
+            prefix="/op",
+            description="op",
+            usage="/op",
+            examples=["/op xxxxx"],
+            tags=["op"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_admin_func(
+            name="exec",
+            handler=self._on_execute,
+            prefix="/exec",
+            description="exec",
+            usage="/exec",
+            examples=["/exec xxxxx"],
+            tags=["exec"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_admin_func(
+            name="debug",
+            handler=self._on_debug,
+            prefix="/debug",
+            description="debug",
+            usage="/debug",
+            examples=["/debug xxxxx"],
+            tags=["debug"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_admin_func(
+            name="deop",
+            handler=self._on_de_op,
+            prefix="/deop",
+            description="deop",
+            usage="/deop",
+            examples=["/deop xxxxx"],
+            tags=["deop"],
+            metadata={"category": "utility"}
+        )
+
+    async def add_send_managers_task(self, data=None):
+        self.add_scheduled_task(
+            job_func=self.on_send_pass_managers_event, 
+            name=f"send_pass_managers_event", 
+            interval="1s", 
+            #max_runs=10, 
+            conditions=[lambda: not self.is_all_plugins_get_managers()]
+        )
+    async def on_send_pass_managers_event(self):
+        await self._event_bus.publish_async(self.pass_managers_event)
+        
+    def is_all_plugins_get_managers(self):
+        """检查所有插件是否都获取了managers"""
+        if self.users_manager.is_get_managers:
+            self.remove_scheduled_task("send_pass_managers_event")
+            print("所有插件已获取到managers，移除定时任务")
+            return True
+        else:
+            print("未获取到managers")
+            return False
+        
+    async def _on_execute(self, msg: BaseMessage):
+        cmd = msg.raw_message.replace("/exec ", "")
+        cmd = html.unescape(cmd)  # 解码HTML实体
+        try:
+            exec(cmd)
+            await msg.reply(f"命令执行了")
+        except Exception as e:
+            await msg.reply(f"命令执行失败：{str(e)}")
+            
+    async def _on_debug(self, msg: BaseMessage):
+        cmd = msg.raw_message.replace("/debug ", "")
+        cmd = html.unescape(cmd)  # 解码HTML实体
+        print(f"Debugging command: {cmd}")
+        try:
+            print(eval(cmd))
+        except Exception as e:
+            print(f"命令执行失败：{str(e)}")
+        
+    async def _on_add_op(self, msg: BaseMessage):
+        command = msg.raw_message.split(" ")
+        user_id = command[1]
+        self.data["ops_list"].append(user_id)
+        if self.users_manager.add_op(user_id):
+            await msg.reply(f"已成功赋予用户{user_id}管理员权限。")
+        else:
+            await msg.reply(f"赋权失败！用户{user_id}已经拥有管理员权限。")
+        
+        
+        
+    async def _on_de_op(self, msg: BaseMessage):
+        command = msg.raw_message.split(" ")
+        user_id = command[1]
+        if self.users_manager.de_op(user_id):
+            await msg.reply(f"已成功撤销用户{user_id}的管理员权限。")
+        else:
+            await msg.reply(f"撤销失败！用户{user_id}无管理员权限。")
+            
+        
+    @bot.request_event()
+    async def handle_request(self, msg: Request):
+        comment = msg.comment
+        if msg.request_type == "friend": 
+            if "剧剧" in comment:
+                self.users_manager.add_user(msg.user_id)
+                await msg.reply(True, comment="加好友请求已通过")
+            else:
+                await msg.reply(False, comment="加好友请求被拒绝")
+        else:
+            self.groups_manager.add_group(msg.group_id)
+            await msg.reply(True, comment="加群请求已通过")
+
+        
+    async def on_unload(self):
+        print(f"{self.name} 插件已卸载")
+    
