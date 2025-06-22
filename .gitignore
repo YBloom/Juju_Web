@@ -196,3 +196,4 @@ napcat
 napcat/
 logs/
 logs
+.vscode/
