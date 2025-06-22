@@ -197,3 +197,5 @@ napcat/
 logs/
 logs
 .vscode/
+data/G_access.json
+data/U_access.json
