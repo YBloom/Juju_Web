@@ -1,0 +1,9 @@
+[2025-06-12 01:13:50,335.335] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749662029,"self_id":3044829389,"post_t...true},"interval":30000}' [150 bytes]
+[2025-06-12 01:13:50,369.369] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749662029, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': False, 'good': True}, 'interval': 30000}
+[2025-06-12 01:14:19,566.566] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:read_frame:1177) | < TEXT '{"time":1749662059,"self_id":3044829389,"post_t...true},"interval":30000}' [150 bytes]
+[2025-06-12 01:14:19,568.568] DEBUG    [MainThread|MainProcess] Logger (connect.py:on_message:45) | {'time': 1749662059, 'self_id': 3044829389, 'post_type': 'meta_event', 'meta_event_type': 'heartbeat', 'status': {'online': False, 'good': True}, 'interval': 30000}
+[2025-06-12 01:14:30,521.521] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:connection_lost:1514) | = connection is CLOSED
+[2025-06-12 01:14:30,523.523] DEBUG    [MainThread|MainProcess] websockets.client (protocol.py:fail_connection:1429) | ! failing connection with code 1006
+[2025-06-12 01:14:30,525.525] ERROR    [MainThread|MainProcess] Logger (connect.py:on_connect:64) | Websocket error: no close frame received or sent
+[2025-06-12 01:14:30,529.529] INFO     [MainThread|MainProcess] Logger (client.py:_run_async:275) | 正在尝试重连服务器...
+[2025-06-12 01:14:34,586.586] INFO     [MainThread|MainProcess] Logger (client.py:_run_async:279) | 正在尝试重连服务器...第 1 s
