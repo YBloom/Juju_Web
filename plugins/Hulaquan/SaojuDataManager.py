@@ -82,7 +82,7 @@ class SaojuDataManager(BaseDataManager):
     1.存储/调取卡司排期数据
     2.根据卡司数据有效期刷新
     """
-    def __init__(self, file_path, file_type=None):
+    def __init__(self, file_path=None, file_type=None):
         file_path = file_path or "plugins/Hulaquan/saoju_data.json"
         super().__init__(file_path, file_type)
 
