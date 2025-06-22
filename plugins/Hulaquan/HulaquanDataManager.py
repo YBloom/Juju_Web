@@ -6,6 +6,13 @@ import re
 import json
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 
+"""
+    更新思路：
+    1.按照是否修改self将函数数据分类
+    """
+
+
+
 class HulaquanDataManager(BaseDataManager):
     """
     功能：
@@ -17,7 +24,7 @@ class HulaquanDataManager(BaseDataManager):
         super().__init__(file_path, file_type)
         
     def _check_data(self):
-        self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
+        self.setdefault("events", {})  # 确保有一个事件字典来存储数据
 
     def fetch_and_update_data(self):
         """更新数据
@@ -25,9 +32,9 @@ class HulaquanDataManager(BaseDataManager):
         Returns:
             返回(old_data, new_data)
         """
-        old_data = self.data
-        self.data = self.dump_hulaquan_events_data()
-        return old_data, self.data
+        old_data = dict(self)
+        self.dump_hulaquan_events_data()
+        return old_data, self
 
     def get_recommendation(self, limit=12, page=0, timeMark=True, tags=None):
         # get events from recommendation API
@@ -50,8 +57,8 @@ class HulaquanDataManager(BaseDataManager):
 
     def dump_hulaquan_events_data(self, data_dict=None):
         try:
-            self.data = data_dict or self.get_events_dict()
-            return data_dict
+            self.update(data_dict or self.get_events_dict())
+            return self
         except Exception as e:
             print(f"呼啦圈数据下载失败: {e}")
             return None
@@ -108,9 +115,15 @@ class HulaquanDataManager(BaseDataManager):
         data = []
         data += self.get_recommendation(count//4, 0, True)[1]
         return data
+    
+    def return_events_data(self):
+        if not self.get("events", None):
+            self.dump_hulaquan_events_data()
+            print("呼啦圈数据已更新")
+        return self["events"]
 
     def search_eventID_by_name(self, event_name):
-        data = self.data["events"]
+        data = self.return_events_data()
         result = []
         for eid, event in data.items():
             title = event["title"]
@@ -131,7 +144,7 @@ class HulaquanDataManager(BaseDataManager):
             return None
         
     def output_data_info(self):
-        old_data = self.data["events"]
+        old_data = self.return_events_data()
         for eid, event in old_data.items():
             print(eid, event["title"], event["end_time"], event["update_time"])
         
@@ -159,7 +172,7 @@ class HulaquanDataManager(BaseDataManager):
         update_data = []
         if not __dump:
             new_data_all = self.get_events_dict()
-            old_data_all = self.data
+            old_data_all = dict(self)
         else:
             old_data_all, new_data_all = self.fetch_and_update_data()
         new_data = new_data_all["events"]
@@ -229,7 +242,7 @@ class HulaquanDataManager(BaseDataManager):
         # Return: (is_updated: bool, messages: [list:Str])
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        is_updated, update_data = self.compare_to_database(__dump=True)
+        is_updated, update_data = self.compare_to_database()
         if not is_updated:
             return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{update_data}",])
         messages = [f"检测到呼啦圈有{len(update_data)}条数据更新\n查询时间：{query_time_str}"]

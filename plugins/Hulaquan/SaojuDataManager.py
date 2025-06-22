@@ -87,9 +87,9 @@ class SaojuDataManager(BaseDataManager):
         super().__init__(file_path, file_type)
 
     def _check_data(self):
-        self.data.setdefault("date_dict", {})  # 确保有一个日期字典来存储数据
-        self.data.setdefault("update_time_dict", {})  # 确保有一个更新时间字典来存储数据
-        self.data["update_time_dict"].setdefault("date_dict", {})  # 确保有一个更新时间字典来存储数据
+        self.setdefault("date_dict", {})  # 确保有一个日期字典来存储数据
+        self.setdefault("update_time_dict", {})  # 确保有一个更新时间字典来存储数据
+        self["update_time_dict"].setdefault("date_dict", {})  # 确保有一个更新时间字典来存储数据
         self.refresh_expired_data()
 
     def search_day(self, date):
@@ -117,15 +117,15 @@ class SaojuDataManager(BaseDataManager):
         return json_response
     
     def get_data_by_date(self, date, update_delta_max_hours=12):
-        if date in self.data["date_dict"].keys():
-            update_time = strToDate(self.data["update_time_dict"]["date_dict"].get(date, None))
+        if date in self["date_dict"].keys():
+            update_time = strToDate(self["update_time_dict"]["date_dict"].get(date, None))
             if (datetime.now() - update_time) < timedelta(hours=update_delta_max_hours):
-                return self.data["date_dict"][date]
+                return self["date_dict"][date]
         else:
             data = self.search_day(date)
             if data:
-                self.data["date_dict"][date] = data["show_list"]
-                self.data["update_time_dict"]["date_dict"][date] = dateToStr(datetime.now())
+                self["date_dict"][date] = data["show_list"]
+                self["update_time_dict"]["date_dict"][date] = dateToStr(datetime.now())
                 return data["show_list"]
             else:
                 return None
@@ -148,12 +148,12 @@ class SaojuDataManager(BaseDataManager):
         如果过期则刷新数据
         """
         current_date = datetime.now()
-        for date in list(self.data.keys()):
+        for date in list(self["update_time_dict"]["date_dict"].keys()):
             date_obj = strToDate(date=date)
             if date_obj < current_date:
                 # 如果数据过期，删除该日期的数据
-                del self.data[date]
-                del self.data["update_time_dict"]["date_dict"][date]
+                del self["date_dict"][date]
+                del self["update_time_dict"]["date_dict"][date]
 
     def search_for_artist(self, search_name, date):
         date = dateToStr(date)

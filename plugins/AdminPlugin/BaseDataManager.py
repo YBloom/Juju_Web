@@ -16,7 +16,7 @@ class BaseDataManager(UniversalLoader):
             RuntimeError: 保存持久化数据失败时抛出
         """
         try:
-            self.data.save()
+            self.save()
         except Exception as e:
             raise RuntimeError(f"保存持久化数据时出错: {e}")
 
@@ -29,14 +29,14 @@ class BaseDataManager(UniversalLoader):
             RuntimeError: 读取持久化数据失败时抛出
         """
         try:
-            self.data.load()
+            self.load()
         except Exception as e:
             if isinstance(e, FileNotFoundError):
                 open(self.file_path, "w").write("")
-                self.data.save()
-                self.data.load()
+                self.save()
+                self.load()
             else:
-                raise RuntimeError(self.name, f"加载持久化数据时出错: {e}")
+                raise RuntimeError(__class__, f"加载持久化数据时出错: {e}")
             
     async def aload(self):
         await super().aload()
