@@ -31,7 +31,7 @@ class UsersManager:
         self.data["users"][user_id] = {
             "activate": True,
             "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "attention_to_hulaquan": False,
+            "attention_to_hulaquan": 0,
         }
     
     def delete_user(self, user_id):
@@ -68,14 +68,14 @@ class UsersManager:
             return True
         return False
     
-    def switch_attention_to_hulaquan(self, user_id):
+    def switch_attention_to_hulaquan(self, user_id, mode=0):
+        # mode = 0: 取消推送，mode = 1: 关注更新，mode = 2：关注一切推送（更新或无更新）
         if not isinstance(user_id, str):
             user_id = str(user_id)
         try:
-            flag = self.data["users"][user_id]["attention_to_hulaquan"]
+            self.data["users"][user_id]["attention_to_hulaquan"] = mode
         except KeyError:
             self.add_user(user_id)
-            flag = self.data["users"][user_id]["attention_to_hulaquan"]
-        self.data["users"][user_id]["attention_to_hulaquan"] = not flag
-        return (not flag)
+            self.data["users"][user_id]["attention_to_hulaquan"] = mode
+        return mode
    

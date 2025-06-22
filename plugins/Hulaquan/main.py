@@ -23,10 +23,8 @@ class Hulaquan(BasePlugin):
         print(f"插件版本: {self.version}")
         self.groups_manager: GroupsManager = None
         self.users_manager: UsersManager = None
-        self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager(file_type="json")
-        self.saoju_data_manager: SaojuDataManager = SaojuDataManager(file_type="json")
-        self.hlq_data_manager.on_load()
-        self.saoju_data_manager.on_load()
+        self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
+        self.saoju_data_manager: SaojuDataManager = SaojuDataManager()
         self.register_handler("AdminPlugin.pass_managers", self.get_managers)
         self.load_event = Event("Hulaquan.load_plugin", data={})
         await self._event_bus.publish_async(self.load_event)
@@ -123,25 +121,31 @@ class Hulaquan(BasePlugin):
             await msg.reply("（管理员）已关闭呼啦圈上新检测功能")
         
     async def on_hulaquan_announcer(self):
-        is_updated, results = self.hlq_data_manager.message_update_data()
-        if not is_updated:
-            """订阅是否通知功能"""
-            pass
+        try:
+            is_updated, results = self.hlq_data_manager.message_update_data()
+        except Exception as e:
+            print(f"呼啦圈上新提醒失败：{e}")
+            return
         message = "\n".join(results)
         for user_id, user in self.users_manager.users().items():
-            if user.get("attention_to_hulaquan"):
+            mode = user.get("attention_to_hulaquan")
+            if mode==2 or (mode==1 and is_updated):
                 await self.api.post_private_msg(user_id, message)
         for group_id, group in self.groups_manager.groups().items():
-            if group.get("attention_to_hulaquan"):
+            mode = group.get("attention_to_hulaquan")
+            if mode==2 or (mode==1 and is_updated):
                 await self.api.post_group_msg(group_id, message)
     
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         #print(lambda: self.data["scheduled_task_switch"],  self.data["scheduled_task_switch"])
         user_id = msg.user_id
         group_id = None
-        mode = msg.raw_message.split(" ")[1]
-        if mode not in ["0", "1", "2"]:
+        mode = msg.raw_message.split(" ")
+        if (not len(mode)<2) and (mode[1] in ["0", "1", "2"]):
+            pass
+        else:
             return await msg.reply("请输入存在的模式：\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送")
+        mode = mode[1]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
             if self.users_manager.is_op(user_id):

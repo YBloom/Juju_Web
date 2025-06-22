@@ -1,11 +1,12 @@
 import json
 import os
-from ncatbot.utils import UniversalLoader
 
-class BaseDataManager(UniversalLoader):
-    def __init__(self, file_path, file_type = None):
-        file_type = file_type or "json"
-        super().__init__(file_path, file_type)
+class BaseDataManager:
+    def __init__(self, file_path):
+        self.work_path = "data/data_manager/"
+        self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
+        self.data = {}
+        self.on_load()
         
     def on_close(self):
         """卸载插件时的清理操作
@@ -15,10 +16,7 @@ class BaseDataManager(UniversalLoader):
         Raises:
             RuntimeError: 保存持久化数据失败时抛出
         """
-        try:
-            self.save()
-        except Exception as e:
-            raise RuntimeError(f"保存持久化数据时出错: {e}")
+        self.save()
 
     def on_load(self):
         """加载插件时的初始化操作
@@ -29,22 +27,30 @@ class BaseDataManager(UniversalLoader):
             RuntimeError: 读取持久化数据失败时抛出
         """
         try:
-            self.load()
-        except Exception as e:
-            if isinstance(e, FileNotFoundError):
-                open(self.file_path, "w").write("")
-                self.save()
+            if os.path.exists(self.file_path):
                 self.load()
+            elif not os.path.exists(self.work_path):
+                os.makedirs(self.work_path)
+                open(self.file_path, "w", encoding="utf-8").write(json.dumps({}))
             else:
-                raise RuntimeError(__class__, f"加载持久化数据时出错: {e}")
-            
-    async def aload(self):
-        await super().aload()
-        self._check_data()
+                open(self.file_path, "w", encoding="utf-8").write(json.dumps({}))
+        except Exception as e:
+                raise RuntimeError(self.__class__.__name__, f"加载持久化数据时出错: {e.title()} - {e}")
         
     def load(self):
-        super().load()
+        with open(self.file_path, "r", encoding="utf-8") as f:
+            try:
+                self.data = json.load(f)
+            except json.JSONDecodeError as e:
+                self.data = {}
         self._check_data()
-    
+        
+    def save(self):
+        try:
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            raise RuntimeError(f"保存持久化数据时出错: {e}")
+        
     def _check_data(self):
         pass

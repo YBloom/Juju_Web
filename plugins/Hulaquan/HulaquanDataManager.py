@@ -18,13 +18,18 @@ class HulaquanDataManager(BaseDataManager):
     功能：
     1.存储/调取卡司排期数据
     2.根据卡司数据有效期刷新
+    
+    {
+        "events":{}
+        "update_time":datetime
+    }
     """
-    def __init__(self, file_path=None, file_type=None):
-        file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
-        super().__init__(file_path, file_type)
+    def __init__(self, file_path=None):
+        #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
+        super().__init__(file_path)
         
     def _check_data(self):
-        self.setdefault("events", {})  # 确保有一个事件字典来存储数据
+        self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
 
     def fetch_and_update_data(self):
         """更新数据
@@ -32,9 +37,9 @@ class HulaquanDataManager(BaseDataManager):
         Returns:
             返回(old_data, new_data)
         """
-        old_data = dict(self)
-        self.dump_hulaquan_events_data()
-        return old_data, self
+        old_data = self.data
+        self.update_hulaquan_events_data()
+        return old_data, self.data
 
     def get_recommendation(self, limit=12, page=0, timeMark=True, tags=None):
         # get events from recommendation API
@@ -55,10 +60,13 @@ class HulaquanDataManager(BaseDataManager):
         
         return json_data["count"], result
 
-    def dump_hulaquan_events_data(self, data_dict=None):
+    def update_hulaquan_events_data(self, data_dict=None):
         try:
-            self.update(data_dict or self.get_events_dict())
-            return self
+            #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
+            data_dict = data_dict or self.get_events_dict()
+            self.data["events"] = data_dict["events"]
+            self.data["update_time"] = data_dict["update_time"]
+            return self.data
         except Exception as e:
             print(f"呼啦圈数据下载失败: {e}")
             return None
@@ -117,10 +125,10 @@ class HulaquanDataManager(BaseDataManager):
         return data
     
     def return_events_data(self):
-        if not self.get("events", None):
-            self.dump_hulaquan_events_data()
+        if not self.data.get("events", None):
+            self.update_hulaquan_events_data()
             print("呼啦圈数据已更新")
-        return self["events"]
+        return self.data["events"]
 
     def search_eventID_by_name(self, event_name):
         data = self.return_events_data()
@@ -172,7 +180,7 @@ class HulaquanDataManager(BaseDataManager):
         update_data = []
         if not __dump:
             new_data_all = self.get_events_dict()
-            old_data_all = dict(self)
+            old_data_all = self.data
         else:
             old_data_all, new_data_all = self.fetch_and_update_data()
         new_data = new_data_all["events"]
