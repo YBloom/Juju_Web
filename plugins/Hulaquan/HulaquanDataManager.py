@@ -38,10 +38,10 @@ class HulaquanDataManager(BaseDataManager):
             返回(old_data, new_data)
         """
         old_data = self.data
-        self.update_hulaquan_events_data()
+        self._update_events_data()
         return old_data, self.data
 
-    def get_recommendation(self, limit=12, page=0, timeMark=True, tags=None):
+    def search_events_data_by_recommendation_link(self, limit=12, page=0, timeMark=True, tags=None):
         # get events from recommendation API
         recommendation_url = "https://clubz.cloudsation.com/site/getevent.html?filter=recommendation&access_token="
         try:
@@ -57,14 +57,15 @@ class HulaquanDataManager(BaseDataManager):
                         result.append(event["basic_info"])
         except requests.RequestException as e:
             return f"Error fetching recommendation: {e}"
-        
         return json_data["count"], result
 
-    def update_hulaquan_events_data(self, data_dict=None):
+    def _update_events_data(self, data_dict=None):
         try:
             #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
             data_dict = data_dict or self.get_events_dict()
             self.data["events"] = data_dict["events"]
+            for eid in list(self.data["events"].keys()):
+                self._update_ticket_details(eid)
             self.data["update_time"] = data_dict["update_time"]
             return self.data
         except Exception as e:
@@ -106,27 +107,26 @@ class HulaquanDataManager(BaseDataManager):
         Returns:
             _type_: _description_
         """
-        data = self.get_all_events()
-        data_dict = {}
+        data = self.search_all_events()
+        data_dic = {"events":{}, "update_time":""}
+        keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
         for event in data:
             event_id = str(event["id"])
-            if event_id not in data_dict:
-                data_dict[event_id] = event
-        data_dic = {}
-        data_dic["events"] = data_dict
+            if event_id not in data_dic["events"]:
+                data_dic["events"][event_id] = {key: event.get(key, None) for key in keys_to_extract}
         data_dic["update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return data_dic
 
-    def get_all_events(self):
+    def search_all_events(self):
         #count = self.get_recommendation(1,0,False)[0]  # Test the connection and the count
         #print(f"Total recommendations available: {count}")
         data = []
-        data += self.get_recommendation(100, 0, True)[1]
+        data += self.search_events_data_by_recommendation_link(100, 0, True)[1]
         return data
     
     def return_events_data(self):
         if not self.data.get("events", None):
-            self.update_hulaquan_events_data()
+            self._update_events_data()
             print("呼啦圈数据已更新")
         return self.data["events"]
 
@@ -140,6 +140,7 @@ class HulaquanDataManager(BaseDataManager):
         return result
         
     def search_event_by_id(self, event_id):
+        # 根据eid查找事件详细信息 主要用来获取余票信息
         event_url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
         try:
             response = requests.get(event_url)
@@ -150,6 +151,16 @@ class HulaquanDataManager(BaseDataManager):
         except requests.RequestException as e:
             print(f"Error fetching event details: {e}")
             return None
+        
+    def get_ticket_details(self, event_id):
+        if not self.data["events"][event_id].get("ticket_details", None):
+            json_data = self.search_event_by_id(event_id)
+            self.data["events"][event_id] = json_data
+        return self.data["events"][event_id]
+    
+    def _update_ticket_details(self, event_id):
+        if self.data["events"][event_id].get("ticket_details", None):
+            self.data["events"][event_id] = self.search_event_by_id(event_id)
         
     def output_data_info(self):
         old_data = self.return_events_data()
@@ -162,7 +173,7 @@ class HulaquanDataManager(BaseDataManager):
     def get_max_ticket_content_length(self, tickets):
         max_len = 0
         for ticket in tickets:
-            s = "{ticket[0]} 余票{ticket[2]}/{ticket[1]}"
+            s = f"{ticket[0]} 余票{ticket[2]}/{ticket[1]}"
             max_len = max(max_len, get_display_width(s))
         return max_len
 
@@ -177,6 +188,7 @@ class HulaquanDataManager(BaseDataManager):
             update_data: list, 包含需要更新的事件数据
             None: 如果没有需要更新的数据
         """
+        
         update_data = []
         if not __dump:
             new_data_all = self.get_events_dict()
@@ -197,7 +209,7 @@ class HulaquanDataManager(BaseDataManager):
         else:
             return False, update_time
         
-    def message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True):
+    def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True):
         query_time = datetime.now()
         result = self.search_eventID_by_name(eName)
         if len(result) > 1:
@@ -222,19 +234,21 @@ class HulaquanDataManager(BaseDataManager):
                         remaining_tickets.append([ticket["title"], ticket["total_ticket"], ticket["left_ticket_count"], ticket["start_time"]])
             max_ticket_info_count = self.get_max_ticket_content_length(remaining_tickets)
             query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
+            url = f"https://clubz.cloudsation.com/event/{eid}.html"
             message = (
                 f"剧名: {title}\n"
                 f"数据更新时间: {query_time_str}\n"
+                f"购票链接：{url}\n"
                 "剩余票务信息:\n"
                 + "\n".join([("✨" if ticket[2] else "❌") 
                                 + ljust_for_chinese(f"{ticket[0]} 余票{ticket[2]}/{ticket[1]}", max_ticket_info_count)
-                                + (" " + (" ".join(saoju.search_casts_by_date_and_name(eName, 
+                                + ((" " + (" ".join(saoju.search_casts_by_date_and_name(eName, 
                                                                                 ticket[3], 
                                                                                 city=extract_city(event_info.get("location", ""))
                                                                                 )
                                                 )
                                         )
-                                ) if show_cast else ""
+                                ) if show_cast else "")
                                 for ticket in remaining_tickets
                                 ])
                 if remaining_tickets else "暂无剩余票务信息。"
@@ -280,7 +294,8 @@ def ljust_for_chinese(s, width, fillchar=' '):
     if current_width >= width:
         return s
     fill_width = width - current_width
-    return s + fillchar * fill_width
+    result = s + fillchar * fill_width
+    return result
 
 def standardize_datetime(dateAndTime):
     current_year = datetime.now().year

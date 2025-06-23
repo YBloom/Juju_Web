@@ -22,28 +22,30 @@ def dateTimeToStr(_time):
     else:
         return _time
 
-def strToDate(date="", time="", dateAndTime=""):
-    # time "08:30"
-        if dateAndTime or (date and time):
-            if (date and time):
-                dateAndTime = date + " " + time
-            try:
-            # 尝试解析包含秒数的格式
-                return datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                # 如果没有秒数，使用不包含秒数的格式
-                return datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M")
-        elif date:
-            return datetime.strptime(date, "%Y-%m-%d")
-        elif time:
-            return datetime.strptime(time, "%H:%M")
-        else:
-            return None
+def parse_datetime(dateAndTime):
+    # 尝试不同的日期时间格式
+    formats = [
+        "%Y-%m-%d %H:%M:%S",  # 格式: 年-月-日 时:分:秒
+        "%Y-%m-%d %H:%M",     # 格式: 年-月-日 时:分
+        "%Y-%m-%d",           # 格式: 年-月-日
+        "%H:%M",              # 格式: 时:分
+        "%H:%M:%S"            # 格式: 时:分:秒
+    ]
+    
+    for fmt in formats:
+        try:
+            return datetime.strptime(dateAndTime, fmt)
+        except ValueError:
+            continue  # 如果当前格式不匹配，尝试下一个格式
+
+    # 如果没有匹配的格式，抛出异常
+    raise ValueError("输入的字符串不匹配已知的格式")
+
         
 def delta_time_list(start_date, end_date):
         # 生成日期列表
-        start_date = strToDate(date=start_date)
-        end_date = strToDate(date=end_date)
+        start_date = parse_datetime(start_date)
+        end_date = parse_datetime(end_date)
         date_list = []
         current_date:datetime = start_date
 
@@ -122,26 +124,31 @@ class SaojuDataManager(BaseDataManager):
         return json_response
     
     def get_data_by_date(self, date, update_delta_max_hours=12):
-        if date in self.data["date_dict"].keys():
-            update_time = strToDate(self.data["update_time_dict"]["date_dict"].get(date, None))
+        if date in list(self.data["date_dict"].keys()):
+            update_time = parse_datetime(self.data["update_time_dict"]["date_dict"].get(date, None))
             if update_time:
                 if (datetime.now() - update_time) < timedelta(hours=update_delta_max_hours):
                     return self.data["date_dict"][date]
+        data = self.search_day(date)
+        if data:
+            self.data["date_dict"][date] = data["show_list"]
+            self.data["update_time_dict"]["date_dict"][date] = dateTimeToStr(datetime.now())
+            return data["show_list"]
         else:
-            data = self.search_day(date)
-            if data:
-                self.data["date_dict"][date] = data["show_list"]
-                self.data["update_time_dict"]["date_dict"][date] = dateTimeToStr(datetime.now())
-                return data["show_list"]
-            else:
-                return None
+            return None
+            
+    def on_search_event_by_date(self, date, city):
+        return f"点击链接查看{date}的音乐剧排期：http://y.saoju.net/yyj/search_day/?date="+date
+        
 
     def search_for_musical_by_date(self, search_name, date_time, city=None):
         # date_time: %Y-%m-%d %H:%M
-        date_time = strToDate(dateAndTime=date_time)
+        date_time = parse_datetime(date_time)
         _date = dateToStr(date_time)
         _time = timeToStr(date_time)
         data = self.get_data_by_date(_date)
+        if not data:
+            return None
         for i in range(len(data)):
             musical = data[i]["musical"]
             if ((city in data[i]["city"]) if city else True) and _time == data[i]["time"] and ((search_name in musical) if isinstance(search_name, str) else all(i in musical for i in search_name) if isinstance(search_name, list) else False):
@@ -155,7 +162,7 @@ class SaojuDataManager(BaseDataManager):
         """
         current_date = datetime.now()
         for date in list(self.data["update_time_dict"]["date_dict"].keys()):
-            date_obj = strToDate(date=date)
+            date_obj = parse_datetime(date)
             if date_obj < current_date:
                 # 如果数据过期，删除该日期的数据
                 del self.data["date_dict"][date]
@@ -204,7 +211,7 @@ class SaojuDataManager(BaseDataManager):
             show = self.search_for_artist(search_name, date)
             for i in show:
                 show_date = dateToStr(date=date) + " " + i["time"]
-                show_date = strToDate(dateAndTime=show_date)
+                show_date = parse_datetime(show_date)
                 schedule.append((show_date, i))
         schedule.sort(key=lambda x: x[0])
         return schedule
