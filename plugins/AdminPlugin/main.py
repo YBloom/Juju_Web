@@ -133,19 +133,6 @@ class AdminPlugin(BasePlugin):
         else:
             await msg.reply(f"撤销失败！用户{user_id}无管理员权限。")
             
-        
-    @bot.request_event()
-    async def handle_request(self, msg: Request):
-        comment = msg.comment
-        if msg.request_type == "friend": 
-            if "剧剧" in comment:
-                self.users_manager.add_user(msg.user_id)
-                await msg.reply(True, comment="加好友请求已通过")
-            else:
-                await msg.reply(False, comment="加好友请求被拒绝")
-        else:
-            self.groups_manager.add_group(msg.group_id)
-            await msg.reply(True, comment="加群请求已通过")
 
         
     async def on_unload(self):
