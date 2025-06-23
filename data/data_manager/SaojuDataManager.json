@@ -6831,6 +6831,10 @@
                     },
                     {
                         "role": "歌队",
+                        "artist": "柳智彦"
+                    },
+                    {
+                        "role": "歌队",
                         "artist": "李季"
                     },
                     {
@@ -6840,10 +6844,6 @@
                     {
                         "role": "歌队",
                         "artist": "姜均"
-                    },
-                    {
-                        "role": "歌队",
-                        "artist": "柳智彦"
                     }
                 ],
                 "theatre": "南京保利大剧院大剧场",
@@ -14551,10 +14551,6 @@
                     },
                     {
                         "role": "歌队",
-                        "artist": "柳智彦"
-                    },
-                    {
-                        "role": "歌队",
                         "artist": "李季"
                     },
                     {
@@ -14564,6 +14560,10 @@
                     {
                         "role": "歌队",
                         "artist": "姜均"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "柳智彦"
                     }
                 ],
                 "theatre": "常州大剧院",
@@ -20639,10 +20639,6 @@
                     },
                     {
                         "role": "歌队",
-                        "artist": "何若水"
-                    },
-                    {
-                        "role": "歌队",
                         "artist": "冯丽冰"
                     },
                     {
@@ -20652,6 +20648,10 @@
                     {
                         "role": "歌队",
                         "artist": "姜均"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "何若水"
                     }
                 ],
                 "theatre": "梅溪湖国际文化艺术中心大剧院",
@@ -21499,19 +21499,19 @@
                     },
                     {
                         "role": "歌队",
-                        "artist": "何若水"
-                    },
-                    {
-                        "role": "歌队",
-                        "artist": "李浩楠"
-                    },
-                    {
-                        "role": "歌队",
                         "artist": "柳智彦"
                     },
                     {
                         "role": "歌队",
                         "artist": "黄骁文"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "何若水"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "李浩楠"
                     }
                 ],
                 "theatre": "坪山大剧院大剧场",
@@ -23506,6 +23506,3516 @@
                 "city": "郑州",
                 "musical": "锦衣卫之刀与花"
             }
+        ],
+        "2025-07-17": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "纳尔齐斯",
+                        "artist": "徐昊"
+                    },
+                    {
+                        "role": "歌尔德蒙",
+                        "artist": "李苏霖"
+                    }
+                ],
+                "theatre": "中国大戏院",
+                "city": "上海",
+                "musical": "纳尔齐斯与歌尔德蒙"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "牛博为"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "刘一谷"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "陈科铭"
+                    }
+                ],
+                "theatre": "星空间6号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "施博威"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "李秋盟"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "李玉言"
+                    }
+                ],
+                "theatre": "星空间1号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "阿尔托",
+                        "artist": "高品"
+                    },
+                    {
+                        "role": "梵高",
+                        "artist": "曹珺"
+                    },
+                    {
+                        "role": "博士",
+                        "artist": "智博闻"
+                    }
+                ],
+                "theatre": "星空间17号·NFP小剧场",
+                "city": "上海",
+                "musical": "阿尔托，梵高"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "游亦",
+                        "artist": "邵奕磊"
+                    },
+                    {
+                        "role": "小松",
+                        "artist": "张家祺"
+                    },
+                    {
+                        "role": "小伟",
+                        "artist": "何严浩"
+                    }
+                ],
+                "theatre": "星空间8号·一台好戏方寸剧场",
+                "city": "上海",
+                "musical": "去你的夏天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "年蔓婷"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "党韫葳"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "田梦"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "夏云梦"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "蒋依敏"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "曼曼",
+                        "artist": "钱安琪"
+                    },
+                    {
+                        "role": "沈文君",
+                        "artist": "赵雨卉"
+                    },
+                    {
+                        "role": "齐志平",
+                        "artist": "韩冰儿"
+                    }
+                ],
+                "theatre": "上海话剧艺术中心D6空间",
+                "city": "上海",
+                "musical": "蝶变"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Eggy",
+                        "artist": "温升宝"
+                    },
+                    {
+                        "role": "Brandon",
+                        "artist": "吴志军"
+                    },
+                    {
+                        "role": "Doris",
+                        "artist": "徐杭"
+                    }
+                ],
+                "theatre": "星空间28号·好好有戏小剧场",
+                "city": "上海",
+                "musical": "#0528"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "范·米格伦",
+                        "artist": "遇泓羊"
+                    },
+                    {
+                        "role": "拉乔·皮勒",
+                        "artist": "郭虹旭"
+                    },
+                    {
+                        "role": "马丁·布雷德乌斯",
+                        "artist": "倪晔"
+                    }
+                ],
+                "theatre": "星空间·星空穹顶剧场",
+                "city": "上海",
+                "musical": "“Savior”"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "里奥",
+                        "artist": "宋元明"
+                    },
+                    {
+                        "role": "韦恩",
+                        "artist": "薛钦元"
+                    }
+                ],
+                "theatre": "星空间18号·谜剧场",
+                "city": "上海",
+                "musical": "怪物"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Teddy",
+                        "artist": "王书琦"
+                    },
+                    {
+                        "role": "Alex",
+                        "artist": "刘朱烨"
+                    },
+                    {
+                        "role": "David",
+                        "artist": "庞东轩"
+                    }
+                ],
+                "theatre": "星空间168号·谜剧场",
+                "city": "上海",
+                "musical": "幽灵"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "于格",
+                        "artist": "叶宇锋"
+                    },
+                    {
+                        "role": "雕像",
+                        "artist": "卢翰林"
+                    }
+                ],
+                "theatre": "星空间1794号·临窗小剧场",
+                "city": "上海",
+                "musical": "雕像"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Poe",
+                        "artist": "白一博"
+                    },
+                    {
+                        "role": "Agatha",
+                        "artist": "陈旭"
+                    },
+                    {
+                        "role": "Doyle",
+                        "artist": "吴盛祥"
+                    },
+                    {
+                        "role": "Pride",
+                        "artist": "陈近东"
+                    },
+                    {
+                        "role": "Lust",
+                        "artist": "陈佳艺"
+                    },
+                    {
+                        "role": "Envy",
+                        "artist": "潘延"
+                    },
+                    {
+                        "role": "Greed",
+                        "artist": "刘昱含"
+                    }
+                ],
+                "theatre": "轮盘剧场",
+                "city": "上海",
+                "musical": "Roulette轮盘"
+            },
+            {
+                "time": "20:00",
+                "cast": [
+                    {
+                        "role": "PB",
+                        "artist": "邓贤凌"
+                    },
+                    {
+                        "role": "Jo",
+                        "artist": "胥子含"
+                    }
+                ],
+                "theatre": "亚洲大厦·星空间黑匣子",
+                "city": "上海",
+                "musical": "海雾"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "方唐镜",
+                        "artist": "刘守正"
+                    },
+                    {
+                        "role": "阿细",
+                        "artist": "郑君炽"
+                    },
+                    {
+                        "role": "杨秀秀",
+                        "artist": "丁彤欣"
+                    },
+                    {
+                        "role": "说书人",
+                        "artist": "张焱"
+                    }
+                ],
+                "theatre": "天桥艺术中心大剧场",
+                "city": "北京",
+                "musical": "大状王"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "郑金铠"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "樊哲"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "杨浩然"
+                    }
+                ],
+                "theatre": "兜兜米新空间",
+                "city": "成都",
+                "musical": "辛吉路的画材店"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "武冠辰"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "曾鑫"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "李坤嘉"
+                    }
+                ],
+                "theatre": "阿波罗尼亚·广州馆",
+                "city": "广州",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "曾阵"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "邓欣锐"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "陈楷"
+                    }
+                ],
+                "theatre": "桑塔露琪亚·广州馆",
+                "city": "广州",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "钟子崴"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "周宇杰"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "杜牧"
+                    }
+                ],
+                "theatre": "好好有戏小剧场",
+                "city": "广州",
+                "musical": "辛吉路的画材店"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "奥尔森",
+                        "artist": "刘凡滔"
+                    },
+                    {
+                        "role": "克雷加德",
+                        "artist": "张腾"
+                    },
+                    {
+                        "role": "戈布",
+                        "artist": "叶锐"
+                    },
+                    {
+                        "role": "弗雷",
+                        "artist": "梁宵默"
+                    },
+                    {
+                        "role": "玛尼",
+                        "artist": "言佳航"
+                    },
+                    {
+                        "role": "伊敦",
+                        "artist": "黄玟宇"
+                    }
+                ],
+                "theatre": "广州塔剧场新空间",
+                "city": "广州",
+                "musical": "翻国王棋"
+            },
+            {
+                "time": "19:00",
+                "cast": [],
+                "theatre": "开心麻花老门东沉浸剧场",
+                "city": "南京",
+                "musical": "醉后赢家"
+            }
+        ],
+        "2025-07-23": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "纳尔齐斯",
+                        "artist": "祝颂皓"
+                    },
+                    {
+                        "role": "歌尔德蒙",
+                        "artist": "李苏霖"
+                    }
+                ],
+                "theatre": "中国大戏院",
+                "city": "上海",
+                "musical": "纳尔齐斯与歌尔德蒙"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "爱德华",
+                        "artist": "顾易"
+                    },
+                    {
+                        "role": "乔纳森",
+                        "artist": "卢翰林"
+                    },
+                    {
+                        "role": "玛莎",
+                        "artist": "钱安琪"
+                    }
+                ],
+                "theatre": "星空间1023号·涵金小剧场",
+                "city": "上海",
+                "musical": "嗜血博士"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "朱家鹏"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "姜崃"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "朱亮"
+                    }
+                ],
+                "theatre": "星空间6号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "高品"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "李秋盟"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "陈志"
+                    }
+                ],
+                "theatre": "星空间1号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "赵钱龙"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "董豫辰"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "林大钦"
+                    }
+                ],
+                "theatre": "星空间2号·好好有戏剧场",
+                "city": "上海",
+                "musical": "辛吉路的画材店"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "霍普",
+                        "artist": "刘子赫"
+                    },
+                    {
+                        "role": "怀恩",
+                        "artist": "魏忠杰"
+                    },
+                    {
+                        "role": "守塔人",
+                        "artist": "翟松"
+                    }
+                ],
+                "theatre": "星空间9号·鲸剧场",
+                "city": "上海",
+                "musical": "灯塔"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "游亦",
+                        "artist": "邵奕磊"
+                    },
+                    {
+                        "role": "小松",
+                        "artist": "郝李英杰"
+                    },
+                    {
+                        "role": "小伟",
+                        "artist": "牛博为"
+                    }
+                ],
+                "theatre": "星空间8号·一台好戏方寸剧场",
+                "city": "上海",
+                "musical": "去你的夏天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "杜钇樵"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "郑涵一"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "田梦"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "夏云梦"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "蒋依敏"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Eggy",
+                        "artist": "叶宇锋"
+                    },
+                    {
+                        "role": "Brandon",
+                        "artist": "于滨嘉"
+                    },
+                    {
+                        "role": "Doris",
+                        "artist": "李珏"
+                    }
+                ],
+                "theatre": "星空间28号·好好有戏小剧场",
+                "city": "上海",
+                "musical": "#0528"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "范·米格伦",
+                        "artist": "郑艺彬"
+                    },
+                    {
+                        "role": "拉乔·皮勒",
+                        "artist": "白倬铭"
+                    },
+                    {
+                        "role": "马丁·布雷德乌斯",
+                        "artist": "倪晔"
+                    }
+                ],
+                "theatre": "星空间·星空穹顶剧场",
+                "city": "上海",
+                "musical": "“Savior”"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "里奥",
+                        "artist": "陈诗"
+                    },
+                    {
+                        "role": "韦恩",
+                        "artist": "孙一城"
+                    }
+                ],
+                "theatre": "星空间18号·谜剧场",
+                "city": "上海",
+                "musical": "怪物"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "李功一",
+                        "artist": "张智涵"
+                    },
+                    {
+                        "role": "高景行",
+                        "artist": "王智威"
+                    },
+                    {
+                        "role": "小静",
+                        "artist": "程晨"
+                    },
+                    {
+                        "role": "李泰辅",
+                        "artist": "栾靖宇"
+                    },
+                    {
+                        "role": "原康孝",
+                        "artist": "李泽晨"
+                    },
+                    {
+                        "role": "高正",
+                        "artist": "尚一航"
+                    }
+                ],
+                "theatre": "星空间10号·MOriginal Box",
+                "city": "上海",
+                "musical": "流星之绊"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Teddy",
+                        "artist": "吴盛祥"
+                    },
+                    {
+                        "role": "Alex",
+                        "artist": "相征"
+                    },
+                    {
+                        "role": "David",
+                        "artist": "钱蒙楠"
+                    }
+                ],
+                "theatre": "星空间168号·谜剧场",
+                "city": "上海",
+                "musical": "幽灵"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "于格",
+                        "artist": "邵玎"
+                    },
+                    {
+                        "role": "雕像",
+                        "artist": "徐杭"
+                    }
+                ],
+                "theatre": "星空间1794号·临窗小剧场",
+                "city": "上海",
+                "musical": "雕像"
+            },
+            {
+                "time": "20:00",
+                "cast": [
+                    {
+                        "role": "PB",
+                        "artist": "韩冰儿"
+                    },
+                    {
+                        "role": "Jo",
+                        "artist": "胥子含"
+                    }
+                ],
+                "theatre": "亚洲大厦·星空间黑匣子",
+                "city": "上海",
+                "musical": "海雾"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "叶锐"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "唐浩瑜"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "杜牧"
+                    }
+                ],
+                "theatre": "好好有戏小剧场",
+                "city": "广州",
+                "musical": "辛吉路的画材店"
+            }
+        ],
+        "2025-07-24": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "牛博为"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "邵奕磊"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "陈楷"
+                    }
+                ],
+                "theatre": "星空间6号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "陈科铭"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "朱亚洲"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "张家祺"
+                    }
+                ],
+                "theatre": "星空间1号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "霍普",
+                        "artist": "刘子赫"
+                    },
+                    {
+                        "role": "怀恩",
+                        "artist": "梁宵默"
+                    },
+                    {
+                        "role": "守塔人",
+                        "artist": "李秋盟"
+                    }
+                ],
+                "theatre": "星空间9号·鲸剧场",
+                "city": "上海",
+                "musical": "灯塔"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "阿尔托",
+                        "artist": "臧鲁滨"
+                    },
+                    {
+                        "role": "梵高",
+                        "artist": "郭之阳"
+                    },
+                    {
+                        "role": "博士",
+                        "artist": "褚威"
+                    }
+                ],
+                "theatre": "星空间17号·NFP小剧场",
+                "city": "上海",
+                "musical": "阿尔托，梵高"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "游亦",
+                        "artist": "李政绪"
+                    },
+                    {
+                        "role": "小松",
+                        "artist": "朱亮"
+                    },
+                    {
+                        "role": "小伟",
+                        "artist": "陈志"
+                    }
+                ],
+                "theatre": "星空间8号·一台好戏方寸剧场",
+                "city": "上海",
+                "musical": "去你的夏天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "赵雨卉"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "党韫葳"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "胥子含"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "夏云梦"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "王明怡"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "曼曼",
+                        "artist": "赵嘉艳"
+                    },
+                    {
+                        "role": "沈文君",
+                        "artist": "张沁丹"
+                    },
+                    {
+                        "role": "齐志平",
+                        "artist": "刘泽星"
+                    }
+                ],
+                "theatre": "上海话剧艺术中心D6空间",
+                "city": "上海",
+                "musical": "蝶变"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Eggy",
+                        "artist": "李存贤"
+                    },
+                    {
+                        "role": "Brandon",
+                        "artist": "林大钦"
+                    },
+                    {
+                        "role": "Doris",
+                        "artist": "王浩楠"
+                    }
+                ],
+                "theatre": "星空间28号·好好有戏小剧场",
+                "city": "上海",
+                "musical": "#0528"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "范·米格伦",
+                        "artist": "郑艺彬"
+                    },
+                    {
+                        "role": "拉乔·皮勒",
+                        "artist": "王逸飞"
+                    },
+                    {
+                        "role": "马丁·布雷德乌斯",
+                        "artist": "祝颂皓"
+                    }
+                ],
+                "theatre": "星空间·星空穹顶剧场",
+                "city": "上海",
+                "musical": "“Savior”"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "里奥",
+                        "artist": "庞东轩"
+                    },
+                    {
+                        "role": "韦恩",
+                        "artist": "薛钦元"
+                    }
+                ],
+                "theatre": "星空间18号·谜剧场",
+                "city": "上海",
+                "musical": "怪物"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Teddy",
+                        "artist": "卢翰林"
+                    },
+                    {
+                        "role": "Alex",
+                        "artist": "徐佳文"
+                    },
+                    {
+                        "role": "David",
+                        "artist": "于世源"
+                    }
+                ],
+                "theatre": "星空间168号·谜剧场",
+                "city": "上海",
+                "musical": "幽灵"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Lucas",
+                        "artist": "周宇杰"
+                    },
+                    {
+                        "role": "Abby",
+                        "artist": "王玙璠"
+                    },
+                    {
+                        "role": "Daniel",
+                        "artist": "万钰彬"
+                    }
+                ],
+                "theatre": "珍珑剧场",
+                "city": "上海",
+                "musical": "珍珑"
+            },
+            {
+                "time": "20:00",
+                "cast": [
+                    {
+                        "role": "PB",
+                        "artist": "吴杭律"
+                    },
+                    {
+                        "role": "Jo",
+                        "artist": "王洁璐"
+                    }
+                ],
+                "theatre": "亚洲大厦·星空间黑匣子",
+                "city": "上海",
+                "musical": "海雾"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "武冠辰"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "何严浩"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "巴文豪"
+                    }
+                ],
+                "theatre": "阿波罗尼亚·广州馆",
+                "city": "广州",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "曾阵"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "陈政宇"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "张梁"
+                    }
+                ],
+                "theatre": "桑塔露琪亚·广州馆",
+                "city": "广州",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "奥尔森",
+                        "artist": "丁梓奕"
+                    },
+                    {
+                        "role": "克雷加德",
+                        "artist": "张腾"
+                    },
+                    {
+                        "role": "戈布",
+                        "artist": "吴嘉怡"
+                    },
+                    {
+                        "role": "弗雷",
+                        "artist": "张飞扬"
+                    },
+                    {
+                        "role": "玛尼",
+                        "artist": "言佳航"
+                    },
+                    {
+                        "role": "伊敦",
+                        "artist": "林凡靖"
+                    }
+                ],
+                "theatre": "广州塔剧场新空间",
+                "city": "广州",
+                "musical": "翻国王棋"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "石头",
+                        "artist": "王书琦"
+                    },
+                    {
+                        "role": "吴名士",
+                        "artist": "张淼龙"
+                    },
+                    {
+                        "role": "洪瑛",
+                        "artist": "刘羿含"
+                    },
+                    {
+                        "role": "江鱼儿",
+                        "artist": "安吉儿"
+                    },
+                    {
+                        "role": "黄九良",
+                        "artist": "陈卓"
+                    },
+                    {
+                        "role": "范泰",
+                        "artist": "孙晨恺"
+                    }
+                ],
+                "theatre": "茶无此人 · 一台好戏小剧场",
+                "city": "杭州",
+                "musical": "茶无此人"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "NoVA",
+                        "artist": "王款儿"
+                    },
+                    {
+                        "role": "O126",
+                        "artist": "郝李英杰"
+                    }
+                ],
+                "theatre": "浙影时代·M511未来影城",
+                "city": "杭州",
+                "musical": "宇宙大明星"
+            }
+        ],
+        "2025-07-26": [
+            {
+                "time": "14:00",
+                "cast": [
+                    {
+                        "role": "曼曼",
+                        "artist": "陈玉婷"
+                    },
+                    {
+                        "role": "沈文君",
+                        "artist": "丁辰西"
+                    },
+                    {
+                        "role": "齐志平",
+                        "artist": "刘泽星"
+                    }
+                ],
+                "theatre": "上海话剧艺术中心D6空间",
+                "city": "上海",
+                "musical": "蝶变"
+            },
+            {
+                "time": "14:00",
+                "cast": [
+                    {
+                        "role": "1900",
+                        "artist": "徐均朔"
+                    },
+                    {
+                        "role": "莫顿",
+                        "artist": "翟李朔天"
+                    },
+                    {
+                        "role": "蒂姆",
+                        "artist": "杨皓晨"
+                    },
+                    {
+                        "role": "盖亚",
+                        "artist": "李炜铃"
+                    },
+                    {
+                        "role": "丹尼",
+                        "artist": "李信"
+                    },
+                    {
+                        "role": "船长",
+                        "artist": "张琦铭"
+                    }
+                ],
+                "theatre": "上海西岸大剧院",
+                "city": "上海",
+                "musical": "海上钢琴师"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "纳尔齐斯",
+                        "artist": "邵立君"
+                    },
+                    {
+                        "role": "歌尔德蒙",
+                        "artist": "相征"
+                    }
+                ],
+                "theatre": "中国大戏院",
+                "city": "上海",
+                "musical": "纳尔齐斯与歌尔德蒙"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "爱德华",
+                        "artist": "朱微之"
+                    },
+                    {
+                        "role": "乔纳森",
+                        "artist": "钱蒙楠"
+                    },
+                    {
+                        "role": "玛莎",
+                        "artist": "罗玉玲"
+                    }
+                ],
+                "theatre": "星空间1023号·涵金小剧场",
+                "city": "上海",
+                "musical": "嗜血博士"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "朱家鹏"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "宋周鑫"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "高品"
+                    }
+                ],
+                "theatre": "星空间6号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "温升宝"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "于滨嘉"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "林大钦"
+                    }
+                ],
+                "theatre": "星空间2号·好好有戏剧场",
+                "city": "上海",
+                "musical": "辛吉路的画材店"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "王洁璐"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "马小乔"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "徐郑凯伊"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "韩冰儿"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "王明怡"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "程小时",
+                        "artist": "舒荣波"
+                    },
+                    {
+                        "role": "陆光",
+                        "artist": "邱俊阳"
+                    },
+                    {
+                        "role": "乔苓",
+                        "artist": "邓贤凌"
+                    },
+                    {
+                        "role": "林贞/陈潇妈",
+                        "artist": "沈恬"
+                    },
+                    {
+                        "role": "陈潇/陆鸿斌",
+                        "artist": "周波"
+                    }
+                ],
+                "theatre": "时光剧场",
+                "city": "上海",
+                "musical": "时光代理人"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "Eggy",
+                        "artist": "陈科铭"
+                    },
+                    {
+                        "role": "Brandon",
+                        "artist": "董豫辰"
+                    },
+                    {
+                        "role": "Doris",
+                        "artist": "刘一谷"
+                    }
+                ],
+                "theatre": "星空间28号·好好有戏小剧场",
+                "city": "上海",
+                "musical": "#0528"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "叶白",
+                        "artist": "许昌泰"
+                    },
+                    {
+                        "role": "小白",
+                        "artist": "施博威"
+                    },
+                    {
+                        "role": "露露",
+                        "artist": "黄可"
+                    }
+                ],
+                "theatre": "星空间12号·耶比剧场",
+                "city": "上海",
+                "musical": "当你心动时"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "范·米格伦",
+                        "artist": "遇泓羊"
+                    },
+                    {
+                        "role": "拉乔·皮勒",
+                        "artist": "王逸飞"
+                    },
+                    {
+                        "role": "马丁·布雷德乌斯",
+                        "artist": "倪晔"
+                    }
+                ],
+                "theatre": "星空间·星空穹顶剧场",
+                "city": "上海",
+                "musical": "“Savior”"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "里奥",
+                        "artist": "蓝浩"
+                    },
+                    {
+                        "role": "韦恩",
+                        "artist": "万钰彬"
+                    }
+                ],
+                "theatre": "星空间18号·谜剧场",
+                "city": "上海",
+                "musical": "怪物"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "海曼",
+                        "artist": "夏阳"
+                    },
+                    {
+                        "role": "威廉",
+                        "artist": "何铭海"
+                    },
+                    {
+                        "role": "贝拉",
+                        "artist": "钱安琪"
+                    },
+                    {
+                        "role": "阿曼达",
+                        "artist": "洪果"
+                    }
+                ],
+                "theatre": "星空间8808号·涵金剧场",
+                "city": "上海",
+                "musical": "末日迷途"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "李功一",
+                        "artist": "张博俊"
+                    },
+                    {
+                        "role": "高景行",
+                        "artist": "王智威"
+                    },
+                    {
+                        "role": "小静",
+                        "artist": "吴杭律"
+                    },
+                    {
+                        "role": "李泰辅",
+                        "artist": "杨浩然"
+                    },
+                    {
+                        "role": "原康孝",
+                        "artist": "朱冠霖"
+                    },
+                    {
+                        "role": "高正",
+                        "artist": "尚一航"
+                    }
+                ],
+                "theatre": "星空间10号·MOriginal Box",
+                "city": "上海",
+                "musical": "流星之绊"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "于格",
+                        "artist": "徐佳文"
+                    },
+                    {
+                        "role": "雕像",
+                        "artist": "卢翰林"
+                    }
+                ],
+                "theatre": "星空间1794号·临窗小剧场",
+                "city": "上海",
+                "musical": "雕像"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "Poe",
+                        "artist": "孙一城"
+                    },
+                    {
+                        "role": "Agatha",
+                        "artist": "陈旭"
+                    },
+                    {
+                        "role": "Doyle",
+                        "artist": "朱羿达"
+                    },
+                    {
+                        "role": "Pride",
+                        "artist": "陈近东"
+                    },
+                    {
+                        "role": "Lust",
+                        "artist": "陈佳艺"
+                    },
+                    {
+                        "role": "Envy",
+                        "artist": "李伯尧"
+                    },
+                    {
+                        "role": "Greed",
+                        "artist": "刘昱含"
+                    }
+                ],
+                "theatre": "轮盘剧场",
+                "city": "上海",
+                "musical": "Roulette轮盘"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "张楚岚",
+                        "artist": "李卓远"
+                    },
+                    {
+                        "role": "冯宝宝",
+                        "artist": "叶新"
+                    },
+                    {
+                        "role": "王也",
+                        "artist": "刘彬濠"
+                    },
+                    {
+                        "role": "诸葛青",
+                        "artist": "施天玮"
+                    },
+                    {
+                        "role": "老天师",
+                        "artist": "刘牧"
+                    },
+                    {
+                        "role": "夏禾",
+                        "artist": "陈旭"
+                    },
+                    {
+                        "role": "风莎燕",
+                        "artist": "高崇"
+                    },
+                    {
+                        "role": "张灵玉",
+                        "artist": "申昊川"
+                    }
+                ],
+                "theatre": "人民大舞台",
+                "city": "上海",
+                "musical": "一人之下"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "纳尔齐斯",
+                        "artist": "纪晓坤"
+                    },
+                    {
+                        "role": "歌尔德蒙",
+                        "artist": "汤佳明"
+                    }
+                ],
+                "theatre": "中国大戏院",
+                "city": "上海",
+                "musical": "纳尔齐斯与歌尔德蒙"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "爱德华",
+                        "artist": "顾易"
+                    },
+                    {
+                        "role": "乔纳森",
+                        "artist": "何铭海"
+                    },
+                    {
+                        "role": "玛莎",
+                        "artist": "葛洧吟"
+                    }
+                ],
+                "theatre": "星空间1023号·涵金小剧场",
+                "city": "上海",
+                "musical": "嗜血博士"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "郝李英杰"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "李秋盟"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "陈志"
+                    }
+                ],
+                "theatre": "星空间6号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "施博威"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "邵奕磊"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "张家祺"
+                    }
+                ],
+                "theatre": "星空间1号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "赵钱龙"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "王桓"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "王浩楠"
+                    }
+                ],
+                "theatre": "星空间2号·好好有戏剧场",
+                "city": "上海",
+                "musical": "辛吉路的画材店"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "霍普",
+                        "artist": "刘凡滔"
+                    },
+                    {
+                        "role": "怀恩",
+                        "artist": "冯文彦"
+                    },
+                    {
+                        "role": "守塔人",
+                        "artist": "脱骁尧"
+                    }
+                ],
+                "theatre": "星空间9号·鲸剧场",
+                "city": "上海",
+                "musical": "灯塔"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "阿尔托",
+                        "artist": "高品"
+                    },
+                    {
+                        "role": "梵高",
+                        "artist": "宋元明"
+                    },
+                    {
+                        "role": "博士",
+                        "artist": "侯俊羽"
+                    }
+                ],
+                "theatre": "星空间17号·NFP小剧场",
+                "city": "上海",
+                "musical": "阿尔托，梵高"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "游亦",
+                        "artist": "郭洋坤"
+                    },
+                    {
+                        "role": "小松",
+                        "artist": "高尔金宝音"
+                    },
+                    {
+                        "role": "小伟",
+                        "artist": "赵轩民"
+                    }
+                ],
+                "theatre": "星空间8号·一台好戏方寸剧场",
+                "city": "上海",
+                "musical": "去你的夏天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "郭美冉"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "孟爽"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "饶佳辛"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "段舒扬"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "毕源格"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "曼曼",
+                        "artist": "郭耀嵘"
+                    },
+                    {
+                        "role": "沈文君",
+                        "artist": "党韫葳"
+                    },
+                    {
+                        "role": "齐志平",
+                        "artist": "张琛"
+                    }
+                ],
+                "theatre": "上海话剧艺术中心D6空间",
+                "city": "上海",
+                "musical": "蝶变"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "程小时",
+                        "artist": "滕春鹏"
+                    },
+                    {
+                        "role": "陆光",
+                        "artist": "殷浩伦"
+                    },
+                    {
+                        "role": "乔苓",
+                        "artist": "钱安琪"
+                    },
+                    {
+                        "role": "林贞/陈潇妈",
+                        "artist": "廖婧媛"
+                    },
+                    {
+                        "role": "陈潇/陆鸿斌",
+                        "artist": "李泽熙"
+                    }
+                ],
+                "theatre": "时光剧场",
+                "city": "上海",
+                "musical": "时光代理人"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Eggy",
+                        "artist": "江泽辰"
+                    },
+                    {
+                        "role": "Brandon",
+                        "artist": "尹智博"
+                    },
+                    {
+                        "role": "Doris",
+                        "artist": "王颢珏"
+                    }
+                ],
+                "theatre": "星空间28号·好好有戏小剧场",
+                "city": "上海",
+                "musical": "#0528"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "叶白",
+                        "artist": "杨浩然"
+                    },
+                    {
+                        "role": "小白",
+                        "artist": "王珏语涵"
+                    },
+                    {
+                        "role": "露露",
+                        "artist": "刘昱含"
+                    }
+                ],
+                "theatre": "星空间12号·耶比剧场",
+                "city": "上海",
+                "musical": "当你心动时"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "范·米格伦",
+                        "artist": "刘岩"
+                    },
+                    {
+                        "role": "拉乔·皮勒",
+                        "artist": "郭虹旭"
+                    },
+                    {
+                        "role": "马丁·布雷德乌斯",
+                        "artist": "刘阳"
+                    }
+                ],
+                "theatre": "星空间·星空穹顶剧场",
+                "city": "上海",
+                "musical": "“Savior”"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "里奥",
+                        "artist": "赵奕然"
+                    },
+                    {
+                        "role": "韦恩",
+                        "artist": "刘朱烨"
+                    }
+                ],
+                "theatre": "星空间18号·谜剧场",
+                "city": "上海",
+                "musical": "怪物"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "江清源",
+                        "artist": "吴志军"
+                    },
+                    {
+                        "role": "孔繁星",
+                        "artist": "徐杭"
+                    },
+                    {
+                        "role": "叶思源",
+                        "artist": "王智威"
+                    },
+                    {
+                        "role": "戴望星",
+                        "artist": "严小北"
+                    },
+                    {
+                        "role": "多功能",
+                        "artist": "胡格畅"
+                    }
+                ],
+                "theatre": "星图剧场",
+                "city": "上海",
+                "musical": "星图"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Teddy",
+                        "artist": "吴盛祥"
+                    },
+                    {
+                        "role": "Alex",
+                        "artist": "邵立君"
+                    },
+                    {
+                        "role": "David",
+                        "artist": "于世源"
+                    }
+                ],
+                "theatre": "星空间168号·谜剧场",
+                "city": "上海",
+                "musical": "幽灵"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "1900",
+                        "artist": "刘令飞"
+                    },
+                    {
+                        "role": "莫顿",
+                        "artist": "翟李朔天"
+                    },
+                    {
+                        "role": "蒂姆",
+                        "artist": "钟嘉诚"
+                    },
+                    {
+                        "role": "盖亚",
+                        "artist": "李炜铃"
+                    },
+                    {
+                        "role": "丹尼",
+                        "artist": "李信"
+                    },
+                    {
+                        "role": "船长",
+                        "artist": "张琦铭"
+                    }
+                ],
+                "theatre": "上海西岸大剧院",
+                "city": "上海",
+                "musical": "海上钢琴师"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "于格",
+                        "artist": "叶宇锋"
+                    },
+                    {
+                        "role": "雕像",
+                        "artist": "邱俊阳"
+                    }
+                ],
+                "theatre": "星空间1794号·临窗小剧场",
+                "city": "上海",
+                "musical": "雕像"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Poe",
+                        "artist": "白一博"
+                    },
+                    {
+                        "role": "Agatha",
+                        "artist": "黄玟宇"
+                    },
+                    {
+                        "role": "Doyle",
+                        "artist": "刘君豪"
+                    },
+                    {
+                        "role": "Pride",
+                        "artist": "陈近东"
+                    },
+                    {
+                        "role": "Lust",
+                        "artist": "陈蕴"
+                    },
+                    {
+                        "role": "Envy",
+                        "artist": "潘延"
+                    },
+                    {
+                        "role": "Greed",
+                        "artist": "顾轩畅"
+                    }
+                ],
+                "theatre": "轮盘剧场",
+                "city": "上海",
+                "musical": "Roulette轮盘"
+            },
+            {
+                "time": "20:00",
+                "cast": [
+                    {
+                        "role": "PB",
+                        "artist": "吴杭律"
+                    },
+                    {
+                        "role": "Jo",
+                        "artist": "张烜尔"
+                    }
+                ],
+                "theatre": "亚洲大厦·星空间黑匣子",
+                "city": "上海",
+                "musical": "海雾"
+            },
+            {
+                "time": "19:30",
+                "cast": [],
+                "theatre": "小柯剧场",
+                "city": "北京",
+                "musical": "三里屯42号"
+            },
+            {
+                "time": "19:30",
+                "cast": [],
+                "theatre": "北京喜剧院",
+                "city": "北京",
+                "musical": "熊猫"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "卡路",
+                        "artist": "陈思霖"
+                    },
+                    {
+                        "role": "塞修",
+                        "artist": "唐浩瑜"
+                    },
+                    {
+                        "role": "辛吉",
+                        "artist": "赵嘉恒"
+                    }
+                ],
+                "theatre": "兜兜米新空间",
+                "city": "成都",
+                "musical": "辛吉路的画材店"
+            },
+            {
+                "time": "14:00",
+                "cast": [
+                    {
+                        "role": "奥尔森",
+                        "artist": "丁梓奕"
+                    },
+                    {
+                        "role": "克雷加德",
+                        "artist": "张腾"
+                    },
+                    {
+                        "role": "戈布",
+                        "artist": "叶锐"
+                    },
+                    {
+                        "role": "弗雷",
+                        "artist": "梁宵默"
+                    },
+                    {
+                        "role": "玛尼",
+                        "artist": "言佳航"
+                    },
+                    {
+                        "role": "伊敦",
+                        "artist": "林凡靖"
+                    }
+                ],
+                "theatre": "广州塔剧场新空间",
+                "city": "广州",
+                "musical": "翻国王棋"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "王博睿"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "曾鑫"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "李坤嘉"
+                    }
+                ],
+                "theatre": "阿波罗尼亚·广州馆",
+                "city": "广州",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "曾阵"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "陈政宇"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "王炳"
+                    }
+                ],
+                "theatre": "桑塔露琪亚·广州馆",
+                "city": "广州",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "巴文豪"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "李政绪"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "武冠辰"
+                    }
+                ],
+                "theatre": "桑塔露琪亚·广州馆",
+                "city": "广州",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "奥尔森",
+                        "artist": "刘子赫"
+                    },
+                    {
+                        "role": "克雷加德",
+                        "artist": "张腾"
+                    },
+                    {
+                        "role": "戈布",
+                        "artist": "吴嘉怡"
+                    },
+                    {
+                        "role": "弗雷",
+                        "artist": "张飞扬"
+                    },
+                    {
+                        "role": "玛尼",
+                        "artist": "言佳航"
+                    },
+                    {
+                        "role": "伊敦",
+                        "artist": "林凡靖"
+                    }
+                ],
+                "theatre": "广州塔剧场新空间",
+                "city": "广州",
+                "musical": "翻国王棋"
+            },
+            {
+                "time": "15:00",
+                "cast": [
+                    {
+                        "role": "费尧多尔",
+                        "artist": "付翔"
+                    },
+                    {
+                        "role": "德米特里",
+                        "artist": "王瀚宇"
+                    },
+                    {
+                        "role": "伊万",
+                        "artist": "李炜鹏"
+                    },
+                    {
+                        "role": "阿辽沙",
+                        "artist": "郑艺彬"
+                    },
+                    {
+                        "role": "斯乜尔加科夫",
+                        "artist": "郭嘉轩"
+                    }
+                ],
+                "theatre": "坪山大剧院大剧场",
+                "city": "深圳",
+                "musical": "卡拉马佐夫兄弟"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "梅瑞狄斯",
+                        "artist": "徐晨曦"
+                    },
+                    {
+                        "role": "爱德蒙",
+                        "artist": "姜呈洋"
+                    },
+                    {
+                        "role": "埃里克",
+                        "artist": "王瑞"
+                    }
+                ],
+                "theatre": "优剧场 YO!THEATER",
+                "city": "南京",
+                "musical": "FLAMES火焰"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "梅瑞狄斯",
+                        "artist": "杭筱玥"
+                    },
+                    {
+                        "role": "爱德蒙",
+                        "artist": "瞿艺"
+                    },
+                    {
+                        "role": "埃里克",
+                        "artist": "王瑞"
+                    }
+                ],
+                "theatre": "优剧场 YO!THEATER",
+                "city": "南京",
+                "musical": "FLAMES火焰"
+            },
+            {
+                "time": "14:30",
+                "cast": [
+                    {
+                        "role": "石头",
+                        "artist": "元佳辰"
+                    },
+                    {
+                        "role": "吴名士",
+                        "artist": "陈韬"
+                    },
+                    {
+                        "role": "洪瑛",
+                        "artist": "王款儿"
+                    },
+                    {
+                        "role": "江鱼儿",
+                        "artist": "王晶琬"
+                    },
+                    {
+                        "role": "黄九良",
+                        "artist": "戴玉龙"
+                    },
+                    {
+                        "role": "范泰",
+                        "artist": "宋凯文"
+                    }
+                ],
+                "theatre": "茶无此人 · 一台好戏小剧场",
+                "city": "杭州",
+                "musical": "茶无此人"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "NoVA",
+                        "artist": "杜鑫艳"
+                    },
+                    {
+                        "role": "O126",
+                        "artist": "元佳辰"
+                    }
+                ],
+                "theatre": "浙影时代·M511未来影城",
+                "city": "杭州",
+                "musical": "宇宙大明星"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "贾宝玉",
+                        "artist": "张泽"
+                    },
+                    {
+                        "role": "林黛玉/有缘人",
+                        "artist": "张会芳"
+                    },
+                    {
+                        "role": "薛宝钗/有缘人",
+                        "artist": "林润欣"
+                    },
+                    {
+                        "role": "王熙凤/有缘人",
+                        "artist": "刘浩冉"
+                    },
+                    {
+                        "role": "贾政/有缘人",
+                        "artist": "赵禹钧"
+                    },
+                    {
+                        "role": "贾母/有缘人",
+                        "artist": "徐磊"
+                    },
+                    {
+                        "role": "有缘人/薛蟠",
+                        "artist": "李存贤"
+                    },
+                    {
+                        "role": "有缘人/蒋玉菡",
+                        "artist": "沈育奇"
+                    },
+                    {
+                        "role": "有缘人/茗烟",
+                        "artist": "沈哲祺"
+                    },
+                    {
+                        "role": "有缘人/晴雯",
+                        "artist": "沈俊池"
+                    },
+                    {
+                        "role": "有缘人/袭人",
+                        "artist": "段淑曦"
+                    },
+                    {
+                        "role": "有缘人/金钏儿",
+                        "artist": "耿凡茜"
+                    },
+                    {
+                        "role": "有缘人/丫鬟",
+                        "artist": "范可妮"
+                    }
+                ],
+                "theatre": "佛山琼花大剧院",
+                "city": "佛山",
+                "musical": "宝玉"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "程婴",
+                        "artist": "郑棋元"
+                    },
+                    {
+                        "role": "屠岸贾",
+                        "artist": "何亮辰"
+                    },
+                    {
+                        "role": "程勃",
+                        "artist": "魏忠杰"
+                    },
+                    {
+                        "role": "程子灵魂",
+                        "artist": "马灵奇"
+                    },
+                    {
+                        "role": "晋国公主",
+                        "artist": "朱芾"
+                    },
+                    {
+                        "role": "程妻",
+                        "artist": "朱梓溶"
+                    },
+                    {
+                        "role": "公孙杵臼",
+                        "artist": "庞盛之"
+                    },
+                    {
+                        "role": "魏绛",
+                        "artist": "胡超政"
+                    },
+                    {
+                        "role": "赵盾",
+                        "artist": "张光磊"
+                    },
+                    {
+                        "role": "韩厥",
+                        "artist": "宗雪健"
+                    },
+                    {
+                        "role": "宫女",
+                        "artist": "谢馨仪"
+                    }
+                ],
+                "theatre": "温州高新文化广场 大剧院",
+                "city": "温州",
+                "musical": "赵氏孤儿"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "风舞阳",
+                        "artist": "张智涵"
+                    },
+                    {
+                        "role": "梅霜花",
+                        "artist": "叶麒圣"
+                    },
+                    {
+                        "role": "马醉灯",
+                        "artist": "赵毅劼"
+                    },
+                    {
+                        "role": "汉王",
+                        "artist": "徐泽辉"
+                    },
+                    {
+                        "role": "朱瞻基",
+                        "artist": "邵玎"
+                    },
+                    {
+                        "role": "孙贵妃",
+                        "artist": "张诗漫"
+                    },
+                    {
+                        "role": "夜凌霄",
+                        "artist": "樊苏颐"
+                    },
+                    {
+                        "role": "侯公公",
+                        "artist": "胡芳洲"
+                    },
+                    {
+                        "role": "龙连营",
+                        "artist": "霍泽安"
+                    },
+                    {
+                        "role": "风树",
+                        "artist": "黄圣淇"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "柳智彦"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "李季"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "黄骁文"
+                    },
+                    {
+                        "role": "歌队",
+                        "artist": "李浩楠"
+                    }
+                ],
+                "theatre": "无锡大剧院歌剧厅",
+                "city": "无锡",
+                "musical": "锦衣卫之刀与花"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "孔洙",
+                        "artist": "王伍伟"
+                    },
+                    {
+                        "role": "真金",
+                        "artist": "陈臻"
+                    },
+                    {
+                        "role": "孔柳",
+                        "artist": "谢雨"
+                    },
+                    {
+                        "role": "秀娘",
+                        "artist": "黄爽"
+                    },
+                    {
+                        "role": "孔端友",
+                        "artist": "张殿宇"
+                    },
+                    {
+                        "role": "忽必烈",
+                        "artist": "刘万林"
+                    },
+                    {
+                        "role": "达鲁花赤",
+                        "artist": "郑曹坤"
+                    },
+                    {
+                        "role": "太傅/老者",
+                        "artist": "王东博"
+                    },
+                    {
+                        "role": "饼伯",
+                        "artist": "谢鑫"
+                    }
+                ],
+                "theatre": "天然舞台大剧场",
+                "city": "宁波",
+                "musical": "南孔"
+            }
+        ],
+        "2025-07-31": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "纳尔齐斯",
+                        "artist": "邵立君"
+                    },
+                    {
+                        "role": "歌尔德蒙",
+                        "artist": "徐佳文"
+                    }
+                ],
+                "theatre": "中国大戏院",
+                "city": "上海",
+                "musical": "纳尔齐斯与歌尔德蒙"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "巴文豪"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "邵奕磊"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "朱亮"
+                    }
+                ],
+                "theatre": "星空间6号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "王炳"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "朱亚洲"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "张家祺"
+                    }
+                ],
+                "theatre": "星空间1号·一台好戏小剧场",
+                "city": "上海",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "游亦",
+                        "artist": "李政绪"
+                    },
+                    {
+                        "role": "小松",
+                        "artist": "郝李英杰"
+                    },
+                    {
+                        "role": "小伟",
+                        "artist": "陈志"
+                    }
+                ],
+                "theatre": "星空间8号·一台好戏方寸剧场",
+                "city": "上海",
+                "musical": "去你的夏天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "王洁璐"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "党韫葳"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "陈玉婷"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "王竞琦"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "王珏语涵"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "曼曼",
+                        "artist": "赵雨卉"
+                    },
+                    {
+                        "role": "沈文君",
+                        "artist": "邓贤凌"
+                    },
+                    {
+                        "role": "齐志平",
+                        "artist": "韩冰儿"
+                    }
+                ],
+                "theatre": "上海话剧艺术中心D6空间",
+                "city": "上海",
+                "musical": "蝶变"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Eggy",
+                        "artist": "李存贤"
+                    },
+                    {
+                        "role": "Brandon",
+                        "artist": "于滨嘉"
+                    },
+                    {
+                        "role": "Doris",
+                        "artist": "施博威"
+                    }
+                ],
+                "theatre": "星空间28号·好好有戏小剧场",
+                "city": "上海",
+                "musical": "#0528"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "里奥",
+                        "artist": "蓝浩"
+                    },
+                    {
+                        "role": "韦恩",
+                        "artist": "孙一城"
+                    }
+                ],
+                "theatre": "星空间18号·谜剧场",
+                "city": "上海",
+                "musical": "怪物"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "江清源",
+                        "artist": "黄圣淇"
+                    },
+                    {
+                        "role": "孔繁星",
+                        "artist": "李磊"
+                    },
+                    {
+                        "role": "叶思源",
+                        "artist": "邱俊阳"
+                    },
+                    {
+                        "role": "戴望星",
+                        "artist": "洪果"
+                    },
+                    {
+                        "role": "多功能",
+                        "artist": "胡格畅"
+                    }
+                ],
+                "theatre": "星图剧场",
+                "city": "上海",
+                "musical": "星图"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "李功一",
+                        "artist": "白倬铭"
+                    },
+                    {
+                        "role": "高景行",
+                        "artist": "王智威"
+                    },
+                    {
+                        "role": "小静",
+                        "artist": "安吉儿"
+                    },
+                    {
+                        "role": "李泰辅",
+                        "artist": "诸葛北辰"
+                    },
+                    {
+                        "role": "原康孝",
+                        "artist": "张旭辰"
+                    },
+                    {
+                        "role": "高正",
+                        "artist": "潘华杰"
+                    }
+                ],
+                "theatre": "星空间10号·MOriginal Box",
+                "city": "上海",
+                "musical": "流星之绊"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Teddy",
+                        "artist": "许昌泰"
+                    },
+                    {
+                        "role": "Alex",
+                        "artist": "刘朱烨"
+                    },
+                    {
+                        "role": "David",
+                        "artist": "庞东轩"
+                    }
+                ],
+                "theatre": "星空间168号·谜剧场",
+                "city": "上海",
+                "musical": "幽灵"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "1900",
+                        "artist": "刘令飞"
+                    },
+                    {
+                        "role": "莫顿",
+                        "artist": "马添龙"
+                    },
+                    {
+                        "role": "蒂姆",
+                        "artist": "杨皓晨"
+                    },
+                    {
+                        "role": "盖亚",
+                        "artist": "刘浩冉"
+                    },
+                    {
+                        "role": "丹尼",
+                        "artist": "李信"
+                    },
+                    {
+                        "role": "船长",
+                        "artist": "张光磊"
+                    }
+                ],
+                "theatre": "上海西岸大剧院",
+                "city": "上海",
+                "musical": "海上钢琴师"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "于格",
+                        "artist": "张琦铭"
+                    },
+                    {
+                        "role": "雕像",
+                        "artist": "卢翰林"
+                    }
+                ],
+                "theatre": "星空间1794号·临窗小剧场",
+                "city": "上海",
+                "musical": "雕像"
+            },
+            {
+                "time": "20:00",
+                "cast": [
+                    {
+                        "role": "PB",
+                        "artist": "李梓溪"
+                    },
+                    {
+                        "role": "Jo",
+                        "artist": "胥子含"
+                    }
+                ],
+                "theatre": "亚洲大厦·星空间黑匣子",
+                "city": "上海",
+                "musical": "海雾"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Richard",
+                        "artist": "武冠辰"
+                    },
+                    {
+                        "role": "Oscar",
+                        "artist": "朱家鹏"
+                    },
+                    {
+                        "role": "Stevie",
+                        "artist": "陈楷"
+                    }
+                ],
+                "theatre": "阿波罗尼亚·广州馆",
+                "city": "广州",
+                "musical": "阿波罗尼亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "Stevie",
+                        "artist": "曾阵"
+                    },
+                    {
+                        "role": "Chi Chi",
+                        "artist": "李玉言"
+                    },
+                    {
+                        "role": "Sonny Boy",
+                        "artist": "张梁"
+                    }
+                ],
+                "theatre": "桑塔露琪亚·广州馆",
+                "city": "广州",
+                "musical": "桑塔露琪亚"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "奥尔森",
+                        "artist": "刘凡滔"
+                    },
+                    {
+                        "role": "克雷加德",
+                        "artist": "张腾"
+                    },
+                    {
+                        "role": "戈布",
+                        "artist": "叶锐"
+                    },
+                    {
+                        "role": "弗雷",
+                        "artist": "张鑫澳"
+                    },
+                    {
+                        "role": "玛尼",
+                        "artist": "陈壬权"
+                    },
+                    {
+                        "role": "伊敦",
+                        "artist": "林凡靖"
+                    }
+                ],
+                "theatre": "广州塔剧场新空间",
+                "city": "广州",
+                "musical": "翻国王棋"
+            },
+            {
+                "time": "19:00",
+                "cast": [],
+                "theatre": "开心麻花老门东沉浸剧场",
+                "city": "南京",
+                "musical": "醉后赢家"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "石头",
+                        "artist": "王书琦"
+                    },
+                    {
+                        "role": "吴名士",
+                        "artist": "张淼龙"
+                    },
+                    {
+                        "role": "洪瑛",
+                        "artist": "刘羿含"
+                    },
+                    {
+                        "role": "江鱼儿",
+                        "artist": "郭美冉"
+                    },
+                    {
+                        "role": "黄九良",
+                        "artist": "陈卓"
+                    },
+                    {
+                        "role": "范泰",
+                        "artist": "孙晨恺"
+                    }
+                ],
+                "theatre": "茶无此人 · 一台好戏小剧场",
+                "city": "杭州",
+                "musical": "茶无此人"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "NoVA",
+                        "artist": "杜鑫艳"
+                    },
+                    {
+                        "role": "O126",
+                        "artist": "元佳辰"
+                    }
+                ],
+                "theatre": "浙影时代·M511未来影城",
+                "city": "杭州",
+                "musical": "宇宙大明星"
+            }
+        ],
+        "2025-08-07": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "杜钇樵"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "郑涵一"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "左一平"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "韩冰儿"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "王珏语涵"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "曼曼",
+                        "artist": "赵嘉艳"
+                    },
+                    {
+                        "role": "沈文君",
+                        "artist": "丁辰西"
+                    },
+                    {
+                        "role": "齐志平",
+                        "artist": "黄周"
+                    }
+                ],
+                "theatre": "上海话剧艺术中心D6空间",
+                "city": "上海",
+                "musical": "蝶变"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "于格",
+                        "artist": "于滨嘉"
+                    },
+                    {
+                        "role": "雕像",
+                        "artist": "徐杭"
+                    }
+                ],
+                "theatre": "星空间1794号·临窗小剧场",
+                "city": "上海",
+                "musical": "雕像"
+            }
+        ],
+        "2025-08-13": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "内森",
+                        "artist": "毛二"
+                    },
+                    {
+                        "role": "理查德",
+                        "artist": "赵伟钢"
+                    }
+                ],
+                "theatre": "上海共舞台",
+                "city": "上海",
+                "musical": "危险游戏"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "丁辰西"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "马小乔"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "左一平"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "李恩妤"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "蒋依敏"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "许静雅",
+                        "artist": "杜鑫艳"
+                    },
+                    {
+                        "role": "大顺凡",
+                        "artist": "宁梦恬"
+                    },
+                    {
+                        "role": "小顺凡",
+                        "artist": "程晨"
+                    },
+                    {
+                        "role": "影子",
+                        "artist": "暴晓萱"
+                    }
+                ],
+                "theatre": "上剧场",
+                "city": "上海",
+                "musical": "最美的一天"
+            }
+        ],
+        "2025-08-14": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "内森",
+                        "artist": "白倬铭"
+                    },
+                    {
+                        "role": "理查德",
+                        "artist": "王敏辉"
+                    }
+                ],
+                "theatre": "上海共舞台",
+                "city": "上海",
+                "musical": "危险游戏"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "赵雨卉"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "马小乔"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "田梦"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "夏云梦"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "蒋依敏"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "许静雅",
+                        "artist": "党韫葳"
+                    },
+                    {
+                        "role": "大顺凡",
+                        "artist": "丁辰西"
+                    },
+                    {
+                        "role": "小顺凡",
+                        "artist": "程晨"
+                    },
+                    {
+                        "role": "影子",
+                        "artist": "暴晓萱"
+                    }
+                ],
+                "theatre": "上剧场",
+                "city": "上海",
+                "musical": "最美的一天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "1900",
+                        "artist": "刘令飞"
+                    },
+                    {
+                        "role": "莫顿",
+                        "artist": "何亮辰"
+                    },
+                    {
+                        "role": "蒂姆",
+                        "artist": "钟嘉诚"
+                    },
+                    {
+                        "role": "盖亚",
+                        "artist": "李炜铃"
+                    },
+                    {
+                        "role": "丹尼",
+                        "artist": "李信"
+                    },
+                    {
+                        "role": "船长",
+                        "artist": "张琦铭"
+                    }
+                ],
+                "theatre": "北京保利剧院",
+                "city": "北京",
+                "musical": "海上钢琴师"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "李小香",
+                        "artist": "孟慧圆"
+                    },
+                    {
+                        "role": "路放",
+                        "artist": "鞠红川"
+                    },
+                    {
+                        "role": "米娜",
+                        "artist": "毋子玥"
+                    },
+                    {
+                        "role": "高达",
+                        "artist": "陈泷"
+                    },
+                    {
+                        "role": "老贾",
+                        "artist": "杨闫乐"
+                    },
+                    {
+                        "role": "Frank/Eric",
+                        "artist": "李培智"
+                    },
+                    {
+                        "role": "伟桥/吉米",
+                        "artist": "白子涵"
+                    },
+                    {
+                        "role": "翔哥",
+                        "artist": "李君傲"
+                    }
+                ],
+                "theatre": "临平大剧院大剧场",
+                "city": "杭州",
+                "musical": "我要你"
+            }
+        ],
+        "2025-08-15": [
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "内森",
+                        "artist": "邵立君"
+                    },
+                    {
+                        "role": "理查德",
+                        "artist": "吴志军"
+                    }
+                ],
+                "theatre": "上海共舞台",
+                "city": "上海",
+                "musical": "危险游戏"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "莉莉丝",
+                        "artist": "杜钇樵"
+                    },
+                    {
+                        "role": "辛西娅",
+                        "artist": "张沁丹"
+                    },
+                    {
+                        "role": "多琳",
+                        "artist": "左一平"
+                    },
+                    {
+                        "role": "罗纳德",
+                        "artist": "韩冰儿"
+                    },
+                    {
+                        "role": "国王",
+                        "artist": "王珏语涵"
+                    }
+                ],
+                "theatre": "黄浦剧场小剧场",
+                "city": "上海",
+                "musical": "她对此感到厌烦"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "许静雅",
+                        "artist": "杜鑫艳"
+                    },
+                    {
+                        "role": "大顺凡",
+                        "artist": "丁辰西"
+                    },
+                    {
+                        "role": "小顺凡",
+                        "artist": "陈玉婷"
+                    },
+                    {
+                        "role": "影子",
+                        "artist": "暴晓萱"
+                    }
+                ],
+                "theatre": "上剧场",
+                "city": "上海",
+                "musical": "最美的一天"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "程小时",
+                        "artist": "姜义哲"
+                    },
+                    {
+                        "role": "陆光",
+                        "artist": "朱涵彬"
+                    },
+                    {
+                        "role": "乔苓",
+                        "artist": "钱安琪"
+                    },
+                    {
+                        "role": "林贞/陈潇妈",
+                        "artist": "李恩妤"
+                    },
+                    {
+                        "role": "陈潇/陆鸿斌",
+                        "artist": "宋元明"
+                    }
+                ],
+                "theatre": "时光剧场",
+                "city": "上海",
+                "musical": "时光代理人"
+            },
+            {
+                "time": "20:00",
+                "cast": [
+                    {
+                        "role": "LIZZIE",
+                        "artist": "严小北"
+                    },
+                    {
+                        "role": "EMMA",
+                        "artist": "赵雨卉"
+                    },
+                    {
+                        "role": "BRIDGET",
+                        "artist": "邓贤凌"
+                    },
+                    {
+                        "role": "ALICE",
+                        "artist": "党韫葳"
+                    }
+                ],
+                "theatre": "星空间11号·MOriginal Box",
+                "city": "上海",
+                "musical": "LIZZIE丽兹"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "1900",
+                        "artist": "徐均朔"
+                    },
+                    {
+                        "role": "莫顿",
+                        "artist": "翟李朔天"
+                    },
+                    {
+                        "role": "蒂姆",
+                        "artist": "钟嘉诚"
+                    },
+                    {
+                        "role": "盖亚",
+                        "artist": "李炜铃"
+                    },
+                    {
+                        "role": "丹尼",
+                        "artist": "李信"
+                    },
+                    {
+                        "role": "船长",
+                        "artist": "张琦铭"
+                    }
+                ],
+                "theatre": "北京保利剧院",
+                "city": "北京",
+                "musical": "海上钢琴师"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "程婴",
+                        "artist": "郑棋元"
+                    },
+                    {
+                        "role": "屠岸贾",
+                        "artist": "何亮辰"
+                    },
+                    {
+                        "role": "程勃",
+                        "artist": "魏忠杰"
+                    },
+                    {
+                        "role": "程子灵魂",
+                        "artist": "马灵奇"
+                    },
+                    {
+                        "role": "晋国公主",
+                        "artist": "朱芾"
+                    },
+                    {
+                        "role": "程妻",
+                        "artist": "朱梓溶"
+                    },
+                    {
+                        "role": "公孙杵臼",
+                        "artist": "赵禹钧"
+                    },
+                    {
+                        "role": "魏绛",
+                        "artist": "胡超政"
+                    },
+                    {
+                        "role": "赵盾",
+                        "artist": "张光磊"
+                    },
+                    {
+                        "role": "韩厥",
+                        "artist": "宗雪健"
+                    },
+                    {
+                        "role": "宫女",
+                        "artist": "谢馨仪"
+                    }
+                ],
+                "theatre": "昆山文化艺术中心",
+                "city": "苏州",
+                "musical": "赵氏孤儿"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "常卫国",
+                        "artist": "奇煜"
+                    },
+                    {
+                        "role": "李二狗",
+                        "artist": "金圣权"
+                    },
+                    {
+                        "role": "秀儿",
+                        "artist": "毋子玥"
+                    },
+                    {
+                        "role": "爷爷",
+                        "artist": "韩涵"
+                    },
+                    {
+                        "role": "常志胜",
+                        "artist": "王靖棋"
+                    },
+                    {
+                        "role": "班长",
+                        "artist": "武阳坤"
+                    },
+                    {
+                        "role": "刘伢子",
+                        "artist": "林子兴"
+                    },
+                    {
+                        "role": "大个",
+                        "artist": "皮云赫"
+                    },
+                    {
+                        "role": "快板",
+                        "artist": "杨雨逍"
+                    },
+                    {
+                        "role": "四川",
+                        "artist": "李纪柯"
+                    },
+                    {
+                        "role": "尕娃",
+                        "artist": "李金阳"
+                    },
+                    {
+                        "role": "铁牛",
+                        "artist": "张泽浩"
+                    }
+                ],
+                "theatre": "苏州湾大剧院歌剧厅",
+                "city": "苏州",
+                "musical": "寻找李二狗"
+            },
+            {
+                "time": "19:30",
+                "cast": [
+                    {
+                        "role": "郑微岚",
+                        "artist": "张博俊"
+                    },
+                    {
+                        "role": "金海鸣",
+                        "artist": "刘岩"
+                    },
+                    {
+                        "role": "夏光",
+                        "artist": "郭耀嵘"
+                    },
+                    {
+                        "role": "李灵",
+                        "artist": "傅祥安"
+                    },
+                    {
+                        "role": "丁宁",
+                        "artist": "张琛"
+                    },
+                    {
+                        "role": "蛰生",
+                        "artist": "舒荣波"
+                    },
+                    {
+                        "role": "马克梵",
+                        "artist": "朱家鹏"
+                    }
+                ],
+                "theatre": "南宁剧场",
+                "city": "南宁",
+                "musical": "粉丝来信"
+            }
         ]
     },
     "update_time_dict": {
@@ -23515,31 +27025,40 @@
             "2025-07-02": "2025-06-23",
             "2025-07-05": "2025-06-23",
             "2025-07-06": "2025-06-23",
-            "2025-07-09": "2025-06-23",
-            "2025-07-10": "2025-06-23",
-            "2025-07-11": "2025-06-23",
-            "2025-07-12": "2025-06-23",
+            "2025-07-09": "2025-06-23 20:33",
+            "2025-07-10": "2025-06-23 20:33",
+            "2025-07-11": "2025-06-23 20:33",
+            "2025-07-12": "2025-06-23 20:34",
             "2025-07-13": "2025-06-23",
             "2025-06-29": "2025-06-23",
             "2025-07-04": "2025-06-23",
-            "2025-07-16": "2025-06-23",
+            "2025-07-16": "2025-06-23 20:40",
             "2025-07-18": "2025-06-23",
-            "2025-07-19": "2025-06-23",
+            "2025-07-19": "2025-06-23 20:40",
             "2025-07-20": "2025-06-23",
             "2025-07-25": "2025-06-23",
             "2025-07-27": "2025-06-23",
             "2025-08-01": "2025-06-23",
-            "2025-08-02": "2025-06-23",
-            "2025-08-03": "2025-06-23",
-            "2025-08-09": "2025-06-23",
+            "2025-08-02": "2025-06-23 20:40",
+            "2025-08-03": "2025-06-23 20:40",
+            "2025-08-09": "2025-06-23 20:40",
             "2025-08-10": "2025-06-23",
-            "2025-08-16": "2025-06-23",
+            "2025-08-16": "2025-06-23 20:40",
             "2025-08-17": "2025-06-23",
             "2025-08-22": "2025-06-23",
             "2025-08-23": "2025-06-23",
             "2025-08-24": "2025-06-23",
             "2025-08-29": "2025-06-23",
-            "2025-08-30": "2025-06-23"
+            "2025-08-30": "2025-06-23",
+            "2025-07-17": "2025-06-23 20:40",
+            "2025-07-23": "2025-06-23 20:40",
+            "2025-07-24": "2025-06-23 20:40",
+            "2025-07-26": "2025-06-23 20:40",
+            "2025-07-31": "2025-06-23 20:40",
+            "2025-08-07": "2025-06-23 20:40",
+            "2025-08-13": "2025-06-23 20:40",
+            "2025-08-14": "2025-06-23 20:40",
+            "2025-08-15": "2025-06-23 20:40"
         }
     }
 }
