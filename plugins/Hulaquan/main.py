@@ -46,8 +46,8 @@ class Hulaquan(BasePlugin):
             name="切换呼啦圈上新推送模式",
             handler=self.on_switch_scheduled_check_task,
             prefix="/上新",
-            description="切换呼啦圈上新推送模式\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送",
-            usage="/上新 (模式编号)",
+            description="切换呼啦圈上新推送模式",
+            usage="/上新 (模式编号)\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送",
             examples=["/上新"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
@@ -85,25 +85,38 @@ class Hulaquan(BasePlugin):
             name="呼啦圈查询",
             handler=self.on_hlq_search,
             prefix="/hlq",
-            description="呼啦圈查学生票余票/数量",
-            usage="/hlq <剧名> -I\n-I表示忽略已售罄场次，去掉以显示所有场次",
+            description="呼啦圈查学生票余票/数量/排期",
+            usage="/hlq <剧名> (-I) (-C)\n-I表示不显示已售罄场次，-C表示显示卡司阵容",
             # 这里的 -I 是一个可选参数，表示忽略已售罄场次
-            examples=["/hlq 连璧 -I"],
+            examples=["/hlq 连璧 -I -C"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
         )
         
-        self.register_user_func(
+        """        self.register_user_func(
             name="呼啦圈查询附卡司",
             handler=self.on_hlq_search_with_cast,
             prefix="/hlqc",
-            description="呼啦圈查学生票余票/数量",
+            description="呼啦圈查学生票余票/数量/卡司",
             usage="/hlqc <剧名> -I\n-I表示忽略已售罄场次，去掉以显示所有场次",
             examples=["/hlqc 连璧 -I"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
-        )
+        )"""
         
+        self.register_user_func(
+            name="扫剧查询某日演出",
+            handler=self.on_saoju_search_events_by_date,
+            prefix="/date",
+            description="根据日期通过扫剧查询排期",
+            usage="/date <日期> <城市名（可选）)>\n日期格式为年-月-日\n如/date 2025-06-01 上海",
+            examples=["/date <日期> <城市名（可选）>"],
+            tags=["saoju"],
+            metadata={"category": "utility"}
+        )
+        """
+        {name}-{description}:使用方式 {usage}
+        """
         
     async def get_managers(self, event):
         if event.data:
@@ -163,29 +176,40 @@ class Hulaquan(BasePlugin):
 
     async def on_hlq_search(self, msg: BaseMessage):
         # 呼啦圈查询处理函数
-        command = msg.raw_message.split(" ")
-        if command[0] != "/hlq":
-            return
-        args = command[1:] if len(command) > 1 else []
+        args = self.extract_args(msg)
         if not args:
-            await msg.reply_text("请提供剧名，例如: /hlq 连璧")
-            return
-        
-        event_name = args[0]
-        
-        await msg.reply_text("查询中，请稍后…")
-        result = self.hlq_data_manager.message_tickets_query(event_name, self.saoju_data_manager, show_cast=False, ignore_sold_out=("-I" in args))
-        await msg.reply_text(result if result else "未找到相关信息，请检查剧名或网络连接。")
-        
-    async def on_hlq_search_with_cast(self, msg: BaseMessage):
-        # 呼啦圈查询处理函数，附带卡司信息
-        command = msg.raw_message.split(" ")
-        args = command[1:] if len(command) > 1 else []
-        if not args:
-            await msg.reply_text("请提供剧名，例如: /hlqc 连璧")
+            await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C")
             return
         event_name = args[0]
         await msg.reply_text("查询中，请稍后…")
-        result = self.hlq_data_manager.message_tickets_query(event_name, self.saoju_data_manager, show_cast=True, ignore_sold_out=("-I" in args))
+        result = self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args))
         await msg.reply_text(result if result else "未找到相关信息，请检查剧名或网络连接。")
         
+
+    def extract_args(self, msg):
+        command = msg.raw_message.split(" ")
+        args = command[1:] if len(command) > 1 else []
+        for i in range(len(args)):
+            args[i] = args[i].lower() # 小写处理-I -i
+        return args
+    
+    def _get_help(self):
+        """自动生成帮助文档"""
+        text = ""
+        for func in self._funcs:
+            text += f"{func.name}\n👉用法：{func.usage}\n⚪描述：{func.description}\n"
+        #for conf in self._configs:
+        #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
+        return text
+        
+    async def on_saoju_search_events_by_date(self, msg: BaseMessage):
+        # 最多有12小时数据延迟
+        args = self.extract_args(msg)
+        if not args:
+            await msg.reply_text("【缺少日期】\n/date <日期> <城市名（可选）)>\n日期格式为年-月-日\n如/date 2025-06-01 上海")
+            return
+        date = args[0]
+        city = args[1] if len(args)>1 else None
+        await msg.reply_text("查询中，请稍后…")
+        result = self.saoju_data_manager.on_search_event_by_date(date, city)
+        await msg.reply(result)
