@@ -151,16 +151,22 @@ class HulaquanDataManager(BaseDataManager):
         except requests.RequestException as e:
             print(f"Error fetching event details: {e}")
             return None
+
+    def search_ticket_details(self, event_id):
+        json_data = self.search_event_by_id(event_id)
+        keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days"]
+        json_data: list = json_data["ticket_details"]
+        for i in range(len(json_data)):
+            json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
+        return json_data
         
     def get_ticket_details(self, event_id):
         if not self.data["events"][event_id].get("ticket_details", None):
-            json_data = self.search_event_by_id(event_id)
-            self.data["events"][event_id] = json_data
+            self._update_ticket_details(event_id)
         return self.data["events"][event_id]
     
     def _update_ticket_details(self, event_id):
-        if self.data["events"][event_id].get("ticket_details", None):
-            self.data["events"][event_id] = self.search_event_by_id(event_id)
+        self.data["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
         
     def output_data_info(self):
         old_data = self.return_events_data()
@@ -173,14 +179,14 @@ class HulaquanDataManager(BaseDataManager):
     def get_max_ticket_content_length(self, tickets):
         max_len = 0
         for ticket in tickets:
-            s = f"{ticket[0]} 余票{ticket[2]}/{ticket[1]}"
+            s = f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
             max_len = max(max_len, get_display_width(s))
         return max_len
 
     # -------------------Query------------------------------ #         
     # ---------------------Announcement--------------------- #
 
-    def compare_to_database(self, __dump=True):
+    def compare_to_database(self):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
         __dump: bool, 是否将新数据写入文件
@@ -189,25 +195,95 @@ class HulaquanDataManager(BaseDataManager):
             None: 如果没有需要更新的数据
         """
         
-        update_data = []
-        if not __dump:
-            new_data_all = self.get_events_dict()
-            old_data_all = self.data
-        else:
-            old_data_all, new_data_all = self.fetch_and_update_data()
+        is_updated = False
+        old_data_all, new_data_all = self.fetch_and_update_data()
         new_data = new_data_all["events"]
-        old_data, update_time = old_data_all["events"], old_data_all["update_time"]
+        old_data = old_data_all["events"]
+        messages = []
         for eid, event in new_data.items():
+            message = []
+            old_event = old_data[eid]
             if eid not in old_data.keys():
-                update_data.append(event)
+                t = [f"✨" if ticket['left_ticket_count'] > 0 else "❌" + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" for ticket in event.get("ticket_details", [])]
+                message.append("🟢新开票场次：" + "\n ".join(t))
+            elif comp := self.compare_tickets(old_event.get("ticket_details", None), new_data[eid].get("ticket_details", None)):
+                new_message = []
+                return_message = []
+                add_message = []
+                for ticket in comp:
+                    flag = ticket['update_status']
+                    t = f"✨" if ticket['left_ticket_count'] > 0 else "❌" + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
+                    if flag == 'new':
+                        new_message.append(t)
+                    elif flag == 'return':
+                        return_message.append(t)
+                    elif flag == 'add':
+                        add_message.append(t)
+                if new_message:
+                    message.append(f"🟢新开票场次：{'\n '.join(new_message)}")
+                if return_message:
+                    message.append(f"🟢回流（？）场次：{'\n '.join(return_message)}")
+                if add_message:
+                    message.append(f"🟢补票场次：{'\n '.join(add_message)}")
             else:
-                old_event = old_data[eid]
-                if event["end_time"] != old_event["end_time"] or event["update_time"] != old_event["update_time"]:
-                    update_data.append(event)
-        if update_data:
-            return True, update_data
-        else:
-            return False, update_time
+                continue
+            messages.append((
+                f"剧名: {event['title']}\n"
+                f"活动结束时间: {event['end_time']}\n"
+                f"更新时间: {event['update_time']}\n"
+            ) + "\n".join(message))
+            is_updated = True
+        return is_updated, messages
+
+    def compare_tickets(self, old_data, new_data):
+        """
+{
+  "id": 31777,
+  "event_id": 3863,
+  "title": "《海雾》07-19 20:00￥199（原价￥299) 学生票",
+  "start_time": "2025-07-19 20:00:00",
+  "end_time": "2025-07-19 21:00:00",
+  "status": "active", /expired
+  "create_time": "2025-06-11 11:06:13",
+  "ticket_price": 199,
+  "max_ticket": 1,
+  "total_ticket": 14,
+  "left_ticket_count": 0,
+  "left_days": 25,
+}
+        """
+        if not old_data or not new_data:
+            return new_data
+        old_data_dict = {item['id']: item for item in old_data}
+        update_data = []
+
+        # 遍历 new_data 并根据条件进行更新
+        for new_item in new_data:
+            new_id = new_item['id']
+            new_left_ticket_counts = new_item['left_ticket_counts']
+            new_total_ticket = new_item['total_ticket']
+
+            if new_id not in old_data_dict:
+                # 如果 new_data 中存在新的 id，则标记为 "new"
+                new_item['update_status'] = 'new'
+                update_data.append(new_item)
+            else:
+                # 获取 old_data 中对应 id 的旧数据
+                old_item = old_data_dict[new_id]
+                old_left_ticket_counts = old_item['left_ticket_counts']
+                old_total_ticket = old_item['total_ticket']
+                if new_total_ticket > old_total_ticket:
+                    # 如果 total_ticket 增加了，则标记为 "add"
+                    new_item['update_status'] = 'add'
+                    update_data.append(new_item)
+                elif new_left_ticket_counts > old_left_ticket_counts:
+                    # 如果 left_ticket_counts 增加了，则标记为 "return"
+                    new_item['update_status'] = 'return'
+                    update_data.append(new_item)
+                else:
+                    new_item['update_status'] = None
+        return update_data
+        
         
     def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True):
         query_time = datetime.now()
@@ -222,16 +298,15 @@ class HulaquanDataManager(BaseDataManager):
             return "未找到该剧目。"
 
     def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False):
-        event_data = self.search_event_by_id(eid)
+        event_data = self.data[eid]
         if event_data:
-            event_info = event_data["basic_info"]
-            title = event_info.get("title", "未知剧名")
+            title = event_data.get("title", "未知剧名")
             tickets_details = event_data.get("ticket_details", [])
             remaining_tickets = []
             for ticket in tickets_details:
-                if datetime.strptime(ticket["start_time"], "%Y-%m-%d %H:%M:%S") > datetime.now():
+                if ticket["status"] == "active":
                     if ticket["left_ticket_count"] > (0 if ignore_sold_out else -1):
-                        remaining_tickets.append([ticket["title"], ticket["total_ticket"], ticket["left_ticket_count"], ticket["start_time"]])
+                        remaining_tickets.append(ticket)
             max_ticket_info_count = self.get_max_ticket_content_length(remaining_tickets)
             query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
@@ -240,11 +315,11 @@ class HulaquanDataManager(BaseDataManager):
                 f"数据更新时间: {query_time_str}\n"
                 f"购票链接：{url}\n"
                 "剩余票务信息:\n"
-                + "\n".join([("✨" if ticket[2] else "❌") 
-                                + ljust_for_chinese(f"{ticket[0]} 余票{ticket[2]}/{ticket[1]}", max_ticket_info_count)
+                + "\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
+                                + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
                                 + ((" " + (" ".join(saoju.search_casts_by_date_and_name(eName, 
-                                                                                ticket[3], 
-                                                                                city=extract_city(event_info.get("location", ""))
+                                                                                ticket['start_time'], 
+                                                                                city=extract_city(event_data.get("location", ""))
                                                                                 )
                                                 )
                                         )
@@ -264,17 +339,11 @@ class HulaquanDataManager(BaseDataManager):
         # Return: (is_updated: bool, messages: [list:Str])
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        is_updated, update_data = self.compare_to_database()
+        is_updated, msg = self.compare_to_database()
         if not is_updated:
             return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{update_data}",])
-        messages = [f"检测到呼啦圈有{len(update_data)}条数据更新\n查询时间：{query_time_str}"]
-        for i in update_data:
-            message = (
-                f"剧名: {i['title']}\n"
-                f"活动结束时间: {i['end_time']}\n"
-                f"更新时间: {i['update_time']}\n"
-            )
-            messages.append(message)
+        messages = [f"检测到呼啦圈有{len(msg)}条数据更新\n查询时间：{query_time_str}"]
+        messages.extend(msg)
         return (True, messages)
         
 

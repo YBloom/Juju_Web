@@ -62,14 +62,25 @@ class Hulaquan(BasePlugin):
         )
         
         self.register_admin_func(
-            name="开启/关闭呼啦圈定时查询更新数据",
+            name="开启/关闭呼啦圈定时检测功能（管理员）",
             handler=self._on_switch_scheduled_check_task_for_users,
             prefix="/呼啦圈检测",
-            description="开启/关闭呼啦圈定时查询更新数据",
+            description="",
             usage="/呼啦圈检测",
             examples=["/呼啦圈检测"],
             metadata={"category": "utility"}
         )
+        
+        self.register_admin_func(
+            name="保存数据（管理员）",
+            handler=self.save_data_managers,
+            prefix="/save",
+            description="/save",
+            usage="/save",
+            examples=["/save"],
+            metadata={"category": "utility"}
+        )
+        
         task_time = str(self.data['config']['scheduled_task_time'])
         self.add_scheduled_task(
             job_func=self.on_hulaquan_announcer, 
@@ -77,6 +88,13 @@ class Hulaquan(BasePlugin):
             interval=task_time+"s", 
             #max_runs=10, 
             conditions=[lambda: self.data["scheduled_task_switch"]]
+        )
+        
+        self.add_scheduled_task(
+            job_func=self.on_schedule_save_data, 
+            name=f"自动保存数据", 
+            interval="1h", 
+            #max_runs=10, 
         )
         
 
@@ -139,16 +157,20 @@ class Hulaquan(BasePlugin):
         except Exception as e:
             print(f"呼啦圈上新提醒失败：{e}")
             return
-        message = "\n".join(results)
+        #message = "\n".join(results)
         for user_id, user in self.users_manager.users().items():
             mode = user.get("attention_to_hulaquan")
             if mode=="2" or (mode=="1" and is_updated):
-                await self.api.post_private_msg(user_id, message)
+                for m in results:
+                    message = f"呼啦圈上新提醒：\n{m}"
+                    await self.api.post_private_msg(user_id, message)
         for group_id, group in self.groups_manager.groups().items():
             mode = group.get("attention_to_hulaquan")
             if mode=="2" or (mode=="1" and is_updated):
-                await self.api.post_group_msg(group_id, message)
-    
+                for m in results:
+                    message = f"呼啦圈上新提醒：\n{m}"
+                    await self.api.post_group_msg(group_id, message)
+
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         #print(lambda: self.data["scheduled_task_switch"],  self.data["scheduled_task_switch"])
         user_id = msg.user_id
@@ -213,3 +235,14 @@ class Hulaquan(BasePlugin):
         await msg.reply_text("查询中，请稍后…")
         result = self.saoju_data_manager.on_search_event_by_date(date, city)
         await msg.reply(result)
+        
+    async def on_schedule_save_data(self):
+        await self.save_data_managers()
+
+    async def save_data_managers(self, msg):
+        try:
+            self.hlq_data_manager.save()
+            self.saoju_data_manager.save()
+            await msg.reply_text("保存成功")
+        except Exception as e:
+            await msg.reply_text(f"保存失败，原因是{e}")
