@@ -3,6 +3,8 @@ import unicodedata
 from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
 import requests
 import re
+import aiohttp
+import asyncio
 import json
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 
@@ -71,42 +73,78 @@ class HulaquanDataManager(BaseDataManager):
         except Exception as e:
             print(f"呼啦圈数据下载失败: {e}")
             return None
+    
+    async def fetch_event_detail(self, session, event_id):
+        url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
+        async with session.get(url, timeout=8) as resp:
+            try:
+                return await resp.json()
+            except requests.RequestException as e:
+                print(f"Error fetching event details: {e}")
+                return None
+    
+    async def fetch_ticket_details_batch_async(self, event_ids):
+        async with aiohttp.ClientSession() as session:
+            tasks = [self.fetch_event_detail(session, eid) for eid in event_ids]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            return {eid: res for eid, res in zip(event_ids, results)} 
+           
+    async def fetch_and_update_data_async(self):
+        """
+        异步更新数据，功能对标 fetch_and_update_data（同步版）
 
-    def get_events_dict(self):
-        """
-        Generate a dictionary of events from the recommendation API.
-        datadict: {event_id: event_info}
-        event_info: {"3848": {
-            "id": 3848,
-            "title": "原创环境式音乐剧《流星之绊》改编自东野圭吾同名小说",
-            "location": "上海市黄浦区西藏南路1号大世界4楼E厅（上海大世界·星空间10号·MOriginal Box）",
-            "start_time": "2025-05-01 19:30:00",
-            "end_time": "2025-06-30 21:30:00",
-            "deadline": "2025-06-30 21:30:00",
-            "all_day_event": null,
-            "rich_description": "<h4 style=\"text-wrap: wrap; border-bottom: 1px solid rgb(187, 187, 187); border-right: 1px solid rgb(187, 187, 187); color: rgb(51, 51, 51); font-family: 黑体; letter-spacing: 1px; line-height: 24px; background-color: rgb(238, 238, 238); font-size: 14px; padding-left: 6px; margin: 15px 0px;\">购票须知</h4><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: center;\"><span style=\"color: rgb(192, 0, 0);\"><strong><span style=\"text-align: justify;\">学生票盲盒</span></strong></span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: center;\"><span style=\"color: rgb(192, 0, 0);\"><strong><span style=\"text-align: justify;\">199元(399~499座位随机)</span></strong></span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51);\"><span style=\"text-align: justify;\">【购票方式】点击活动下方的对应的时间场次图标可按提示购票。请下载呼啦圈APP收到演出通知和提醒。</span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51);\"><span style=\"text-align: justify;\"><span style=\"color: rgb(192, 0, 0); font-family: 微软雅黑, 宋体; font-size: 13px; letter-spacing: 1px; text-align: justify; text-wrap: wrap;\">票品为有价证券，非普通商品，其后承载的文化服务具有时效性，稀缺性等特征，不支持退换。购票时请勿仔细核对相关信息并谨慎下单。</span></span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: justify;\">【取票规则】<strong><span style=\"color: rgb(118, 146, 60);\">学生票</span></strong>: 演出当天提前一小时，凭学生证至上海市黄浦区西藏南路1号大世界4楼E厅（上海大世界·星空间10号·MOriginal Box）取票处实名取票及入场，人证票一致方可入场。。<strong>学生票禁止转让，仅限购票本人使用。</strong></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: justify;\">【咨询电话】4008781318, 小呼啦微信:hulacampus<a href=\"https://weibo.com/7741472507\" target=\"_self\"><strong style=\"text-align: center; color: rgb(192, 0, 0);\"><span style=\"text-align: justify;\"><img src=\"http://lift.cloudsation.com/meetup/detail/1861640866230308864.jpg\" title=\"\" alt=\"微信图片_20241127131538.jpg\" width=\"70\" height=\"54\" style=\"width: 70px; height: 54px; float: right;\"/></span></strong></a><span style=\"font-size: 13px;\"><br/></span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: justify;\"><span style=\"font-size: 13px;\">【异常订购说明】</span><span style=\"font-size: 13px;\"></span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: justify;\"><span style=\"font-size: 13px;\">对于异常订购行为，呼啦圈有权在订单成立或者生效之后取消相应订单。异常订购行为包括但不限于以下情形： （1）通过同一ID订购超出限购张数的订单； （2）经合理判断认为非真实消费者的下单行为，包括但不限于通过批量相同或虚构的支付账号、收货地址（包括下单时填写及最终实际收货地址）、收件人、电话号码订购超出限购张数的订单</span></p><p style=\"text-wrap: wrap; font-family: 微软雅黑, 宋体; letter-spacing: 1px; line-height: 28px; font-size: 14px; color: rgb(51, 51, 51); text-align: justify;\"><span style=\"font-size: 13px;\"><strong style=\"color: rgb(74, 74, 74); font-family: 微软雅黑;\"></strong><strong style=\"color: rgb(74, 74, 74); font-family: 微软雅黑;\">入场温馨提示</strong><br/>入场时，请听从现场工作人员的引导指示，保持一米以上间隔有序入场，场内严禁饮食，感谢您的支持与配合，祝您观演愉快！</span><span style=\"font-size: 13px;\">因个人原因导致无法入场，将不做退换票处理，敬请谅解！</span></p><h4 style=\"text-wrap: wrap; border-bottom: 1px solid rgb(187, 187, 187); border-right: 1px solid rgb(187, 187, 187); color: rgb(51, 51, 51); font-family: 黑体; letter-spacing: 1px; line-height: 24px; background-color: rgb(238, 238, 238); font-size: 14px; padding-left: 6px; margin: 15px 0px;\">演出介绍</h4><p style=\"text-align: center;\"><img src=\"http://lift.cloudsation.com/meetup/detail/1902573448199278592.jpg\" title=\"\" alt=\"1.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573478154997760.jpg\" title=\"\" alt=\"2.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573508114911232.jpg\" title=\"\" alt=\"3.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573537902858240.jpg\" title=\"\" alt=\"4.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573568303173632.jpg\" title=\"\" alt=\"5.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573597822685184.jpg\" title=\"\" alt=\"6.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573624242606080.jpg\" title=\"\" alt=\"7.jpg\" style=\"width: 100%;\"/><img src=\"http://lift.cloudsation.com/meetup/detail/1902573657746706432.jpg\" title=\"\" alt=\"8.jpg\" style=\"width: 100%;\"/></p>",
-            "description": "",
-            "description_url": null,
-            "organizer": 81460,
-            "status": "processing",
-            "directory": null,
-            "min_people": null,
-            "max_people": 1000,
-            "type": "public",
-            "create_time": "2025-03-17 14:28:16",
-            "contact": "4008781318",
-            "location_id": null,
-            "update_time": "2025-05-14 15:26:22",
-            "phone_required": false,
-            "verify_required": false,
-            "verify_detail": null,
-            "sponsor": null,
-            "sponsor_url": null,
-            "view_count": 20199,
-            "show_qr_code": 1}
         Returns:
-            _type_: _description_
+            返回(old_data, new_data)
         """
+        old_data = self.data.copy()
+        # 1. 获取所有事件（只含基本信息和update_time）
+        events = await self.fetch_events_list_async()
+        # 2. 对比本地events，找出update_time有变化的event_id
+        changed_event_ids = []
+        for eid, event in events.items():
+            if eid not in self.data["events"] or event["update_time"] != self.data["events"][eid]["update_time"]:
+                changed_event_ids.append(eid)
+        # 3. 并发请求变动事件的票务详情
+        details = await self.fetch_ticket_details_batch_async(changed_event_ids)
+        # 4. 更新本地数据
+        for eid in changed_event_ids:
+            if eid in self.data["events"]:
+                self.data["events"][eid].update(details[eid])
+            else:
+                self.data["events"][eid] = details[eid]
+        self.data["update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return old_data, self.data
+
+    async def fetch_events_list_async(self):
+        """
+        异步获取所有事件（只含基本信息和update_time），返回格式与 get_events_dict()["events"] 一致
+        """
+        url = "https://clubz.cloudsation.com/site/getevent.html?filter=recommendation&access_token=&limit=100&page=0"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=8) as resp:
+                json_data = await resp.text()
+                json_data = json.loads(json_data)
+                events = {}
+                keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
+                for event in json_data["events"]:
+                    event_id = str(event["id"])
+                    events[event_id] = {key: event.get(key, None) for key in keys_to_extract}
+                return events
+
+    def search_ticket_details(self, event_id):
+        json_data = self.search_event_by_id(event_id)
+        keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days"]
+        json_data: list = json_data["ticket_details"]
+        for i in range(len(json_data)):
+            json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
+            if json_data[i]["total_ticket"] is None and json_data[i]["left_ticket_count"] is None:
+                del json_data[i]
+        return json_data
+        
+    def _update_ticket_details(self, event_id):
+        self.data["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+        
+    def get_events_dict(self):
         data = self.search_all_events()
         data_dic = {"events":{}, "update_time":""}
         keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
@@ -152,21 +190,7 @@ class HulaquanDataManager(BaseDataManager):
             print(f"Error fetching event details: {e}")
             return None
 
-    def search_ticket_details(self, event_id):
-        json_data = self.search_event_by_id(event_id)
-        keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days"]
-        json_data: list = json_data["ticket_details"]
-        for i in range(len(json_data)):
-            json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
-        return json_data
-        
-    def get_ticket_details(self, event_id):
-        if not self.data["events"][event_id].get("ticket_details", None):
-            self._update_ticket_details(event_id)
-        return self.data["events"][event_id]
-    
-    def _update_ticket_details(self, event_id):
-        self.data["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+
         
     def output_data_info(self):
         old_data = self.return_events_data()
@@ -220,11 +244,11 @@ class HulaquanDataManager(BaseDataManager):
                     elif flag == 'add':
                         add_message.append(t)
                 if new_message:
-                    message.append(f"🟢新开票场次：{'\n '.join(new_message)}")
+                    message.append("🟢新开票场次："+'\n'.join(new_message))
                 if return_message:
-                    message.append(f"🟢回流（？）场次：{'\n '.join(return_message)}")
+                    message.append("🟢回流（？）场次："+'\n'.join(return_message))
                 if add_message:
-                    message.append(f"🟢补票场次：{'\n '.join(add_message)}")
+                    message.append("🟢补票场次："+'\n'.join(add_message))
             else:
                 continue
             messages.append((
@@ -252,7 +276,7 @@ class HulaquanDataManager(BaseDataManager):
   "left_days": 25,
 }
         """
-        if not old_data or not new_data:
+        if not (old_data and new_data):
             return new_data
         old_data_dict = {item['id']: item for item in old_data}
         update_data = []
@@ -260,7 +284,7 @@ class HulaquanDataManager(BaseDataManager):
         # 遍历 new_data 并根据条件进行更新
         for new_item in new_data:
             new_id = new_item['id']
-            new_left_ticket_counts = new_item['left_ticket_counts']
+            new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']
 
             if new_id not in old_data_dict:
@@ -270,14 +294,15 @@ class HulaquanDataManager(BaseDataManager):
             else:
                 # 获取 old_data 中对应 id 的旧数据
                 old_item = old_data_dict[new_id]
-                old_left_ticket_counts = old_item['left_ticket_counts']
+                old_left_ticket_count = old_item['left_ticket_count']
                 old_total_ticket = old_item['total_ticket']
+                #print("new_item", new_item, "\nold item", old_item)
                 if new_total_ticket > old_total_ticket:
                     # 如果 total_ticket 增加了，则标记为 "add"
                     new_item['update_status'] = 'add'
                     update_data.append(new_item)
-                elif new_left_ticket_counts > old_left_ticket_counts:
-                    # 如果 left_ticket_counts 增加了，则标记为 "return"
+                elif new_left_ticket_count > old_left_ticket_count:
+                    # 如果 left_ticket_count 增加了，则标记为 "return"
                     new_item['update_status'] = 'return'
                     update_data.append(new_item)
                 else:
@@ -298,7 +323,7 @@ class HulaquanDataManager(BaseDataManager):
             return "未找到该剧目。"
 
     def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False):
-        event_data = self.data[eid]
+        event_data = self.data["events"].get(str(eid), None)
         if event_data:
             title = event_data.get("title", "未知剧名")
             tickets_details = event_data.get("ticket_details", [])
@@ -315,7 +340,7 @@ class HulaquanDataManager(BaseDataManager):
                 f"数据更新时间: {query_time_str}\n"
                 f"购票链接：{url}\n"
                 "剩余票务信息:\n"
-                + "\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
+                + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
                                 + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
                                 + ((" " + (" ".join(saoju.search_casts_by_date_and_name(eName, 
                                                                                 ticket['start_time'], 
@@ -326,7 +351,7 @@ class HulaquanDataManager(BaseDataManager):
                                 ) if show_cast else "")
                                 for ticket in remaining_tickets
                                 ])
-                if remaining_tickets else "暂无剩余票务信息。"
+                if remaining_tickets else "暂无余票。")
                                 )
             now_time = datetime.now()
             delta_time = now_time - query_time
@@ -336,14 +361,21 @@ class HulaquanDataManager(BaseDataManager):
             return "未找到该剧目的详细信息。"
         
     def message_update_data(self):
+        """
+        Checks for updates in the data and returns update status and messages.
+
+        Returns:
+            tuple:
+                - is_updated (bool): True if there is updated data, False otherwise.
+                - messages (list of str): List of messages describing the update status and details.
+        """
         # Return: (is_updated: bool, messages: [list:Str])
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
         is_updated, msg = self.compare_to_database()
         if not is_updated:
-            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{update_data}",])
-        messages = [f"检测到呼啦圈有{len(msg)}条数据更新\n查询时间：{query_time_str}"]
-        messages.extend(msg)
+            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['update_time']}",])
+        messages = [f"检测到呼啦圈有{len(msg)}条数据更新\n查询时间：{query_time_str}"] + msg
         return (True, messages)
         
 
