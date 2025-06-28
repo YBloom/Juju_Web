@@ -55,7 +55,7 @@ class Hulaquan(BasePlugin):
 
         self.register_config(
             key="scheduled_task_time",
-            default=900,
+            default=300,
             description="自动检测呼啦圈数据更新时间",
             value_type=int,
             allowed_values=[30, 60, 120, 180, 300, 600, 900, 1800, 3600],
