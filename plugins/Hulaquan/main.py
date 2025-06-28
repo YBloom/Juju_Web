@@ -254,9 +254,9 @@ class Hulaquan(BasePlugin):
     
     def _get_help(self):
         """自动生成帮助文档"""
-        text = ""
-        for func in self._funcs:
-            text += f"{func.name}\n👉用法：{func.usage}\n⚪描述：{func.description}\n"
+        text = "1"
+        #for func in self._funcs:
+        #    text += f"{func.name}\n👉用法：{func.usage}\n⚪描述：{func.description}\n"
         #for conf in self._configs:
         #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
         return text
