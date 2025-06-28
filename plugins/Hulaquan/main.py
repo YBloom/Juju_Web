@@ -168,7 +168,7 @@ class Hulaquan(BasePlugin):
         except Exception as e:
             print(f"呼啦圈上新提醒失败：")
             traceback.print_exc()
-            return    #message = "\n".join(results)
+            return False   #message = "\n".join(results)
         try:
             for user_id, user in self.users_manager.users().items():
                 mode = user.get("attention_to_hulaquan")
@@ -187,10 +187,11 @@ class Hulaquan(BasePlugin):
                     for m in results:
                         message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_group_msg(group_id, message)
+            return True
         except Exception as e:
             print(f"呼啦圈上新提醒失败：")
             traceback.print_exc()
-            return    #message = "\n".join(results)
+            return False #message = "\n".join(results)
  
 
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
@@ -273,7 +274,8 @@ class Hulaquan(BasePlugin):
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
-        await self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else None, group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else None, manual=True)
+        await flag = self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else None, group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else None, manual=True)
+        await msg.reply_text("刷新成功")
 
     async def on_schedule_save_data(self):
         await self.save_data_managers()
