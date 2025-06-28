@@ -14,8 +14,13 @@ VERSION = "1.0"
 @bot.group_event()
 async def on_group_message(msg: GroupMessage):
     _log.info(msg)
-    if msg.raw_message == "测试":
-        await msg.reply(text="NcatBot 测试成功喵~")
+    key, args = parse_args_of_messages(msg)
+    if key:
+        if any(word in key for word in HELLOWORDS):
+            for m in hello_message():
+                await bot.api.post_group_msg(msg.group_id, text=m)
+    else:
+        pass
 
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):

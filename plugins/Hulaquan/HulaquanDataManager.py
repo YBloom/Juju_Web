@@ -351,7 +351,7 @@ class HulaquanDataManager(BaseDataManager):
                                 ])
                 if remaining_tickets else "暂无余票。")
                                 )
-            message += f"数据更新时间: {self.data['update_time']}\n"
+            message += f"\n数据更新时间: {self.data['update_time']}\n"
             return message
         else:
             return "未找到该剧目的详细信息。"
