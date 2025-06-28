@@ -21,6 +21,10 @@ class UsersManager:
         
     def users_list(self):
         return self.data.get("users_list", [])
+    
+    def ops_list(self):
+        return self.data.get("ops_list", [])
+        
         
     def add_user(self, user_id):
         if not isinstance(user_id, str):

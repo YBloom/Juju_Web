@@ -29,7 +29,6 @@ class AdminPlugin(BasePlugin):
           # 异步发布不等待结果
         await self.on_send_pass_managers_event()
         self.register_handler("Hulaquan.load_plugin", self.add_send_managers_task)
-        await self.add_send_managers_task()
         
         self.register_admin_func(
             name="op",

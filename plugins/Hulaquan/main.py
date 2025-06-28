@@ -47,7 +47,7 @@ class Hulaquan(BasePlugin):
             handler=self.on_switch_scheduled_check_task,
             prefix="/上新",
             description="切换呼啦圈上新推送模式",
-            usage="/上新 (模式编号)\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送",
+            usage="/上新 (模式编号)\n2：关注呼啦圈检测的推送（定时检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送",
             examples=["/上新"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
@@ -178,6 +178,7 @@ class Hulaquan(BasePlugin):
                     for m in results:
                         message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_private_msg(user_id, message)
+                    log.info("呼啦圈数据刷新成功："+"\n".join(results))
             for group_id, group in self.groups_manager.groups().items():
                 mode = group.get("attention_to_hulaquan")
                 if (group_lists is not None) and (group_id not in group_lists) if group_lists else False:
@@ -190,7 +191,6 @@ class Hulaquan(BasePlugin):
             print(f"呼啦圈上新提醒失败：")
             traceback.print_exc()
             return    #message = "\n".join(results)
-        log.info("呼啦圈数据检测完毕")
  
 
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
@@ -237,9 +237,11 @@ class Hulaquan(BasePlugin):
             args[i] = args[i].lower() # 小写处理-I -i
         return args
     
-    def on_change_schedule_hulaquan_task_interval(self, msg: BaseMessage):
-        self.remove_scheduled_task("呼啦圈上新提醒")
+    async def on_change_schedule_hulaquan_task_interval(self, msg: BaseMessage):
         task_time = str(self.data['config']['scheduled_task_time'])
+        if not msg.user_id in self.users_manager.ops_list():
+            await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
+        self.remove_scheduled_task("呼啦圈上新提醒")
         self.add_scheduled_task(
             job_func=self.on_hulaquan_announcer, 
             name=f"呼啦圈上新提醒", 
@@ -247,6 +249,7 @@ class Hulaquan(BasePlugin):
             #max_runs=10, 
             conditions=[lambda: self.data["scheduled_task_switch"]]
         )
+        await msg.reply_text(f"已修改至{task_time}秒更新一次")
     
     def _get_help(self):
         """自动生成帮助文档"""
@@ -275,10 +278,15 @@ class Hulaquan(BasePlugin):
     async def on_schedule_save_data(self):
         await self.save_data_managers()
 
-    async def save_data_managers(self, msg):
+    async def save_data_managers(self, msg=None):
         try:
             self.hlq_data_manager.save()
             self.saoju_data_manager.save()
-            await msg.reply_text("保存成功")
+            if msg:
+                await msg.reply_text("保存成功")
+            else:
+                for user_id in self.users_manager.ops_list():
+                    await self.api.post_private_msg(user_id, "自动保存成功")
         except Exception as e:
-            await msg.reply_text(f"保存失败，原因是{e}")
+            if msg:
+                await msg.reply_text(f"保存失败，原因是{e}")

@@ -68,6 +68,7 @@ class HulaquanDataManager(BaseDataManager):
             self.data["events"] = data_dict["events"]
             for eid in list(self.data["events"].keys()):
                 self._update_ticket_details(eid)
+            self.data["last_update_time"] = self.data["update_time"]
             self.data["update_time"] = data_dict["update_time"]
             return self.data
         except Exception as e:
@@ -333,11 +334,9 @@ class HulaquanDataManager(BaseDataManager):
                     if ticket["left_ticket_count"] > (0 if ignore_sold_out else -1):
                         remaining_tickets.append(ticket)
             max_ticket_info_count = self.get_max_ticket_content_length(remaining_tickets)
-            query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
             message = (
                 f"剧名: {title}\n"
-                f"数据更新时间: {query_time_str}\n"
                 f"购票链接：{url}\n"
                 "剩余票务信息:\n"
                 + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
@@ -353,9 +352,7 @@ class HulaquanDataManager(BaseDataManager):
                                 ])
                 if remaining_tickets else "暂无余票。")
                                 )
-            now_time = datetime.now()
-            delta_time = now_time - query_time
-            message += f"\n⌚耗时: {delta_time.total_seconds():.2f}秒⌚"
+            message += f"数据更新时间: {self.data['update_time']}\n"
             return message
         else:
             return "未找到该剧目的详细信息。"
@@ -374,7 +371,7 @@ class HulaquanDataManager(BaseDataManager):
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
         is_updated, msg = self.compare_to_database()
         if not is_updated:
-            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['update_time']}",])
+            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",])
         messages = [f"检测到呼啦圈有{len(msg)}条数据更新\n查询时间：{query_time_str}"] + msg
         return (True, messages)
         
