@@ -42,6 +42,16 @@ class Hulaquan(BasePlugin):
     def register_hulaquan_announcement_tasks(self):
         if "scheduled_task_switch" not in self.data:
             self.data["scheduled_task_switch"] = False
+            
+        self.register_user_func(
+            name="帮助",
+            handler=self.on_help,
+            regex=r"^(?:[/#-](?:help|帮助)|help|帮助)[\s\S]*",
+            description="查看帮助",
+            usage="/help",
+            examples=["/help", "/help example_plugin"],
+        )
+        
         self.register_user_func(
             name="切换呼啦圈上新推送模式",
             handler=self.on_switch_scheduled_check_task,
@@ -53,15 +63,15 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
-        self.register_user_func(
-            name="帮助",
-            handler=self.on_help,
-            regex=r"^(?:[/#-](?:help|帮助)|help|帮助)[\s\S]*",
-            description="查看帮助",
-            usage="/help [<plugin_name>]",
-            examples=["/help", "/help example_plugin"],
-        )
-
+        self.register_admin_func(
+                    name="开启/关闭呼啦圈定时检测功能（管理员）",
+                    handler=self._on_switch_scheduled_check_task_for_users,
+                    prefix="/呼啦圈检测",
+                    description="开启/关闭呼啦圈定时检测功能（管理员）",
+                    usage="/呼啦圈检测",
+                    examples=["/呼啦圈检测"],
+                    metadata={"category": "utility"}
+                )
         self.register_config(
             key="scheduled_task_time",
             default=300,
@@ -70,16 +80,9 @@ class Hulaquan(BasePlugin):
             allowed_values=[30, 60, 120, 180, 300, 600, 900, 1800, 3600],
             on_change=self.on_change_schedule_hulaquan_task_interval,
         )
+        self.data["config"]["scheduled_task_time"] = 600
         
-        self.register_admin_func(
-            name="开启/关闭呼啦圈定时检测功能（管理员）",
-            handler=self._on_switch_scheduled_check_task_for_users,
-            prefix="/呼啦圈检测",
-            description="开启/关闭呼啦圈定时检测功能（管理员）",
-            usage="/呼啦圈检测",
-            examples=["/呼啦圈检测"],
-            metadata={"category": "utility"}
-        )
+        
         
         self.register_admin_func(
             name="保存数据（管理员）",
@@ -181,7 +184,7 @@ class Hulaquan(BasePlugin):
         try:
             for user_id, user in self.users_manager.users().items():
                 mode = user.get("attention_to_hulaquan")
-                if (user_lists is not None) and (user_id not in user_lists) if user_lists else False:
+                if (user_lists is not None) and (user_id not in user_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in results:
@@ -190,7 +193,7 @@ class Hulaquan(BasePlugin):
                     log.info("呼啦圈数据刷新成功："+"\n".join(results))
             for group_id, group in self.groups_manager.groups().items():
                 mode = group.get("attention_to_hulaquan")
-                if (group_lists is not None) and (group_id not in group_lists) if group_lists else False:
+                if (group_lists is not None) and (group_id not in group_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in results:
