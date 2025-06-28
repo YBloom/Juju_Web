@@ -274,8 +274,12 @@ class Hulaquan(BasePlugin):
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
-        await flag = self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else None, group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else None, manual=True)
-        await msg.reply_text("刷新成功")
+        try:
+            await self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else None, group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else None, manual=True)
+            await msg.reply_text("刷新成功")
+        except Exception as e:
+            print(e)
+            await msg.reply_text("刷新失败")
 
     async def on_schedule_save_data(self):
         await self.save_data_managers()
