@@ -75,7 +75,7 @@ class Hulaquan(BasePlugin):
             name="开启/关闭呼啦圈定时检测功能（管理员）",
             handler=self._on_switch_scheduled_check_task_for_users,
             prefix="/呼啦圈检测",
-            description="",
+            description="开启/关闭呼啦圈定时检测功能（管理员）",
             usage="/呼啦圈检测",
             examples=["/呼啦圈检测"],
             metadata={"category": "utility"}
@@ -85,7 +85,7 @@ class Hulaquan(BasePlugin):
             name="保存数据（管理员）",
             handler=self.save_data_managers,
             prefix="/save",
-            description="/save",
+            description="保存数据（管理员）",
             usage="/save",
             examples=["/save"],
             metadata={"category": "utility"}
@@ -125,7 +125,7 @@ class Hulaquan(BasePlugin):
             name="呼啦圈手动刷新（管理员）",
             handler=self.on_hulaquan_announcer_manual,
             prefix="/refresh",
-            description="/refresh",
+            description="呼啦圈手动刷新（管理员）",
             usage="/refresh",
             examples=["/refresh"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
@@ -263,9 +263,12 @@ class Hulaquan(BasePlugin):
     
     def _get_help(self):
         """自动生成帮助文档"""
-        text = ""
+        text = {"user":"", "admin":""}
         for func in self._funcs:
-            text += f"{func.name}\n👉用法：{func.usage}\n⚪描述：{func.description}\n"
+            if func.permission == "user":
+                text["user"] += f"👉功能描述：{func.description}\n★用法：{func.usage}\n\n"
+            else:
+                text["admin"] += f"👉功能描述：{func.description}\n★用法：{func.usage}\n\n"
         #for conf in self._configs:
         #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
         return text
@@ -295,7 +298,11 @@ class Hulaquan(BasePlugin):
         
     async def on_help(self, msg: BaseMessage):
         text = self._get_help()
-        await msg.reply(text)
+        send = text["user"]
+        if self.users_manager.is_op(msg.user_id):
+            send += "\n以下是管理员功能："+text["admin"]
+            send = "以下是用户功能：\n"
+        await msg.reply(send)
 
     async def save_data_managers(self, msg=None):
         try:
