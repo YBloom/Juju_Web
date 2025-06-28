@@ -301,7 +301,7 @@ class Hulaquan(BasePlugin):
         send = text["user"]
         if self.users_manager.is_op(msg.user_id):
             send += "\n以下是管理员功能："+text["admin"]
-            send = "以下是用户功能：\n"
+            send = "以下是用户功能：\n" + send
         await msg.reply(send)
 
     async def save_data_managers(self, msg=None):
