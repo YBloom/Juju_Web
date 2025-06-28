@@ -252,7 +252,14 @@ class Hulaquan(BasePlugin):
         )
         await msg.reply_text(f"已修改至{task_time}秒更新一次")
     
-
+    def _get_help(self):
+        """自动生成帮助文档"""
+        text = ""
+        for func in self._funcs:
+            text += f"{func.name}\n👉用法：{func.usage}\n⚪描述：{func.description}\n"
+        #for conf in self._configs:
+        #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
+        return text
         
     async def on_saoju_search_events_by_date(self, msg: BaseMessage):
         # 最多有12小时数据延迟
@@ -272,7 +279,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("刷新成功")
         except Exception as e:
             print(e)
-            await msg.reply_text("刷新失败")
+            await msg.reply_text()
 
     async def on_schedule_save_data(self):
         await self.save_data_managers()
