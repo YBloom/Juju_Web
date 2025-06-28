@@ -49,6 +49,7 @@ class UsersManager:
         if not isinstance(user_id, str):
             user_id = str(user_id)
         if user_id in self.data["ops_list"]:
+            
             return False
         if user_id not in self.data["users_list"]:
             self.add_user(user_id)

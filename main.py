@@ -58,7 +58,7 @@ def hello_message():
     ✅3./date <日期> 返回扫剧查排期的网址\n
     日期格式为 YYYY-MM-DD\n
     如：/date 2025-06-23\n
-    ✅4./help Hulaquan 获取指令帮助文档
+    ✅4./help 获取指令帮助文档
     """)
     msg.append(f"""
     ❗由于考虑到机器人服务的稳定性和快速性，有些数据更新可能并不及时，以下是各数据更新时间：\n

@@ -52,6 +52,15 @@ class Hulaquan(BasePlugin):
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
         )
+        
+        self.register_user_func(
+            name="帮助",
+            handler=self.on_help,
+            regex=r"^(?:[/#-](?:help|帮助)|help|帮助)[\s\S]*",
+            description="查看帮助",
+            usage="/help [<plugin_name>]",
+            examples=["/help", "/help example_plugin"],
+        )
 
         self.register_config(
             key="scheduled_task_time",
@@ -240,7 +249,7 @@ class Hulaquan(BasePlugin):
     
     async def on_change_schedule_hulaquan_task_interval(self, msg: BaseMessage):
         task_time = str(self.data['config']['scheduled_task_time'])
-        if not msg.user_id in self.users_manager.ops_list():
+        if not self.users_manager.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
         self.remove_scheduled_task("呼啦圈上新提醒")
         self.add_scheduled_task(
@@ -283,6 +292,10 @@ class Hulaquan(BasePlugin):
 
     async def on_schedule_save_data(self):
         await self.save_data_managers()
+        
+    async def on_help(self, msg: BaseMessage):
+        text = self._get_help()
+        await msg.reply(text)
 
     async def save_data_managers(self, msg=None):
         try:
