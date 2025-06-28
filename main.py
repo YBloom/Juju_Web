@@ -52,7 +52,7 @@ async def handle_request(self, msg):
 def hello_message():
     msg = []
     msg.append(f"""
-    哈咯我是剧剧机器人，致力于便捷广大zgyyj韭菜（划掉）查学生票查排期，目前只是初步实现，更多功能欢迎大家多多提议！\n
+    hihi我是剧剧机器人，致力于便捷广大zgyyj剧韭（划掉）查学生票查排期，目前只是初步实现，更多功能欢迎大家多多提议！\n
     当前版本：v{VERSION}\n
     目前已经实现的功能有：\n
     ✅1./hlq <剧名> <-i> <-c> 查某剧呼啦圈余票/数量/卡司\n
