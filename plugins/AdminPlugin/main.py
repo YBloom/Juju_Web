@@ -115,6 +115,9 @@ class AdminPlugin(BasePlugin):
         
     async def _on_add_op(self, msg: BaseMessage):
         command = msg.raw_message.split(" ")
+        if len(command) < 2:
+            await msg.reply(f"需输入目标账号")
+            return
         user_id = command[1]
         self.data["ops_list"].append(user_id)
         if self.users_manager.add_op(user_id):
@@ -126,7 +129,11 @@ class AdminPlugin(BasePlugin):
         
     async def _on_de_op(self, msg: BaseMessage):
         command = msg.raw_message.split(" ")
+        if len(command) < 2:
+            await msg.reply(f"需输入目标账号")
+            return
         user_id = command[1]
+        
         if self.users_manager.de_op(user_id):
             await msg.reply(f"已成功撤销用户{user_id}的管理员权限。")
         else:
