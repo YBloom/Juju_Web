@@ -68,7 +68,7 @@ class HulaquanDataManager(BaseDataManager):
             self.data["events"] = data_dict["events"]
             for eid in list(self.data["events"].keys()):
                 self._update_ticket_details(eid)
-            self.data["last_update_time"] = self.data["update_time"]
+            self.data["last_update_time"] = self.data.get("update_time", None)
             self.data["update_time"] = data_dict["update_time"]
             return self.data
         except Exception as e:
@@ -222,16 +222,15 @@ class HulaquanDataManager(BaseDataManager):
         
         is_updated = False
         old_data_all, new_data_all = self.fetch_and_update_data()
-        new_data = new_data_all["events"]
-        old_data = old_data_all["events"]
+        new_data = new_data_all.get("events", {})
+        old_data = old_data_all.get("events", {})
         messages = []
         for eid, event in new_data.items():
             message = []
-            old_event = old_data[eid]
             if eid not in old_data.keys():
                 t = [f"✨" if ticket['left_ticket_count'] > 0 else "❌" + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" for ticket in event.get("ticket_details", [])]
                 message.append("🟢新开票场次：" + "\n ".join(t))
-            elif comp := self.compare_tickets(old_event.get("ticket_details", None), new_data[eid].get("ticket_details", None)):
+            elif comp := self.compare_tickets(old_data[eid].get("ticket_details", None), new_data[eid].get("ticket_details", None)):
                 new_message = []
                 return_message = []
                 add_message = []
