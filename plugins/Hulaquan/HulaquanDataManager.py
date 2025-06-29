@@ -284,7 +284,7 @@ class HulaquanDataManager(BaseDataManager):
             messages.append((
                 f"剧名: {event['title']}\n"
                 f"活动结束时间: {event['end_time']}\n"
-                f"更新时间: {event['update_time']}\n"
+                f"更新时间: {self.data['update_time']}\n"
             ) + "\n".join(message))
             is_updated = True
         return is_updated, messages
