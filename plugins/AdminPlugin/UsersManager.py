@@ -35,7 +35,7 @@ class UsersManager:
         self.data["users"][user_id] = {
             "activate": True,
             "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "attention_to_hulaquan": 0,
+            "attention_to_hulaquan": 1,
         }
     
     def delete_user(self, user_id):
