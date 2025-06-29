@@ -4,6 +4,8 @@ from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
 import requests
 import re
 import aiohttp
+import traceback
+import copy
 import asyncio
 import json
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
@@ -39,7 +41,7 @@ class HulaquanDataManager(BaseDataManager):
         Returns:
             返回(old_data, new_data)
         """
-        old_data = self.data
+        old_data = copy.deepcopy(self.data)
         self._update_events_data()
         return old_data, self.data
 
@@ -52,6 +54,8 @@ class HulaquanDataManager(BaseDataManager):
             response.raise_for_status()
             json_data = response.content.decode('utf-8-sig')
             json_data = json.loads(json_data)
+            if isinstance(json_data, bool):
+                return False, False
             result = []
             for event in json_data["events"]:
                 if not timeMark or (timeMark and event["timeMark"] > 0):
@@ -61,18 +65,28 @@ class HulaquanDataManager(BaseDataManager):
             return f"Error fetching recommendation: {e}"
         return json_data["count"], result
 
-    def _update_events_data(self, data_dict=None):
+    def _update_events_data(self, data_dict=None, __dump=True):
         try:
             #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
             data_dict = data_dict or self.get_events_dict()
-            self.data["events"] = data_dict["events"]
-            for eid in list(self.data["events"].keys()):
-                self._update_ticket_details(eid)
-            self.data["last_update_time"] = self.data.get("update_time", None)
-            self.data["update_time"] = data_dict["update_time"]
-            return self.data
+            if __dump:
+                self.data["events"] = data_dict["events"]
+                for eid in list(self.data["events"].keys()):
+                    self._update_ticket_details(eid)
+                self.data["last_update_time"] = self.data.get("update_time", None)
+                self.data["update_time"] = data_dict["update_time"]
+                return self.data
+            else:
+                result = {}
+                result["events"] = data_dict["events"]
+                for eid in list(result["events"].keys()):
+                    result = self._update_ticket_details(eid, data_dict=result)
+                result["last_update_time"] = self.data.get("update_time", None)
+                result["update_time"] = data_dict["update_time"]
+                return result
         except Exception as e:
             print(f"呼啦圈数据下载失败: {e}")
+            traceback.print_exc()
             return None
     
     async def fetch_event_detail(self, session, event_id):
@@ -142,8 +156,13 @@ class HulaquanDataManager(BaseDataManager):
                 del json_data[i]
         return json_data
         
-    def _update_ticket_details(self, event_id):
-        self.data["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+    def _update_ticket_details(self, event_id, data_dict=None):
+        if data_dict is None:
+            self.data["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+            return self.data
+        else:
+            data_dict["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+            return data_dict
         
     def get_events_dict(self):
         data = self.search_all_events()
@@ -159,8 +178,15 @@ class HulaquanDataManager(BaseDataManager):
     def search_all_events(self):
         #count = self.get_recommendation(1,0,False)[0]  # Test the connection and the count
         #print(f"Total recommendations available: {count}")
-        data = []
-        data += self.search_events_data_by_recommendation_link(100, 0, True)[1]
+        data = False
+        cnt = 95
+        while data is False:
+            data = self.search_events_data_by_recommendation_link(cnt, 0, True)[1]
+            cnt -= 5
+            if cnt != 90:
+                print(f"获取呼啦圈数据失败，第{(19-cnt/5)}尝试。")
+            if cnt == 0:
+                raise Exception
         return data
     
     def return_events_data(self):
@@ -211,7 +237,7 @@ class HulaquanDataManager(BaseDataManager):
     # -------------------Query------------------------------ #         
     # ---------------------Announcement--------------------- #
 
-    def compare_to_database(self):
+    def compare_to_database(self, __dump=True):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
         __dump: bool, 是否将新数据写入文件
@@ -221,22 +247,26 @@ class HulaquanDataManager(BaseDataManager):
         """
         
         is_updated = False
-        old_data_all, new_data_all = self.fetch_and_update_data()
+        if __dump:
+            old_data_all, new_data_all = self.fetch_and_update_data()
+        else:
+            old_data_all = self.data
+            new_data_all = self._update_events_data(__dump=False)
         new_data = new_data_all.get("events", {})
         old_data = old_data_all.get("events", {})
         messages = []
         for eid, event in new_data.items():
             message = []
             if eid not in old_data.keys():
-                t = [f"✨" if ticket['left_ticket_count'] > 0 else "❌" + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" for ticket in event.get("ticket_details", [])]
-                message.append("🟢新开票场次：" + "\n ".join(t))
+                t = [("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" for ticket in event.get("ticket_details", [])]
+                message.append("🟢新开票场次：\n" + "\n ".join(t))
             elif comp := self.compare_tickets(old_data[eid].get("ticket_details", None), new_data[eid].get("ticket_details", None)):
                 new_message = []
                 return_message = []
                 add_message = []
                 for ticket in comp:
                     flag = ticket['update_status']
-                    t = f"✨" if ticket['left_ticket_count'] > 0 else "❌" + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
+                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
                     if flag == 'new':
                         new_message.append(t)
                     elif flag == 'return':
@@ -244,11 +274,11 @@ class HulaquanDataManager(BaseDataManager):
                     elif flag == 'add':
                         add_message.append(t)
                 if new_message:
-                    message.append("🟢新开票场次："+'\n'.join(new_message))
+                    message.append("🟢新开票场次：\n"+'\n'.join(new_message))
                 if return_message:
-                    message.append("🟢回流（？）场次："+'\n'.join(return_message))
+                    message.append("🟢回流（？）场次：\n"+'\n'.join(return_message))
                 if add_message:
-                    message.append("🟢补票场次："+'\n'.join(add_message))
+                    message.append("🟢补票场次：\n"+'\n'.join(add_message))
             else:
                 continue
             messages.append((
@@ -280,7 +310,8 @@ class HulaquanDataManager(BaseDataManager):
             return new_data
         old_data_dict = {item['id']: item for item in old_data}
         update_data = []
-
+        if int(old_data[0]["event_id"]) == 3848:
+            pass
         # 遍历 new_data 并根据条件进行更新
         for new_item in new_data:
             new_id = new_item['id']
@@ -307,6 +338,7 @@ class HulaquanDataManager(BaseDataManager):
                     update_data.append(new_item)
                 else:
                     new_item['update_status'] = None
+        print(update_data)
         return update_data
         
         
