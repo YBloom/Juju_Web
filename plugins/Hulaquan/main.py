@@ -177,8 +177,9 @@ class Hulaquan(BasePlugin):
     async def on_hulaquan_announcer(self, user_lists: list=None, group_lists: list=None, manual=False):
         try:
             is_updated, results = self.hlq_data_manager.message_update_data()
+            log.info("呼啦圈数据刷新成功：\n"+"\n".join(results))
         except Exception as e:
-            print(f"呼啦圈上新提醒失败：")
+            log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
             traceback.print_exc()
             return False   #message = "\n".join(results)
         try:
@@ -190,7 +191,6 @@ class Hulaquan(BasePlugin):
                     for m in results:
                         message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_private_msg(user_id, message)
-                    log.info("呼啦圈数据刷新成功："+"\n".join(results))
             for group_id, group in self.groups_manager.groups().items():
                 mode = group.get("attention_to_hulaquan")
                 if (group_lists is not None) and (group_id not in group_lists):
@@ -201,9 +201,9 @@ class Hulaquan(BasePlugin):
                         await self.api.post_group_msg(group_id, message)
             return True
         except Exception as e:
-            print(f"呼啦圈上新提醒失败：")
+            log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
             traceback.print_exc()
-            return False #message = "\n".join(results)
+            return False   #message = "\n".join(results)
  
 
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
@@ -314,8 +314,10 @@ class Hulaquan(BasePlugin):
             if msg:
                 await msg.reply_text("保存成功")
             else:
-                for user_id in self.users_manager.ops_list():
-                    await self.api.post_private_msg(user_id, "自动保存成功")
+                pass
+                #for user_id in self.users_manager.ops_list():
+                    #await self.api.post_private_msg(user_id, "自动保存成功")
         except Exception as e:
+            log.error(f"呼啦圈自动保存失败：\n" + traceback.format_exc())
             if msg:
                 await msg.reply_text(f"保存失败，原因是{e}")
