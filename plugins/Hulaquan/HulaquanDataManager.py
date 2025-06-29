@@ -338,7 +338,6 @@ class HulaquanDataManager(BaseDataManager):
                     update_data.append(new_item)
                 else:
                     new_item['update_status'] = None
-        print(update_data)
         return update_data
         
         
