@@ -1,5 +1,5 @@
 from datetime import timedelta
-import traceback
+import traceback, time
 
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
@@ -209,6 +209,7 @@ class Hulaquan(BasePlugin):
         
 
     async def on_hulaquan_announcer(self, user_lists: list=None, group_lists: list=None, manual=False):
+        start_time = time.time()
         try:
             result = self.hlq_data_manager.message_update_data()
             is_updated = result["is_updated"]
@@ -238,11 +239,13 @@ class Hulaquan(BasePlugin):
                         await self.api.post_group_msg(group_id, message)
             if new_pending:
                 self.register_pending_tickets_announcer()
-            return True
         except Exception as e:
             log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
             traceback.print_exc()
             return False
+        elapsed_time = time.time() - start_time
+        print(f"任务执行时间: {elapsed_time}秒")
+        return True
         
     def register_pending_tickets_announcer(self):
         for eid, event in self.hlq_data_manager.data["pending_events_dict"].items():
