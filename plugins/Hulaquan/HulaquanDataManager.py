@@ -32,7 +32,7 @@ class HulaquanDataManager(BaseDataManager):
     def __init__(self, file_path=None):
         #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
-        self.data.pending_dict = {} # {id(int):{"valid_from":datetime, "message":str}}
+        self.data.pending_events_dict = self.data.pending_events_dict or {}  # 确保有一个pending_events_dict来存储待办事件
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
@@ -150,7 +150,7 @@ class HulaquanDataManager(BaseDataManager):
 
     def search_ticket_details(self, event_id):
         json_data = self.search_event_by_id(event_id)
-        keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days"]
+        keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
         json_data: list = json_data["ticket_details"]
         for i in range(len(json_data)):
             json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
@@ -249,6 +249,7 @@ class HulaquanDataManager(BaseDataManager):
         """
         
         is_updated = False
+        new_pending = False
         if __dump:
             old_data_all, new_data_all = self.fetch_and_update_data()
         else:
@@ -281,6 +282,7 @@ class HulaquanDataManager(BaseDataManager):
                         elif flag == 'add':
                             add_message.append(t)
                 if pending_message:
+                    new_pending = True
                     t = "🟡新上架场次：\n"
                     cnt = 1
                     for valid_from, m in pending_message.items():
@@ -290,7 +292,7 @@ class HulaquanDataManager(BaseDataManager):
                         valid_date = standardize_datetime(valid_from, return_str=True)
                         while random_id in pending_message:
                             random_id = random.randint(1000, 9999)
-                        self.data.pending_dict[random_id] = {
+                        self.data.pending_events_dict[random_id] = {
                             "valid_from": valid_date,
                             "message": (f"剧名: {event['title']}\n"
                                         f"活动结束时间: {event['end_time']}\n"
@@ -316,7 +318,7 @@ class HulaquanDataManager(BaseDataManager):
                 f"更新时间: {self.data['update_time']}\n"
             ) + "\n".join(message))
             is_updated = True
-        return is_updated, messages
+        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
 
     def compare_tickets(self, old_data, new_data):
         """
@@ -424,14 +426,17 @@ class HulaquanDataManager(BaseDataManager):
                 - is_updated (bool): True if there is updated data, False otherwise.
                 - messages (list of str): List of messages describing the update status and details.
         """
-        # Return: (is_updated: bool, messages: [list:Str])
+        # Return: (is_updated: bool, messages: [list:Str], new_pending:bool)
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        is_updated, msg = self.compare_to_database()
+        result = self.compare_to_database()
+        is_updated = result["is_updated"]
+        messages = result["messages"]
+        new_pending = result["new_pending"]
         if not is_updated:
-            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",])
-        messages = [f"检测到呼啦圈有{len(msg)}条数据更新\n查询时间：{query_time_str}"] + msg
-        return (True, messages)
+            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], False)
+        messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
+        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
         
 
     # ---------------------静态函数--------------------- #

@@ -9,6 +9,8 @@ from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 log = get_log()
 
+
+
 class Hulaquan(BasePlugin):
     name = "Hulaquan"  # 插件名称
     version = "0.0.1"  # 插件版本
@@ -176,19 +178,22 @@ class Hulaquan(BasePlugin):
 
     async def on_hulaquan_announcer(self, user_lists: list=None, group_lists: list=None, manual=False):
         try:
-            is_updated, results = self.hlq_data_manager.message_update_data()
-            log.info("呼啦圈数据刷新成功：\n"+"\n".join(results))
+            result = self.hlq_data_manager.message_update_data()
+            is_updated = result["is_updated"]
+            messages = result["messages"]
+            new_pending = result["new_pending"]
+            log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
         except Exception as e:
             log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
             traceback.print_exc()
-            return False   #message = "\n".join(results)
+            return False
         try:
             for user_id, user in self.users_manager.users().items():
                 mode = user.get("attention_to_hulaquan")
                 if (user_lists is not None) and (user_id not in user_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
-                    for m in results:
+                    for m in messages:
                         message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_private_msg(user_id, message)
             for group_id, group in self.groups_manager.groups().items():
@@ -196,16 +201,49 @@ class Hulaquan(BasePlugin):
                 if (group_lists is not None) and (group_id not in group_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
-                    for m in results:
+                    for m in messages:
                         message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_group_msg(group_id, message)
+            if new_pending:
+                await self.register_pending_tickets_announcer()
             return True
         except Exception as e:
             log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
             traceback.print_exc()
-            return False   #message = "\n".join(results)
- 
-
+            return False
+        
+    async def register_pending_tickets_announcer(self):
+        for eid, event in self.hlq_data_manager.data.pending_events_dict.items():
+            eid = str(eid)
+            if eid in self._time_task_scheduler.get_job_status(eid):
+                continue
+            valid_from = event.get("valid_from")
+            self.add_scheduled_task(
+                job_func=self.on_pending_tickets_announcer,
+                name=eid,
+                interval=valid_from,
+                kwargs={"eid":eid, "message":event.get("message")},
+                max_runs=1,
+            )
+            
+    async def on_pending_tickets_announcer(self, eid:str, message: str):
+        try:
+            for user_id, user in self.users_manager.users().items():
+                mode = user.get("attention_to_hulaquan")
+                if mode == "1" or mode == "2":
+                    message = f"【即将开票】呼啦圈开票提醒：\n{message}"
+                    await self.api.post_private_msg(user_id, message)
+            for group_id, group in self.groups_manager.groups().items():
+                mode = group.get("attention_to_hulaquan")
+                if mode == "1" or mode == "2":
+                    message = f"【即将开票】呼啦圈开票提醒：\n{message}"
+                    await self.api.post_group_msg(group_id, message)
+        except Exception as e:
+            log.error(f"呼啦圈开票提醒失败：\n" + traceback.format_exc())
+            traceback.print_exc()
+        del self.hlq_data_manager.data.pending_events_dict[eid]
+        
+        
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         #print(lambda: self.data["scheduled_task_switch"],  self.data["scheduled_task_switch"])
         user_id = msg.user_id
