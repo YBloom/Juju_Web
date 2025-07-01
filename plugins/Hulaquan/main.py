@@ -10,15 +10,34 @@ bot = CompatibleEnrollment  # 兼容回调函数注册器
 log = get_log()
 
 
+def generate_update_log(update_log):
+    # 逆序列表
+    update_log.reverse()
+    
+    log_text = ""
+    for entry in update_log:
+        version = entry.get("version")
+        description = entry.get("description")
+        date = entry.get("date")
+        log_text += f"V {version} 更新内容：\n{description}\n更新时间：{date}\n\n"
+    
+    return log_text.strip()
+
 
 class Hulaquan(BasePlugin):
     name = "Hulaquan"  # 插件名称
-    version = "0.0.1"  # 插件版本
+    version = "0.0.2"  # 插件版本
     author = "摇摇杯"  # 插件作者
     info = "与呼啦圈学生票相关的功能"  # 插件描述
     dependencies = {
         }  # 插件依赖，格式: {"插件名": "版本要求"}
-
+    update_log = [
+        {"version": "0.0.1", "description": "初始公测版本", "date":"2025-06-28"},
+        {"version": "0.0.2", 
+         "description": "1.修改了回流票的检测逻辑（之前可能是误检测）\n2.增加了对呼啦圈学生票待开票状态的检测\n3.添加了呼啦圈未开票的票的开票定时提醒功能（提前30分钟）\n4.增加了更新日志和版本显示",
+         "date": "2025-07-01"
+        },
+    ]
     async def on_load(self):
         # 插件加载时执行的操作
         print(f"{self.name} 插件已加载")
@@ -157,6 +176,16 @@ class Hulaquan(BasePlugin):
             tags=["saoju"],
             metadata={"category": "utility"}
         )
+        self.register_user_func(
+            name="获取更新日志",
+            handler=self.on_get_update_log,
+            prefix="/版本",
+            description="获取更新日志",
+            usage="/版本",
+            examples=["/版本"],
+            tags=["version"],
+            metadata={"category": "utility"}
+        )
         """
         {name}-{description}:使用方式 {usage}
         """
@@ -175,6 +204,12 @@ class Hulaquan(BasePlugin):
             await msg.reply("(管理员）已开启呼啦圈上新检测功能")
         else:
             await msg.reply("（管理员）已关闭呼啦圈上新检测功能")
+            
+    async def on_get_update_log(self, msg: BaseMessage):
+        m = f"当前版本：{self.version}\n"
+        f"版本更新日志：{generate_update_log(self.update_log)}"
+        await msg.reply(m)
+        
 
     async def on_hulaquan_announcer(self, user_lists: list=None, group_lists: list=None, manual=False):
         try:
