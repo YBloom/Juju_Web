@@ -8,6 +8,7 @@ import traceback
 import copy
 import asyncio
 import json
+import random
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 
 """
@@ -31,6 +32,7 @@ class HulaquanDataManager(BaseDataManager):
     def __init__(self, file_path=None):
         #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
+        self.data.pending_dict = {} # {id(int):{"valid_from":datetime, "message":str}}
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
@@ -279,12 +281,27 @@ class HulaquanDataManager(BaseDataManager):
                         elif flag == 'add':
                             add_message.append(t)
                 if pending_message:
-                    t = ""
+                    t = "🟡新上架场次：\n"
                     cnt = 1
                     for valid_from, m in pending_message.items():
-                        t += (f"第{cnt}波" if len(pending_message.keys()) > 1 else None)+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
+                        s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else None)+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
                         cnt += 1
-                    message.append("🟡新上架场次：\n"+t)
+                        random_id = random.randint(1000, 9999)
+                        valid_date = standardize_datetime(valid_from, return_str=True)
+                        while random_id in pending_message:
+                            random_id = random.randint(1000, 9999)
+                        self.data.pending_dict[random_id] = {
+                            "valid_from": valid_date,
+                            "message": (f"剧名: {event['title']}\n"
+                                        f"活动结束时间: {event['end_time']}\n"
+                                        f"更新时间: {self.data['update_time']}\n"
+                                        f"开票时间: {valid_from}\n"
+                                        f"场次信息：\n" + '\n'.join(m) + "\n"
+                                        )
+                                        
+                        }
+                        t += s
+                    message.append(t)
                 if new_message:
                     message.append("🟢新开票场次：\n"+'\n'.join(new_message))
                 if add_message:
@@ -343,7 +360,7 @@ class HulaquanDataManager(BaseDataManager):
                     # 如果 total_ticket 增加了，则标记为 "add"
                     new_item['update_status'] = 'add'
                     update_data.append(new_item)
-                elif new_left_ticket_count > old_left_ticket_count:
+                elif new_left_ticket_count > old_left_ticket_count and old_left_ticket_count == 0:
                     # 如果 left_ticket_count 增加了，则标记为 "return"
                     new_item['update_status'] = 'return'
                     update_data.append(new_item)
@@ -436,15 +453,25 @@ def ljust_for_chinese(s, width, fillchar=' '):
     result = s + fillchar * fill_width
     return result
 
-def standardize_datetime(dateAndTime):
+def standardize_datetime(dateAndTime, return_str=True):
     current_year = datetime.now().year
     if len(dateAndTime.split("-")[0]) != 4:
         dateAndTime = str(current_year) + "-" + dateAndTime
     try:
         dt = datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M:%S")
+        if return_str:
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
     except ValueError:
         dt = datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M")
-    return dt.strftime("%Y-%m-%d %H:%M")
+        dt.second = 0  # 将秒数设置为0
+        dt.microsecond = 0  # 将微秒数设置为0
+        if return_str:
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+    if not return_str:
+        return dt
+    else:
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+        
 
 def extract_city(address):
     city_pattern_1 = r'([^\s]{2})市'
