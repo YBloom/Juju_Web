@@ -32,7 +32,7 @@ class HulaquanDataManager(BaseDataManager):
     def __init__(self, file_path=None):
         #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
-        self.data["pending_events_dict"] = self.data["pending_events_dict"] or {}  # 确保有一个pending_events_dict来存储待办事件
+        self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
