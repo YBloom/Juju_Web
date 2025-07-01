@@ -204,7 +204,7 @@ class Hulaquan(BasePlugin):
             await msg.reply("（管理员）已关闭呼啦圈上新检测功能")
             
     async def on_get_update_log(self, msg: BaseMessage):
-        m = f"当前版本：{self.version}\n版本更新日志：{get_update_log()}"
+        m = f"当前版本：{self.version}\n\n版本更新日志：\n{get_update_log()}"
         await msg.reply(m)
         
 
