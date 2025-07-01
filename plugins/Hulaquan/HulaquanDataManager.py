@@ -434,7 +434,7 @@ class HulaquanDataManager(BaseDataManager):
         messages = result["messages"]
         new_pending = result["new_pending"]
         if not is_updated:
-            return (False, [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], False)
+            return {"is_updated": False, "messages": [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], "new_pending": False}
         messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
         
