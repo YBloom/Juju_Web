@@ -257,28 +257,40 @@ class HulaquanDataManager(BaseDataManager):
         messages = []
         for eid, event in new_data.items():
             message = []
-            if eid not in old_data.keys():
-                t = [("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" for ticket in event.get("ticket_details", [])]
-                message.append("🟢新开票场次：\n" + "\n ".join(t))
-            elif comp := self.compare_tickets(old_data[eid].get("ticket_details", None), new_data[eid].get("ticket_details", None)):
+            if comp := self.compare_tickets(old_data[eid].get("ticket_details", None), new_data[eid].get("ticket_details", None)):
                 new_message = []
                 return_message = []
                 add_message = []
+                pending_message = {}
                 for ticket in comp:
                     flag = ticket['update_status']
                     t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
-                    if flag == 'new':
-                        new_message.append(t)
-                    elif flag == 'return':
-                        return_message.append(t)
-                    elif flag == 'add':
-                        add_message.append(t)
+                    if ticket["status"] == "pending" and 'update_status' in ticket.keys():
+                        valid_from = ticket["valid_from"]
+                        if not valid_from or valid_from == "null":
+                            valid_from = "未公开"
+                        pending_message[valid_from] = []
+                        pending_message[valid_from].append(t)
+                    elif ticket["status"] == "active":
+                        if flag == 'new':
+                            new_message.append(t)
+                        elif flag == 'return':
+                            return_message.append(t)
+                        elif flag == 'add':
+                            add_message.append(t)
+                if pending_message:
+                    t = ""
+                    cnt = 1
+                    for valid_from, m in pending_message.items():
+                        t += (f"第{cnt}波" if len(pending_message.keys()) > 1 else None)+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
+                        cnt += 1
+                    message.append("🟡新上架场次：\n"+t)
                 if new_message:
                     message.append("🟢新开票场次：\n"+'\n'.join(new_message))
-                if return_message:
-                    message.append("🟢回流（？）场次：\n"+'\n'.join(return_message))
                 if add_message:
                     message.append("🟢补票场次：\n"+'\n'.join(add_message))
+                if return_message:
+                    message.append("🟢回流（？）场次：\n"+'\n'.join(return_message))
             else:
                 continue
             messages.append((
@@ -297,7 +309,7 @@ class HulaquanDataManager(BaseDataManager):
   "title": "《海雾》07-19 20:00￥199（原价￥299) 学生票",
   "start_time": "2025-07-19 20:00:00",
   "end_time": "2025-07-19 21:00:00",
-  "status": "active", /expired
+  "status": "active", /expired, /pending
   "create_time": "2025-06-11 11:06:13",
   "ticket_price": 199,
   "max_ticket": 1,
@@ -317,7 +329,6 @@ class HulaquanDataManager(BaseDataManager):
             new_id = new_item['id']
             new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']
-
             if new_id not in old_data_dict:
                 # 如果 new_data 中存在新的 id，则标记为 "new"
                 new_item['update_status'] = 'new'
