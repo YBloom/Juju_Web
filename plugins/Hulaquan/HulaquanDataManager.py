@@ -289,7 +289,7 @@ class HulaquanDataManager(BaseDataManager):
                         s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else None)+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
                         cnt += 1
                         random_id = random.randint(1000, 9999)
-                        valid_date = standardize_datetime(valid_from, return_str=True)
+                        valid_date = standardize_datetime(valid_from, return_str=False)
                         while random_id in pending_message:
                             random_id = random.randint(1000, 9999)
                         self.data.pending_events_dict[random_id] = {
@@ -458,24 +458,37 @@ def ljust_for_chinese(s, width, fillchar=' '):
     result = s + fillchar * fill_width
     return result
 
-def standardize_datetime(dateAndTime, return_str=True):
+def standardize_datetime(dateAndTime: str, return_str=True):
+    # 当前年份
     current_year = datetime.now().year
-    if len(dateAndTime.split("-")[0]) != 4:
-        dateAndTime = str(current_year) + "-" + dateAndTime
-    try:
-        dt = datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M:%S")
-        if return_str:
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        dt = datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M")
-        dt.second = 0  # 将秒数设置为0
-        dt.microsecond = 0  # 将微秒数设置为0
-        if return_str:
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
-    if not return_str:
-        return dt
-    else:
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    dateAndTime = dateAndTime.replace("：", ':')
+    
+    # 尝试不同的日期时间格式
+    formats = [
+        "%Y-%m-%d %H:%M",  # 2025-12-07 06:30
+        "%m-%d %H:%M",     # 12-07 06:30
+        "%m-%d %H:%M:%S",  # 12-07 06:30:21
+        "%y-%m-%d %H:%M",  # 25-12-07 06:30
+        "%y/%m/%d %H:%M"   # 25/12/07 06:30
+    ]
+    for fmt in formats:
+        try:
+            # 如果年份不在字符串中, 默认使用当前年份
+            if fmt[0] == "%y" or fmt[0] == "%Y":
+                if dateAndTime[:2].isdigit() and len(dateAndTime.split()[0]) == 7:  # "25/12/07"
+                    dateAndTime = str(current_year) + "-" + dateAndTime
+                dt = datetime.strptime(dateAndTime, fmt)
+            else:
+                dt = datetime.strptime(dateAndTime, fmt)
+            if len(str(dt.second)) == 0:
+                dt = dt.replace(second=0)
+            if return_str:
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                return dt
+        except ValueError:
+            continue
+    raise ValueError("无法解析该日期时间格式")
         
 
 def extract_city(address):

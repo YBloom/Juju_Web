@@ -1,3 +1,4 @@
+from datetime import timedelta
 import traceback
 
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
@@ -78,7 +79,7 @@ class Hulaquan(BasePlugin):
             handler=self.on_switch_scheduled_check_task,
             prefix="/上新",
             description="切换呼啦圈上新推送模式",
-            usage="/上新 (模式编号)\n2：关注呼啦圈检测的推送（定时检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送",
+            usage="/上新 模式编号\n2：关注呼啦圈检测的推送（定时检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格",
             examples=["/上新"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
@@ -138,7 +139,7 @@ class Hulaquan(BasePlugin):
             handler=self.on_hlq_search,
             prefix="/hlq",
             description="呼啦圈查学生票余票/数量/排期",
-            usage="/hlq <剧名> (-I) (-C)\n-I表示不显示已售罄场次，-C表示显示卡司阵容",
+            usage="/hlq 剧名 -I -C\n-I表示不显示已售罄场次，-C表示显示卡司阵容，参数间需要有空格",
             # 这里的 -I 是一个可选参数，表示忽略已售罄场次
             examples=["/hlq 连璧 -I -C"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
@@ -155,24 +156,14 @@ class Hulaquan(BasePlugin):
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
         )
-        """        self.register_user_func(
-            name="呼啦圈查询附卡司",
-            handler=self.on_hlq_search_with_cast,
-            prefix="/hlqc",
-            description="呼啦圈查学生票余票/数量/卡司",
-            usage="/hlqc <剧名> -I\n-I表示忽略已售罄场次，去掉以显示所有场次",
-            examples=["/hlqc 连璧 -I"],
-            tags=["呼啦圈", "学生票", "查询", "hlq"],
-            metadata={"category": "utility"}
-        )"""
         
         self.register_user_func(
             name="扫剧查询某日演出",
             handler=self.on_saoju_search_events_by_date,
             prefix="/date",
             description="根据日期通过扫剧查询排期",
-            usage="/date <日期> <城市名（可选）)>\n日期格式为年-月-日\n如/date 2025-06-01 上海",
-            examples=["/date <日期> <城市名（可选）>"],
+            usage="/date 日期 \n日期格式为年-月-日\n如/date 2025-06-01",
+            examples=["/date <日期>"],
             tags=["saoju"],
             metadata={"category": "utility"}
         )
@@ -186,6 +177,7 @@ class Hulaquan(BasePlugin):
             tags=["version"],
             metadata={"category": "utility"}
         )
+        self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}
         """
@@ -253,6 +245,7 @@ class Hulaquan(BasePlugin):
             if eid in self._time_task_scheduler.get_job_status(eid):
                 continue
             valid_from = event.get("valid_from")
+            valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
             self.add_scheduled_task(
                 job_func=self.on_pending_tickets_announcer,
                 name=eid,
@@ -287,7 +280,7 @@ class Hulaquan(BasePlugin):
         if (not len(mode)<2) and (mode[1] in ["0", "1", "2"]):
             pass
         else:
-            return await msg.reply("请输入存在的模式：\n2：关注呼啦圈检测的推送（每30秒检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送")
+            return await msg.reply("请输入存在的模式\n用法：/上新 模式编号\n2：关注呼啦圈检测的推送（定时检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格")
         mode = mode[1]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
@@ -353,7 +346,7 @@ class Hulaquan(BasePlugin):
         # 最多有12小时数据延迟
         args = self.extract_args(msg)
         if not args:
-            await msg.reply_text("【缺少日期】\n/date <日期> <城市名（可选）)>\n日期格式为年-月-日\n如/date 2025-06-01 上海")
+            await msg.reply_text("【缺少日期】\n/date 日期)>\n日期格式为年-月-日\n如/date 2025-06-01")
             return
         date = args[0]
         city = args[1] if len(args)>1 else None
