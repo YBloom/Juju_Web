@@ -232,14 +232,14 @@ class Hulaquan(BasePlugin):
                         message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_group_msg(group_id, message)
             if new_pending:
-                await self.register_pending_tickets_announcer()
+                self.register_pending_tickets_announcer()
             return True
         except Exception as e:
             log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
             traceback.print_exc()
             return False
         
-    async def register_pending_tickets_announcer(self):
+    def register_pending_tickets_announcer(self):
         for eid, event in self.hlq_data_manager.data["pending_events_dict"].items():
             eid = str(eid)
             if eid in self._time_task_scheduler.get_job_status(eid):
