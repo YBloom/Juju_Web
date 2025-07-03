@@ -69,12 +69,14 @@ class HulaquanDataManager(BaseDataManager):
     
     async def _update_events_data_async(self, data_dict=None, __dump=True):
         data_dict = data_dict or self.get_events_dict()
+        self.updating = True
         self.data["events"] = data_dict["events"]
         event_ids = list(self.data["events"].keys())
         # 并发批量更新
         await asyncio.gather(*(self._update_ticket_details_async(eid) for eid in event_ids))
         self.data["last_update_time"] = self.data.get("update_time", None)
         self.data["update_time"] = data_dict["update_time"]
+        self.updating = False
         return self.data
 
     def _update_events_data(self, data_dict=None, __dump=True):

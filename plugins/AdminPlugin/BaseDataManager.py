@@ -6,6 +6,7 @@ class BaseDataManager:
         self.work_path = "data/data_manager/"
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
         self.data = {}
+        self.updating = False
         self.on_load()
         
     def on_close(self):
@@ -47,6 +48,8 @@ class BaseDataManager:
         
     def save(self):
         try:
+            if self.updating:
+                raise RuntimeError(f"保存持久化数据时出错: {e}")
             with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=4)
         except Exception as e:
