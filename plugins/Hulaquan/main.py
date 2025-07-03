@@ -145,7 +145,7 @@ class Hulaquan(BasePlugin):
             handler=self.on_hlq_search,
             prefix="/hlq",
             description="呼啦圈查学生票余票/数量/排期",
-            usage="/hlq 剧名 -I -C\n-I表示不显示已售罄场次，-C表示显示卡司阵容，参数间需要有空格",
+            usage="/hlq 剧名 -I -C -R\n-I表示不显示已售罄场次，-C表示显示卡司阵容，-R表示检测此时此刻的数据而非每15分钟自动更新的数据，参数间需要有空格",
             # 这里的 -I 是一个可选参数，表示忽略已售罄场次
             examples=["/hlq 连璧 -I -C"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
@@ -306,11 +306,11 @@ class Hulaquan(BasePlugin):
         # 呼啦圈查询处理函数
         args = self.extract_args(msg)
         if not args:
-            await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C")
+            await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C -R")
             return
         event_name = args[0]
         await msg.reply_text("查询中，请稍后…")
-        result = self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args))
+        result = self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=("-r" in args))
         await msg.reply_text(result if result else "未找到相关信息，请检查剧名或网络连接。")
         
 

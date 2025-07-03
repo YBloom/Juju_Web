@@ -399,7 +399,7 @@ class HulaquanDataManager(BaseDataManager):
         return update_data
         
         
-    def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True):
+    def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
         query_time = datetime.now()
         result = self.search_eventID_by_name(eName)
         if len(result) > 1:
@@ -411,8 +411,12 @@ class HulaquanDataManager(BaseDataManager):
         else:
             return "未找到该剧目。"
 
-    def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False):
-        event_data = self.data["events"].get(str(eid), None)
+    def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):
+        if not refresh:
+            event_data = self.data["events"].get(str(eid), None)
+        else:
+            self._update_ticket_details(eid)
+            event_data = self.data["events"].get(str(eid), None)
         if event_data:
             title = event_data.get("title", "未知剧名")
             tickets_details = event_data.get("ticket_details", [])
