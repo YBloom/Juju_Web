@@ -82,7 +82,7 @@ class Hulaquan(BasePlugin):
             try:
                 await self.on_hulaquan_announcer()
             except Exception as e:
-                self.on_traceback_message(f"呼啦圈定时任务异常: {e}")
+                await self.on_traceback_message(f"呼啦圈定时任务异常")
             await asyncio.sleep(self._hulaquan_announcer_interval)
             
     def start_hulaquan_announcer(self, interval=None):
@@ -253,7 +253,7 @@ class Hulaquan(BasePlugin):
             new_pending = result["new_pending"]
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
         except Exception as e:
-            self.on_traceback_message(f"呼啦圈数据更新失败")
+            await self.on_traceback_message(f"呼啦圈数据更新失败")
             return False
         try:
             for user_id, user in self.users_manager.users().items():
@@ -275,7 +275,7 @@ class Hulaquan(BasePlugin):
             if new_pending:
                 self.register_pending_tickets_announcer()
         except Exception as e:
-            self.on_traceback_message(f"呼啦圈上新提醒在提醒过程中失败")
+            await self.on_traceback_message(f"呼啦圈上新提醒在提醒过程中失败")
             return False
         elapsed_time = time.time() - start_time
         print(f"任务执行时间: {elapsed_time}秒")
@@ -309,7 +309,7 @@ class Hulaquan(BasePlugin):
                     message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                     await self.api.post_group_msg(group_id, message)
         except Exception as e:
-            self.on_traceback_message(f"呼啦圈开票提醒失败")
+            await self.on_traceback_message(f"呼啦圈开票提醒失败")
         del self.hlq_data_manager.data["pending_events_dict"][eid]
         
         
@@ -418,7 +418,7 @@ class Hulaquan(BasePlugin):
                 #for user_id in self.users_manager.ops_list():
                     #await self.api.post_private_msg(user_id, "自动保存成功")
         except Exception as e:
-            self.on_traceback_message(f"呼啦圈自动保存失败")
+            await self.on_traceback_message(f"呼啦圈自动保存失败")
                 
     async def on_traceback_message(self, context="", announce_admin=True):
         #log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
