@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import unicodedata
 from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
 import requests
 import re
 import aiohttp
-import traceback
+import os, shutil
 import copy
 import asyncio
 import json
@@ -255,7 +255,7 @@ class HulaquanDataManager(BaseDataManager):
         messages = []
         for eid, event in new_data.items(): # 一个id对应一部剧
             message = []
-            if comp := self.compare_tickets(old_data.get(eid, {}).get("ticket_details", None), new_data[eid].get("ticket_details", None)):
+            if comp := self.compare_tickets(old_data.get(eid, {}), new_data[eid].get("ticket_details", None)):
                 # 仅返回更新了的ticket detail
                 new_message = []
                 return_message = []
@@ -314,9 +314,32 @@ class HulaquanDataManager(BaseDataManager):
                 f"更新时间: {self.data['update_time']}\n"
             ) + "\n".join(message))
             is_updated = True
+            if is_updated:
+                cache_root = os.path.join(os.getcwd(), "update_data_cache")
+                os.makedirs(cache_root, exist_ok=True)
+                # 清理超过48小时的缓存
+                now = datetime.now()
+                for d in os.listdir(cache_root):
+                    dir_path = os.path.join(cache_root, d)
+                    if os.path.isdir(dir_path):
+                        try:
+                            # 目录名格式为"2025-07-03_12-34-56"
+                            dir_time = datetime.strptime(d, "%Y-%m-%d_%H-%M-%S")
+                            if now - dir_time > timedelta(hours=48):
+                                shutil.rmtree(dir_path)
+                        except Exception:
+                            continue
+                # 新建本次缓存
+                update_time_str = str(self.data['update_time']).replace(":", "-").replace(" ", "_")
+                cache_dir = os.path.join(cache_root, update_time_str)
+                os.makedirs(cache_dir, exist_ok=True)
+                with open(os.path.join(cache_dir, "old_data_all.json"), "w", encoding="utf-8") as f:
+                    json.dump(old_data_all, f, ensure_ascii=False, indent=2)
+                with open(os.path.join(cache_dir, "new_data_all.json"), "w", encoding="utf-8") as f:
+                    json.dump(new_data_all, f, ensure_ascii=False, indent=2)
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
 
-    def compare_tickets(self, old_data, new_data):
+    def compare_tickets(self, old_data_all, new_data):
         """
 {
   "id": 31777,
@@ -333,7 +356,16 @@ class HulaquanDataManager(BaseDataManager):
   "left_days": 25,
 }
         """
-        if not (old_data and new_data):
+        if (not old_data_all) and new_data:
+            for i in new_data:
+                i["update_status"] = 'new'
+                
+            return new_data
+        elif not (old_data_all and new_data):
+            return None
+        else:
+            old_data = old_data_all.get("ticket_details", {})
+        if not old_data:
             for i in new_data:
                 i["update_status"] = 'new'
             return new_data

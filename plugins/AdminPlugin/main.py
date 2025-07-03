@@ -73,6 +73,17 @@ class AdminPlugin(BasePlugin):
             tags=["deop"],
             metadata={"category": "utility"}
         )
+        
+        self.register_admin_func(
+            name="群发",
+            handler=self._on_global_message,
+            prefix="/群发",
+            description="群发",
+            usage="/群发",
+            examples=["/群发 xxxxx"],
+            tags=["群发"],
+            metadata={"category": "utility"}
+        )
 
     async def add_send_managers_task(self, data=None):
         self.add_scheduled_task(
@@ -84,6 +95,12 @@ class AdminPlugin(BasePlugin):
         )
     async def on_send_pass_managers_event(self):
         await self._event_bus.publish_async(self.pass_managers_event)
+        
+    async def _on_global_message(self, msg:BaseMessage):
+        message = msg.split(" ")[1]
+        for i in self.users_manager.users():
+            await self.api.post_private_msg(i, message)
+        await msg.reply("群发成功")
         
     def is_all_plugins_get_managers(self):
         """检查所有插件是否都获取了managers"""
