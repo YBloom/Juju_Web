@@ -158,7 +158,7 @@ class HulaquanDataManager(BaseDataManager):
         else:
             old_data_all = self.data
             new_data_all = await self._update_events_data_async()
-        self.__compare_to_database(old_data_all, new_data_all)
+        return self.__compare_to_database(old_data_all, new_data_all)
         
     def __compare_to_database(self, old_data_all, new_data_all):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
@@ -329,7 +329,7 @@ class HulaquanDataManager(BaseDataManager):
             return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
         elif len(result) == 1:
             eid = result[0][0]
-            return self.generate_tickets_query_message(eid, query_time, eName, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out)
+            return await self.generate_tickets_query_message(eid, query_time, eName, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out)
         else:
             return "未找到该剧目。"
 
