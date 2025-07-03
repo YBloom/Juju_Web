@@ -37,38 +37,53 @@ class HulaquanDataManager(BaseDataManager):
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
 
-    def fetch_and_update_data(self):
-        """更新数据
+    async def get_events_dict_async(self):
+        data = await self.search_all_events_async()
+        data_dic = {"events": {}, "update_time": ""}
+        keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
+        for event in data:
+            event_id = str(event["id"])
+            if event_id not in data_dic["events"]:
+                data_dic["events"][event_id] = {key: event.get(key, None) for key in keys_to_extract}
+        data_dic["update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return data_dic
 
-        Returns:
-            返回(old_data, new_data)
-        """
-        old_data = copy.deepcopy(self.data)
-        self._update_events_data()
-        return old_data, self.data
+    async def search_all_events_async(self):
+        data = False
+        cnt = 95
+        while data is False:
+            count, result = await self.search_events_data_by_recommendation_link_async(cnt, 0, True)
+            data = result
+            cnt -= 5
+            if cnt != 90 and not data:
+                print(f"获取呼啦圈数据失败，第{(19-cnt/5)}尝试。")
+            if cnt == 0:
+                raise Exception
+        return data
 
-    def search_events_data_by_recommendation_link(self, limit=12, page=0, timeMark=True, tags=None):
-        # get events from recommendation API
+    async def search_events_data_by_recommendation_link_async(self, limit=12, page=0, timeMark=True, tags=None):
         recommendation_url = "https://clubz.cloudsation.com/site/getevent.html?filter=recommendation&access_token="
         try:
             recommendation_url = recommendation_url + "&limit=" + str(limit) + "&page=" + str(page)
-            response = requests.get(recommendation_url)
-            response.raise_for_status()
-            json_data = response.content.decode('utf-8-sig')
-            json_data = json.loads(json_data)
-            if isinstance(json_data, bool):
-                return False, False
-            result = []
-            for event in json_data["events"]:
-                if not timeMark or (timeMark and event["timeMark"] > 0):
-                    if not tags or (tags and any(tag in event["tags"] for tag in tags)):
-                        result.append(event["basic_info"])
-        except requests.RequestException as e:
-            return f"Error fetching recommendation: {e}"
-        return json_data["count"], result
+            async with aiohttp.ClientSession() as session:
+                async with session.get(recommendation_url, timeout=8) as response:
+                    json_data = await response.text()
+                    json_data = json.loads(json_data)
+                    if isinstance(json_data, bool):
+                        return False, False
+                    result = []
+                    for event in json_data["events"]:
+                        if not timeMark or (timeMark and event["timeMark"] > 0):
+                            if not tags or (tags and any(tag in event["tags"] for tag in tags)):
+                                result.append(event["basic_info"])
+                    return json_data["count"], result
+        except Exception as e:
+            return f"Error fetching recommendation: {e}", False
+
+
     
     async def _update_events_data_async(self, data_dict=None, __dump=True):
-        data_dict = data_dict or self.get_events_dict()
+        data_dict = data_dict or await self.get_events_dict_async()
         self.updating = True
         self.data["events"] = data_dict["events"]
         event_ids = list(self.data["events"].keys())
@@ -79,25 +94,6 @@ class HulaquanDataManager(BaseDataManager):
         self.updating = False
         return self.data
 
-    def _update_events_data(self, data_dict=None, __dump=True):
-        #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
-        data_dict = data_dict or self.get_events_dict()
-        if __dump:
-            self.data["events"] = data_dict["events"]
-            for eid in list(self.data["events"].keys()):
-                self._update_ticket_details(eid)
-            self.data["last_update_time"] = self.data.get("update_time", None)
-            self.data["update_time"] = data_dict["update_time"]
-            return self.data
-        else:
-            result = {}
-            result["events"] = data_dict["events"]
-            for eid in list(result["events"].keys()):
-                result = self._update_ticket_details(eid, data_dict=result)
-            result["last_update_time"] = self.data.get("update_time", None)
-            result["update_time"] = data_dict["update_time"]
-            return result
-            
     async def _update_ticket_details_async(self, event_id, data_dict=None):
             json_data = await self.search_event_by_id_async(event_id)
             keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
@@ -112,60 +108,16 @@ class HulaquanDataManager(BaseDataManager):
             else:
                 data_dict["events"][event_id]["ticket_details"] = ticket_list
                 return data_dict
-    
-    
-    def _update_ticket_details(self, event_id, data_dict=None):
-        
-        def search_ticket_details(self, event_id):
-            json_data = self.search_event_by_id(event_id)
-            keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
-            json_data: list = json_data["ticket_details"]
-            for i in range(len(json_data)):
-                json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
-                if json_data[i]["total_ticket"] is None and json_data[i]["left_ticket_count"] is None:
-                    del json_data[i]
-            return json_data
-    
-        if data_dict is None:
-            self.data["events"][event_id]["ticket_details"] = search_ticket_details(event_id)
-            return self.data
-        else:
-            data_dict["events"][event_id]["ticket_details"] = search_ticket_details(event_id)
-            return data_dict
-        
-    def get_events_dict(self):
-        data = self.search_all_events()
-        data_dic = {"events":{}, "update_time":""}
-        keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
-        for event in data:
-            event_id = str(event["id"])
-            if event_id not in data_dic["events"]:
-                data_dic["events"][event_id] = {key: event.get(key, None) for key in keys_to_extract}
-        data_dic["update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return data_dic
 
-    def search_all_events(self):
-        #count = self.get_recommendation(1,0,False)[0]  # Test the connection and the count
-        #print(f"Total recommendations available: {count}")
-        data = False
-        cnt = 95
-        while data is False:
-            data = self.search_events_data_by_recommendation_link(cnt, 0, True)[1]
-            cnt -= 5
-            if cnt != 90:
-                print(f"获取呼啦圈数据失败，第{(19-cnt/5)}尝试。")
-            if cnt == 0:
-                raise Exception
-        return data
     
-    def return_events_data(self):
+    async def return_events_data(self):
         if not self.data.get("events", None):
-            self._update_events_data()
+            await self._update_events_data_async()
             print("呼啦圈数据已更新")
         return self.data["events"]
 
-    def search_eventID_by_name(self, event_name):
-        data = self.return_events_data()
+    async def search_eventID_by_name(self, event_name):
+        data = await self.return_events_data()
         result = []
         for eid, event in data.items():
             title = event["title"]
@@ -180,23 +132,8 @@ class HulaquanDataManager(BaseDataManager):
                 json_data = await resp.text()
                 return json.loads(json_data)
         
-    def search_event_by_id(self, event_id):
-        # 根据eid查找事件详细信息 主要用来获取余票信息
-        event_url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
-        try:
-            response = requests.get(event_url)
-            response.raise_for_status()
-            json_data = response.content.decode('utf-8-sig')
-            json_data = json.loads(json_data)
-            return json_data
-        except requests.RequestException as e:
-            print(f"Error fetching event details: {e}")
-            return None
-
-
-        
-    def output_data_info(self):
-        old_data = self.return_events_data()
+    async def output_data_info(self):
+        old_data = await self.return_events_data()
         for eid, event in old_data.items():
             print(eid, event["title"], event["end_time"], event["update_time"])
         
@@ -221,14 +158,6 @@ class HulaquanDataManager(BaseDataManager):
             new_data_all = await self._update_events_data_async()
         self.__compare_to_database(old_data_all, new_data_all)
         
-    def compare_to_database_sync(self, __dump=True):
-        if __dump:
-            old_data_all, new_data_all = self.fetch_and_update_data()
-        else:
-            old_data_all = self.data
-            new_data_all = self._update_events_data(__dump=False)
-        self.__compare_to_database(old_data_all, new_data_all)
-
     def __compare_to_database(self, old_data_all, new_data_all):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
@@ -390,9 +319,9 @@ class HulaquanDataManager(BaseDataManager):
         return update_data
         
         
-    def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
+    async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
         query_time = datetime.now()
-        result = self.search_eventID_by_name(eName)
+        result = await self.search_eventID_by_name(eName)
         if len(result) > 1:
             queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
             return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
@@ -402,11 +331,11 @@ class HulaquanDataManager(BaseDataManager):
         else:
             return "未找到该剧目。"
 
-    def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):
+    async def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):
         if not refresh:
             event_data = self.data["events"].get(str(eid), None)
         else:
-            self._update_ticket_details(eid)
+            await self._update_ticket_details_async(eid)
             event_data = self.data["events"].get(str(eid), None)
         if event_data:
             title = event_data.get("title", "未知剧名")
@@ -452,19 +381,6 @@ class HulaquanDataManager(BaseDataManager):
         messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}    
     
-    def message_update_data_sync(self):
-        # Return: (is_updated: bool, messages: [list:Str], new_pending:bool)
-        query_time = datetime.now()
-        query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        result = self.compare_to_database()
-        is_updated = result["is_updated"]
-        messages = result["messages"]
-        new_pending = result["new_pending"]
-        if not is_updated:
-            return {"is_updated": False, "messages": [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], "new_pending": False}
-        messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
-        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
-        
 
     # ---------------------静态函数--------------------- #
 def get_display_width(s):

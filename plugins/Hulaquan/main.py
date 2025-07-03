@@ -258,7 +258,7 @@ class Hulaquan(BasePlugin):
         try:
             for user_id, user in self.users_manager.users().items():
                 mode = user.get("attention_to_hulaquan")
-                if (user_lists is not None) and (user_id not in user_lists):
+                if (user_lists is not None or manual) and (user_id not in user_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in messages:
@@ -266,7 +266,7 @@ class Hulaquan(BasePlugin):
                         await self.api.post_private_msg(user_id, message)
             for group_id, group in self.groups_manager.groups().items():
                 mode = group.get("attention_to_hulaquan")
-                if (group_lists is not None) and (group_id not in group_lists):
+                if (group_lists is not None or manual) and (group_id not in group_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in messages:
@@ -345,7 +345,7 @@ class Hulaquan(BasePlugin):
             return
         event_name = args[0]
         await msg.reply_text("查询中，请稍后…")
-        result = self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=("-r" in args))
+        result = await self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=("-r" in args))
         await msg.reply_text(result if result else "未找到相关信息，请检查剧名或网络连接。")
         
 
