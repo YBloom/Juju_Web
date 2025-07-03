@@ -68,28 +68,23 @@ class HulaquanDataManager(BaseDataManager):
         return json_data["count"], result
 
     def _update_events_data(self, data_dict=None, __dump=True):
-        try:
-            #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
-            data_dict = data_dict or self.get_events_dict()
-            if __dump:
-                self.data["events"] = data_dict["events"]
-                for eid in list(self.data["events"].keys()):
-                    self._update_ticket_details(eid)
-                self.data["last_update_time"] = self.data.get("update_time", None)
-                self.data["update_time"] = data_dict["update_time"]
-                return self.data
-            else:
-                result = {}
-                result["events"] = data_dict["events"]
-                for eid in list(result["events"].keys()):
-                    result = self._update_ticket_details(eid, data_dict=result)
-                result["last_update_time"] = self.data.get("update_time", None)
-                result["update_time"] = data_dict["update_time"]
-                return result
-        except Exception as e:
-            print(f"呼啦圈数据下载失败: {e}")
-            traceback.print_exc()
-            return None
+        #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
+        data_dict = data_dict or self.get_events_dict()
+        if __dump:
+            self.data["events"] = data_dict["events"]
+            for eid in list(self.data["events"].keys()):
+                self._update_ticket_details(eid)
+            self.data["last_update_time"] = self.data.get("update_time", None)
+            self.data["update_time"] = data_dict["update_time"]
+            return self.data
+        else:
+            result = {}
+            result["events"] = data_dict["events"]
+            for eid in list(result["events"].keys()):
+                result = self._update_ticket_details(eid, data_dict=result)
+            result["last_update_time"] = self.data.get("update_time", None)
+            result["update_time"] = data_dict["update_time"]
+            return result
     
     async def fetch_event_detail(self, session, event_id):
         url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
