@@ -66,6 +66,16 @@ class HulaquanDataManager(BaseDataManager):
         except requests.RequestException as e:
             return f"Error fetching recommendation: {e}"
         return json_data["count"], result
+    
+    async def _update_events_data_async(self, data_dict=None, __dump=True):
+        data_dict = data_dict or self.get_events_dict()
+        self.data["events"] = data_dict["events"]
+        event_ids = list(self.data["events"].keys())
+        # 并发批量更新
+        await asyncio.gather(*(self._update_ticket_details_async(eid) for eid in event_ids))
+        self.data["last_update_time"] = self.data.get("update_time", None)
+        self.data["update_time"] = data_dict["update_time"]
+        return self.data
 
     def _update_events_data(self, data_dict=None, __dump=True):
         #self.update(json.dumps(data_dict or self.get_events_dict(), ensure_ascii=False))
@@ -85,80 +95,40 @@ class HulaquanDataManager(BaseDataManager):
             result["last_update_time"] = self.data.get("update_time", None)
             result["update_time"] = data_dict["update_time"]
             return result
-    
-    async def fetch_event_detail(self, session, event_id):
-        url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
-        async with session.get(url, timeout=8) as resp:
-            try:
-                return await resp.json()
-            except requests.RequestException as e:
-                print(f"Error fetching event details: {e}")
-                return None
-    
-    async def fetch_ticket_details_batch_async(self, event_ids):
-        async with aiohttp.ClientSession() as session:
-            tasks = [self.fetch_event_detail(session, eid) for eid in event_ids]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            return {eid: res for eid, res in zip(event_ids, results)} 
-           
-    async def fetch_and_update_data_async(self):
-        """
-        异步更新数据，功能对标 fetch_and_update_data（同步版）
-
-        Returns:
-            返回(old_data, new_data)
-        """
-        old_data = self.data.copy()
-        # 1. 获取所有事件（只含基本信息和update_time）
-        events = await self.fetch_events_list_async()
-        # 2. 对比本地events，找出update_time有变化的event_id
-        changed_event_ids = []
-        for eid, event in events.items():
-            if eid not in self.data["events"] or event["update_time"] != self.data["events"][eid]["update_time"]:
-                changed_event_ids.append(eid)
-        # 3. 并发请求变动事件的票务详情
-        details = await self.fetch_ticket_details_batch_async(changed_event_ids)
-        # 4. 更新本地数据
-        for eid in changed_event_ids:
-            if eid in self.data["events"]:
-                self.data["events"][eid].update(details[eid])
+            
+    async def _update_ticket_details_async(self, event_id, data_dict=None):
+            json_data = await self.search_event_by_id_async(event_id)
+            keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
+            ticket_list = json_data["ticket_details"]
+            for i in range(len(ticket_list)):
+                ticket_list[i] = {key: ticket_list[i].get(key, None) for key in keys_to_extract}
+                if ticket_list[i]["total_ticket"] is None and ticket_list[i]["left_ticket_count"] is None:
+                    del ticket_list[i]
+            if data_dict is None:
+                self.data["events"][event_id]["ticket_details"] = ticket_list
+                return self.data
             else:
-                self.data["events"][eid] = details[eid]
-        self.data["update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return old_data, self.data
-
-    async def fetch_events_list_async(self):
-        """
-        异步获取所有事件（只含基本信息和update_time），返回格式与 get_events_dict()["events"] 一致
-        """
-        url = "https://clubz.cloudsation.com/site/getevent.html?filter=recommendation&access_token=&limit=100&page=0"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=8) as resp:
-                json_data = await resp.text()
-                json_data = json.loads(json_data)
-                events = {}
-                keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
-                for event in json_data["events"]:
-                    event_id = str(event["id"])
-                    events[event_id] = {key: event.get(key, None) for key in keys_to_extract}
-                return events
-
-    def search_ticket_details(self, event_id):
-        json_data = self.search_event_by_id(event_id)
-        keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
-        json_data: list = json_data["ticket_details"]
-        for i in range(len(json_data)):
-            json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
-            if json_data[i]["total_ticket"] is None and json_data[i]["left_ticket_count"] is None:
-                del json_data[i]
-        return json_data
-        
+                data_dict["events"][event_id]["ticket_details"] = ticket_list
+                return data_dict
+    
+    
     def _update_ticket_details(self, event_id, data_dict=None):
+        
+        def search_ticket_details(self, event_id):
+            json_data = self.search_event_by_id(event_id)
+            keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
+            json_data: list = json_data["ticket_details"]
+            for i in range(len(json_data)):
+                json_data[i] = {key: json_data[i].get(key, None) for key in keys_to_extract}
+                if json_data[i]["total_ticket"] is None and json_data[i]["left_ticket_count"] is None:
+                    del json_data[i]
+            return json_data
+    
         if data_dict is None:
-            self.data["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+            self.data["events"][event_id]["ticket_details"] = search_ticket_details(event_id)
             return self.data
         else:
-            data_dict["events"][event_id]["ticket_details"] = self.search_ticket_details(event_id)
+            data_dict["events"][event_id]["ticket_details"] = search_ticket_details(event_id)
             return data_dict
         
     def get_events_dict(self):
@@ -200,6 +170,13 @@ class HulaquanDataManager(BaseDataManager):
             if re.search(event_name, title, re.IGNORECASE):
                 result.append([eid, title])
         return result
+    
+    async def search_event_by_id_async(self, event_id):
+        event_url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(event_url, timeout=8) as resp:
+                json_data = await resp.text()
+                return json.loads(json_data)
         
     def search_event_by_id(self, event_id):
         # 根据eid查找事件详细信息 主要用来获取余票信息
@@ -233,8 +210,24 @@ class HulaquanDataManager(BaseDataManager):
 
     # -------------------Query------------------------------ #         
     # ---------------------Announcement--------------------- #
+    async def compare_to_database_async(self, __dump=True):
+        if __dump:
+            old_data_all = copy.deepcopy(self.data)
+            new_data_all = await self._update_events_data_async()
+        else:
+            old_data_all = self.data
+            new_data_all = await self._update_events_data_async()
+        self.__compare_to_database(old_data_all, new_data_all)
+        
+    def compare_to_database_sync(self, __dump=True):
+        if __dump:
+            old_data_all, new_data_all = self.fetch_and_update_data()
+        else:
+            old_data_all = self.data
+            new_data_all = self._update_events_data(__dump=False)
+        self.__compare_to_database(old_data_all, new_data_all)
 
-    def compare_to_database(self, __dump=True):
+    def __compare_to_database(self, old_data_all, new_data_all):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
         __dump: bool, 是否将新数据写入文件
@@ -242,14 +235,8 @@ class HulaquanDataManager(BaseDataManager):
             update_data: list, 包含需要更新的事件数据
             None: 如果没有需要更新的数据
         """
-        
         is_updated = False
         new_pending = False
-        if __dump:
-            old_data_all, new_data_all = self.fetch_and_update_data()
-        else:
-            old_data_all = self.data
-            new_data_all = self._update_events_data(__dump=False)
         new_data = new_data_all.get("events", {})
         old_data = old_data_all.get("events", {})
         messages = []
@@ -338,6 +325,8 @@ class HulaquanDataManager(BaseDataManager):
                 with open(os.path.join(cache_dir, "new_data_all.json"), "w", encoding="utf-8") as f:
                     json.dump(new_data_all, f, ensure_ascii=False, indent=2)
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
+
+    
 
     def compare_tickets(self, old_data_all, new_data):
         """
@@ -449,15 +438,19 @@ class HulaquanDataManager(BaseDataManager):
         else:
             return "未找到该剧目的详细信息。"
         
-    def message_update_data(self):
-        """
-        Checks for updates in the data and returns update status and messages.
-
-        Returns:
-            tuple:
-                - is_updated (bool): True if there is updated data, False otherwise.
-                - messages (list of str): List of messages describing the update status and details.
-        """
+    async def message_update_data_async(self):
+        query_time = datetime.now()
+        query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
+        result = await self.compare_to_database_async()
+        is_updated = result["is_updated"]
+        messages = result["messages"]
+        new_pending = result["new_pending"]
+        if not is_updated:
+            return {"is_updated": False, "messages": [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], "new_pending": False}
+        messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
+        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}    
+    
+    def message_update_data_sync(self):
         # Return: (is_updated: bool, messages: [list:Str], new_pending:bool)
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")

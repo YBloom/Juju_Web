@@ -1,6 +1,5 @@
 from datetime import timedelta
-import traceback, time
-
+import traceback, time, asyncio
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 from .HulaquanDataManager import HulaquanDataManager
@@ -55,6 +54,9 @@ class Hulaquan(BasePlugin):
         # 插件加载时执行的操作
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
+        self._hulaquan_announcer_task = None
+        self._hulaquan_announcer_interval = 900  # 默认15分钟，可根据配置初始化
+        self._hulaquan_announcer_running = False
         self.groups_manager: GroupsManager = None
         self.users_manager: UsersManager = None
         self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
@@ -64,14 +66,39 @@ class Hulaquan(BasePlugin):
         await self._event_bus.publish_async(self.load_event)
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
+        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", 600))
         
         
     async def on_close(self, *arg, **kwd):
         self.remove_scheduled_task("呼啦圈上新提醒")
         self.users_manager.is_get_managers = False
+        self.stop_hulaquan_announcer()
         self.hlq_data_manager.on_close()
         self.saoju_data_manager.on_close()
         return await super().on_close(*arg, **kwd)
+    
+    async def _hulaquan_announcer_loop(self):
+        while self._hulaquan_announcer_running:
+            try:
+                await self.on_hulaquan_announcer()
+            except Exception as e:
+                self.on_traceback_message(f"呼啦圈定时任务异常: {e}")
+            await asyncio.sleep(self._hulaquan_announcer_interval)
+            
+    def start_hulaquan_announcer(self, interval=None):
+        if interval:
+            self._hulaquan_announcer_interval = interval
+        if self._hulaquan_announcer_task and not self._hulaquan_announcer_task.done():
+            return  # 已经在运行
+        self._hulaquan_announcer_running = True
+        self._hulaquan_announcer_task = asyncio.create_task(self._hulaquan_announcer_loop())
+
+    def stop_hulaquan_announcer(self):
+        self._hulaquan_announcer_running = False
+        if self._hulaquan_announcer_task:
+            self._hulaquan_announcer_task.cancel()
+            self._hulaquan_announcer_task = None
+
 
     def register_hulaquan_announcement_tasks(self):
         if "scheduled_task_switch" not in self.data:
@@ -105,7 +132,8 @@ class Hulaquan(BasePlugin):
                     usage="/呼啦圈检测",
                     examples=["/呼啦圈检测"],
                     metadata={"category": "utility"}
-                )
+        )
+        
         self.register_config(
             key="scheduled_task_time",
             default=300,
@@ -128,14 +156,14 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
-        task_time = str(self.data['config']['scheduled_task_time'])
+        """task_time = str(self.data['config']['scheduled_task_time'])
         self.add_scheduled_task(
             job_func=self.on_hulaquan_announcer, 
             name=f"呼啦圈上新提醒", 
             interval=task_time+"s", 
             #max_runs=10, 
             conditions=[lambda: self.data["scheduled_task_switch"]]
-        )
+        )"""
         
         self.add_scheduled_task(
             job_func=self.on_schedule_save_data, 
@@ -202,8 +230,10 @@ class Hulaquan(BasePlugin):
             print("已获取到managers")
     
     async def _on_switch_scheduled_check_task_for_users(self, msg: BaseMessage):
-        flag = not self.data["scheduled_task_switch"]
-        self.data["scheduled_task_switch"] = flag
+        if self._hulaquan_announcer_running:
+            self.stop_hulaquan_announcer()
+        else:
+            self.start_hulaquan_announcer()
         if flag:
             await msg.reply("(管理员）已开启呼啦圈上新检测功能")
         else:
@@ -217,7 +247,7 @@ class Hulaquan(BasePlugin):
     async def on_hulaquan_announcer(self, user_lists: list=None, group_lists: list=None, manual=False):
         start_time = time.time()
         try:
-            result = self.hlq_data_manager.message_update_data()
+            result = await self.hlq_data_manager.message_update_data_async()
             is_updated = result["is_updated"]
             messages = result["messages"]
             new_pending = result["new_pending"]
@@ -284,7 +314,6 @@ class Hulaquan(BasePlugin):
         
         
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
-        #print(lambda: self.data["scheduled_task_switch"],  self.data["scheduled_task_switch"])
         user_id = msg.user_id
         group_id = None
         mode = msg.raw_message.split(" ")
@@ -331,14 +360,8 @@ class Hulaquan(BasePlugin):
         task_time = str(self.data['config']['scheduled_task_time'])
         if not self.users_manager.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
-        self.remove_scheduled_task("呼啦圈上新提醒")
-        self.add_scheduled_task(
-            job_func=self.on_hulaquan_announcer, 
-            name=f"呼啦圈上新提醒", 
-            interval=task_time+"s", 
-            #max_runs=10, 
-            conditions=[lambda: self.data["scheduled_task_switch"]]
-        )
+        self.stop_hulaquan_announcer()
+        self.start_hulaquan_announcer(interval=int(value))
         await msg.reply_text(f"已修改至{task_time}秒更新一次")
     
     def _get_help(self):
