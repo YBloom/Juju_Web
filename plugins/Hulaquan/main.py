@@ -16,9 +16,15 @@ UPDATE_LOG = [
          "description": "初始公测版本", 
          "date":"2025-06-28"},
         
-        {"version": "⭐0.0.2", 
+        {"version": "0.0.2", 
          "description": "1.修改了回流票的检测逻辑（之前可能是误检测）\n2.增加了对呼啦圈学生票待开票状态的检测\n3.添加了呼啦圈未开票的票的开票定时提醒功能（提前30分钟）\n4.增加了更新日志和版本显示",
          "date": "2025-07-01"
+        },
+        
+        {"version": "⭐0.0.3", 
+         "description": """1.修改了一些缓存功能\n2.修复了一些bug\n3.添加了/hlq xx -R获取当下数据的功能
+         """,
+         "date": "2025-07-03"
         },
     ]
 
@@ -39,7 +45,7 @@ def get_update_log(update_log=UPDATE_LOG):
 
 class Hulaquan(BasePlugin):
     name = "Hulaquan"  # 插件名称
-    version = "0.0.2"  # 插件版本
+    version = "0.0.3"  # 插件版本
     author = "摇摇杯"  # 插件作者
     info = "与呼啦圈学生票相关的功能"  # 插件描述
     dependencies = {
@@ -145,7 +151,7 @@ class Hulaquan(BasePlugin):
             handler=self.on_hlq_search,
             prefix="/hlq",
             description="呼啦圈查学生票余票/数量/排期",
-            usage="/hlq 剧名 -I -C -R\n-I表示不显示已售罄场次，-C表示显示卡司阵容，-R表示检测此时此刻的数据而非每15分钟自动更新的数据，参数间需要有空格",
+            usage="/hlq 剧名 -I -C -R\n-I表示不显示已售罄场次，-C表示显示卡司阵容，-R表示检测此时此刻的数据，而非每15分钟自动更新的数据（但由于频繁请求容易造成请求失败或者其他问题，不建议多使用此功能），参数间需要有空格",
             # 这里的 -I 是一个可选参数，表示忽略已售罄场次
             examples=["/hlq 连璧 -I -C"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
