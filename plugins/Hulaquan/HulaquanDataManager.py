@@ -258,15 +258,16 @@ class HulaquanDataManager(BaseDataManager):
         new_data = new_data_all.get("events", {})
         old_data = old_data_all.get("events", {})
         messages = []
-        for eid, event in new_data.items():
+        for eid, event in new_data.items(): # 一个id对应一部剧
             message = []
-            if comp := self.compare_tickets(old_data[eid].get("ticket_details", None), new_data[eid].get("ticket_details", None)):
+            if comp := self.compare_tickets(old_data.get(eid, {}).get("ticket_details", None), new_data[eid].get("ticket_details", None)):
+                # 仅返回更新了的ticket detail
                 new_message = []
                 return_message = []
                 add_message = []
                 pending_message = {}
                 for ticket in comp:
-                    flag = ticket['update_status']
+                    flag = ticket.get('update_status')
                     t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
                     if ticket["status"] == "pending" and 'update_status' in ticket.keys():
                         valid_from = ticket["valid_from"]
@@ -338,11 +339,11 @@ class HulaquanDataManager(BaseDataManager):
 }
         """
         if not (old_data and new_data):
+            for i in new_data:
+                i["update_status"] = 'new'
             return new_data
         old_data_dict = {item['id']: item for item in old_data}
         update_data = []
-        if int(old_data[0]["event_id"]) == 3848:
-            pass
         # 遍历 new_data 并根据条件进行更新
         for new_item in new_data:
             new_id = new_item['id']
