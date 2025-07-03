@@ -105,7 +105,7 @@ class Hulaquan(BasePlugin):
             default=300,
             description="自动检测呼啦圈数据更新时间",
             value_type=int,
-            allowed_values=[30, 60, 120, 180, 300, 600, 900, 1800, 3600],
+            allowed_values=[30, 60, 120, 180, 300, 600, 900, 1200, 1800, 3600],
             on_change=self.on_change_schedule_hulaquan_task_interval,
         )
         self.data["config"]["scheduled_task_time"] = 600
@@ -321,7 +321,7 @@ class Hulaquan(BasePlugin):
             args[i] = args[i].lower() # 小写处理-I -i
         return args
     
-    async def on_change_schedule_hulaquan_task_interval(self, msg: BaseMessage):
+    async def on_change_schedule_hulaquan_task_interval(self, value, msg: BaseMessage):
         task_time = str(self.data['config']['scheduled_task_time'])
         if not self.users_manager.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
