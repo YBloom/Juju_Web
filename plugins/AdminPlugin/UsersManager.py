@@ -6,6 +6,9 @@ from ncatbot.utils.logger import get_log
 log = get_log()
 
 class UsersManager:
+    
+    admin_id = "3022402752"
+    
     def __init__(self, data: UniversalLoader=None):
         self.is_get_managers = False #插件Hulaquan有没有捕获managers
         self.data = data
