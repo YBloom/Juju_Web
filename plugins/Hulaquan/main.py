@@ -244,7 +244,7 @@ class Hulaquan(BasePlugin):
         await msg.reply(m)
         
 
-    async def on_hulaquan_announcer(self, user_lists: list=None, group_lists: list=None, manual=False):
+    async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
         try:
             result = await self.hlq_data_manager.message_update_data_async()
@@ -258,7 +258,7 @@ class Hulaquan(BasePlugin):
         try:
             for user_id, user in self.users_manager.users().items():
                 mode = user.get("attention_to_hulaquan")
-                if (user_lists is not None or manual) and (user_id not in user_lists):
+                if (manual and user_id not in user_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in messages:
@@ -266,7 +266,7 @@ class Hulaquan(BasePlugin):
                         await self.api.post_private_msg(user_id, message)
             for group_id, group in self.groups_manager.groups().items():
                 mode = group.get("attention_to_hulaquan")
-                if (group_lists is not None or manual) and (group_id not in group_lists):
+                if (manual and group_id not in group_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in messages:
