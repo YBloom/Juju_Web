@@ -68,6 +68,7 @@ class HulaquanDataManager(BaseDataManager):
             async with aiohttp.ClientSession() as session:
                 async with session.get(recommendation_url, timeout=8) as response:
                     json_data = await response.text()
+                    json_data = json_data.encode().decode("utf-8-sig")  # 关键：去除BOM
                     json_data = json.loads(json_data)
                     if isinstance(json_data, bool):
                         return False, False
@@ -130,6 +131,7 @@ class HulaquanDataManager(BaseDataManager):
         async with aiohttp.ClientSession() as session:
             async with session.get(event_url, timeout=8) as resp:
                 json_data = await resp.text()
+                json_data = json_data.encode().decode("utf-8-sig")  # 关键：去除BOM
                 return json.loads(json_data)
         
     async def output_data_info(self):
