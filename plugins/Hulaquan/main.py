@@ -383,7 +383,7 @@ class Hulaquan(BasePlugin):
         date = args[0]
         city = args[1] if len(args)>1 else None
         await msg.reply_text("查询中，请稍后…")
-        result = self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city)
+        result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city)
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
