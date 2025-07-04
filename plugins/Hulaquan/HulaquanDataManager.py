@@ -435,21 +435,21 @@ class HulaquanDataManager(BaseDataManager):
         
     def get_ticket_cast_and_city(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
-        has_city = (city is None and 'city' not in ticket)
-        has_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
-        if (not has_city) or (not has_cast):
+        has_no_city = (city is None and 'city' not in ticket)
+        has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
+        if has_no_city or has_no_cast:
             response = saoju.search_for_musical_by_date(eName,
                                                         ticket['start_time'], 
                                                         city=city)
             if not response:
                 return []
             else:
-                if not has_cast:
+                if not has_no_cast:
                     cast = response.get("cast", [])
                     self.data['ticket_id_to_casts'][eid] = {}
                     self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
                     self.data['ticket_id_to_casts'][eid]["cast"] = cast
-                if not has_city:
+                if not has_no_city:
                     ticket['city'] = response['city']
         return {"cast": self.data['ticket_id_to_casts'][eid]['cast'], "city":ticket['city']}
         
