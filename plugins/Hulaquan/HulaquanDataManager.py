@@ -322,7 +322,7 @@ class HulaquanDataManager(BaseDataManager):
         return update_data
     
     
-    async def on_message_search_event_by_date(self, saoju, date, _city=None):
+    async def on_message_search_event_by_date(self, saoju, date, _city=None, ignore_sold_out=False):
         # date: "2025-06-07"
         try:
             date_obj = standardize_datetime(date, with_second=False, return_str=False)
@@ -351,13 +351,14 @@ class HulaquanDataManager(BaseDataManager):
                 if t_start.date() != date_obj.date():
                     continue
                 # city过滤
-                event_city = extract_city(event.get("location", ""))
+                tInfo = extract_title_info(ticket.get("title", ""))
+                event_title = tInfo['title'][1:-1]
+                event_city = self.get_ticket_city(saoju, event_title, ticket)
                 if _city:
                     if not event_city or _city not in event_city:
                         continue
                 # 获取卡司
-                tInfo = extract_title_info(ticket.get("title", ""))
-                cast_str = self.get_cast_artists_str(saoju, tInfo['title'][1:-1], ticket, _city) or "无卡司信息"
+                cast_str = self.get_cast_artists_str(saoju, event_title, ticket, _city) or "无卡司信息"
                 time_key = t_start.strftime("%H:%M")
                 if event_city not in result_by_city:
                     result_by_city[event_city] = {}
@@ -382,6 +383,8 @@ class HulaquanDataManager(BaseDataManager):
             for t in sorted(result_by_city[city_key].keys()):
                 message += f"⏲️时间：{t}\n"
                 for item in result_by_city[city_key][t]:
+                    if ignore_sold_out and item['left']==0:
+                        continue
                     message += (("✨" if item['left'] > 0 else "❌") + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n")                      
         message += f"\n数据更新时间: {self.data['update_time']}\n"
         return message
@@ -433,7 +436,7 @@ class HulaquanDataManager(BaseDataManager):
         else:
             return "未找到该剧目的详细信息。"
         
-    def get_ticket_cast(self, saoju: SaojuDataManager, eName, ticket, city):
+    def get_ticket_cast_and_city(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
         if eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == []):
             response = saoju.search_for_musical_by_date(eName,
@@ -447,13 +450,17 @@ class HulaquanDataManager(BaseDataManager):
                 self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
                 self.data['ticket_id_to_casts'][eid]["cast"] = cast
         else:
+            ticket['city'] = response['city'] if 'city' not in ticket else ticket['city']
             cast = self.data['ticket_id_to_casts'][eid]['cast']
-        return cast
+        return {"cast": cast, "city":response['city']}
         
     def get_cast_artists_str(self, saoju, eName, ticket, city=None):
-        cast = self.get_ticket_cast(saoju, eName, ticket, city)
+        cast = self.get_ticket_cast_and_city(saoju, eName, ticket, city)['cast']
         # return 演员卡司:: "丁辰西 陈玉婷 照余辉"
         return " ".join([i["artist"] for i in cast])
+    
+    def get_ticket_city(self, saoju, eName, ticket):
+        return self.get_ticket_cast_and_city(saoju, eName, ticket)['city']
             
         
     async def message_update_data_async(self):
