@@ -442,7 +442,7 @@ class HulaquanDataManager(BaseDataManager):
                                                         ticket['start_time'], 
                                                         city=city)
             if not response:
-                return {"cast":None, "city":None}
+                return {"cast":[], "city":None}
             else:
                 if has_no_cast:
                     cast = response.get("cast", [])
