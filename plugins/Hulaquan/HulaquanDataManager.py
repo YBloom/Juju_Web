@@ -324,8 +324,7 @@ class HulaquanDataManager(BaseDataManager):
     
     async def on_message_search_event_by_date(self, saoju, date, _city=None, ignore_sold_out=False):
         # date: "2025-06-07"
-        try:
-            date_obj = standardize_datetime(date, with_second=False, return_str=False)
+        date_obj = standardize_datetime(date, with_second=False, return_str=False)
         result_by_city = {}
         city_events_count = {}
         for eid, event in self.data["events"].items():
