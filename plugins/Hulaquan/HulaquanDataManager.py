@@ -435,21 +435,23 @@ class HulaquanDataManager(BaseDataManager):
         
     def get_ticket_cast_and_city(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
-        if eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == []):
+        has_city = (city is None and 'city' not in ticket)
+        has_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
+        if (not has_city) or (not has_cast):
             response = saoju.search_for_musical_by_date(eName,
                                                         ticket['start_time'], 
                                                         city=city)
             if not response:
                 return []
             else:
-                cast = response.get("cast", [])
-                self.data['ticket_id_to_casts'][eid] = {}
-                self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
-                self.data['ticket_id_to_casts'][eid]["cast"] = cast
-        else:
-            ticket['city'] = response['city'] if 'city' not in ticket else ticket['city']
-            cast = self.data['ticket_id_to_casts'][eid]['cast']
-        return {"cast": cast, "city":response['city']}
+                if not has_cast:
+                    cast = response.get("cast", [])
+                    self.data['ticket_id_to_casts'][eid] = {}
+                    self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
+                    self.data['ticket_id_to_casts'][eid]["cast"] = cast
+                if not has_city:
+                    ticket['city'] = response['city']
+        return {"cast": self.data['ticket_id_to_casts'][eid]['cast'], "city":ticket['city']}
         
     def get_cast_artists_str(self, saoju, eName, ticket, city=None):
         cast = self.get_ticket_cast_and_city(saoju, eName, ticket, city)['cast']
