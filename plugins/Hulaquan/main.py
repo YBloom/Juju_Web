@@ -394,7 +394,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("查询中，请稍后…")
             result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city, ignore_sold_out=("-i" in mode_args))
         except Exception:
-            self.on_traceback_message("/date查询过程中失败")
+            await self.on_traceback_message("/date查询过程中失败")
             return
         await msg.reply(result)
         
