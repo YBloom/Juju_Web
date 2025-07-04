@@ -357,7 +357,7 @@ class HulaquanDataManager(BaseDataManager):
                         continue
                 # 获取卡司
                 tInfo = extract_title_info(ticket.get("title", ""))
-                cast_str = self.get_cast_artists_str(saoju, tInfo['title'], ticket, _city) or "无卡司信息"
+                cast_str = self.get_cast_artists_str(saoju, tInfo['title'][1:-1], ticket, _city) or "无卡司信息"
                 time_key = t_start.strftime("%H:%M")
                 if event_city not in result_by_city:
                     result_by_city[event_city] = {}
