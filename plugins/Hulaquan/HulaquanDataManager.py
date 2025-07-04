@@ -444,6 +444,7 @@ class HulaquanDataManager(BaseDataManager):
                 return []
             else:
                 cast = response.get("cast", [])
+                self.data['ticket_id_to_casts'][eid] = {}
                 self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
                 self.data['ticket_id_to_casts'][eid]["cast"] = cast
         else:
