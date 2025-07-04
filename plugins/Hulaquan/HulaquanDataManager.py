@@ -309,11 +309,11 @@ class HulaquanDataManager(BaseDataManager):
                 old_left_ticket_count = old_item['left_ticket_count']
                 old_total_ticket = old_item['total_ticket']
                 #print("new_item", new_item, "\nold item", old_item)
-                if new_total_ticket > old_total_ticket:
+                if old_total_ticket is None or (new_total_ticket > (old_total_ticket or 0)):
                     # 如果 total_ticket 增加了，则标记为 "add"
                     new_item['update_status'] = 'add'
                     update_data.append(new_item)
-                elif new_left_ticket_count > old_left_ticket_count and old_left_ticket_count == 0:
+                elif old_left_ticket_count is None or (new_left_ticket_count > old_left_ticket_count and old_left_ticket_count == 0):
                     # 如果 left_ticket_count 增加了，则标记为 "return"
                     new_item['update_status'] = 'return'
                     update_data.append(new_item)
