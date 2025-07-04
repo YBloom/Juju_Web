@@ -356,7 +356,8 @@ class HulaquanDataManager(BaseDataManager):
                     if not event_city or _city not in event_city:
                         continue
                 # 获取卡司
-                cast_str = self.get_cast_artists_str(saoju, event["title"], ticket, _city) or "无卡司信息"
+                tInfo = extract_title_info(ticket.get("title", ""))
+                cast_str = self.get_cast_artists_str(saoju, tInfo['title'], ticket, _city) or "无卡司信息"
                 time_key = t_start.strftime("%H:%M")
                 if event_city not in result_by_city:
                     result_by_city[event_city] = {}
@@ -365,7 +366,6 @@ class HulaquanDataManager(BaseDataManager):
                 elif time_key not in result_by_city[event_city]:
                     result_by_city[event_city][time_key] = []
                 city_events_count[event_city] += 1
-                tInfo = extract_title_info(ticket.get("title", ""))
                 result_by_city[event_city][time_key].append({
                     "event_title": tInfo['title'] + " " + ticket.get("ticket_price", "") + (f"(原价：{tInfo["full_price"]})" if tInfo["full_price"] else None),
                     "ticket_title": ticket.get("title", ""),
@@ -420,7 +420,7 @@ class HulaquanDataManager(BaseDataManager):
                 "剩余票务信息:\n"
                 + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
                                 + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
-                                + ((" " + (self.get_cast_artists_str(saoju, eName, ticket['start_time'], 
+                                + ((" " + (self.get_cast_artists_str(saoju, eName, ticket, 
                                                         city=extract_city(event_data.get("location", ""))
                                                     )
                                         )
