@@ -451,7 +451,7 @@ class HulaquanDataManager(BaseDataManager):
         return cast
         
     def get_cast_artists_str(self, saoju, eName, ticket, city=None):
-        cast = self.get_ticket_cast(self, saoju, eName, ticket, city)
+        cast = self.get_ticket_cast(saoju, eName, ticket, city)
         # return 演员卡司:: "丁辰西 陈玉婷 照余辉"
         return " ".join([i["artist"] for i in cast])
             
