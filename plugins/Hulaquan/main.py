@@ -356,7 +356,7 @@ class Hulaquan(BasePlugin):
     def extract_args(self, msg):
         # 之后修改，不方便
         command = msg.raw_message.split(" ")
-        args = {"command":command[0], "mode_args":[arg for arg in command if arg[0] == '-'], "text_args":[arg for arg in command if arg[0] != '-']}
+        args = {"command":command[0], "mode_args":[arg for arg in command[1:] if arg[0] == '-'], "text_args":[arg for arg in command[1:] if arg[0] != '-']}
         for i in range(len(args["mode_args"])):
             args["mode_args"][i] = args["mode_args"][i].lower() # 小写处理-I -i
         return args
