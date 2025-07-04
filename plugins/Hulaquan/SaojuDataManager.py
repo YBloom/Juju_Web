@@ -3,6 +3,7 @@ import unicodedata
 import pandas as pd
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from plugins.Hulaquan.HulaquanDataManager import standardize_datetime
 
 def dateToStr(date):
     if isinstance(date, datetime):
@@ -23,23 +24,7 @@ def dateTimeToStr(_time):
         return _time
 
 def parse_datetime(dateAndTime):
-    # 尝试不同的日期时间格式
-    formats = [
-        "%Y-%m-%d %H:%M:%S",  # 格式: 年-月-日 时:分:秒
-        "%Y-%m-%d %H:%M",     # 格式: 年-月-日 时:分
-        "%Y-%m-%d",           # 格式: 年-月-日
-        "%H:%M",              # 格式: 时:分
-        "%H:%M:%S"            # 格式: 时:分:秒
-    ]
-    
-    for fmt in formats:
-        try:
-            return datetime.strptime(dateAndTime, fmt)
-        except ValueError:
-            continue  # 如果当前格式不匹配，尝试下一个格式
-
-    # 如果没有匹配的格式，抛出异常
-    raise ValueError("输入的字符串不匹配已知的格式")
+    return standardize_datetime(dateAndTime, return_str=False)
 
         
 def delta_time_list(start_date, end_date):
@@ -70,16 +55,6 @@ def ljust_for_chinese(s, width, fillchar=' '):
         return s
     fill_width = width - current_width
     return s + fillchar * fill_width
-
-def standardize_datetime(dateAndTime):
-    current_year = datetime.now().year
-    if len(dateAndTime.split("-")[0]) != 4:
-        dateAndTime = str(current_year) + "-" + dateAndTime
-    try:
-        dt = datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        dt = datetime.strptime(dateAndTime, "%Y-%m-%d %H:%M")
-    return dt.strftime("%Y-%m-%d %H:%M")
 
 def get_max_cast_length(casts=None):
     return 8
@@ -177,23 +152,6 @@ class SaojuDataManager(BaseDataManager):
                 if cast["artist"] == search_name:
                     schedule.append(data[i])
         return schedule
-
-    def search_casts_by_date_and_name(self, name, date_time, city=None):
-        """
-        根据日期和剧名查询演出卡司
-        :param date: str, 日期格式为 "YYYY-MM-DD HH:MM"
-        :param name: str, 剧名
-        :return: str 关于卡司的信息
-        """
-        date_time = standardize_datetime(date_time)
-        response = self.search_for_musical_by_date(name, date_time, city)
-        if not response:
-            return []
-        casts = [ljust_for_chinese(i["artist"], get_max_cast_length()) for i in response["cast"]]
-        #casts = response["cast"]
-        if not casts:
-            return []
-        return casts
 
     def search_artist_from_timetable(self, search_name, timetable: list[datetime]):
         """

@@ -199,11 +199,11 @@ class Hulaquan(BasePlugin):
         
         self.register_user_func(
             name="扫剧查询某日演出",
-            handler=self.on_saoju_search_events_by_date,
+            handler=self.on_list_hulaquan_events_by_date,
             prefix="/date",
-            description="根据日期通过扫剧查询排期",
-            usage="/date 日期 \n日期格式为年-月-日\n如/date 2025-06-01",
-            examples=["/date <日期>"],
+            description="根据日期通过呼啦圈查询当天学生票",
+            usage="/date 日期 城市\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写",
+            examples=["/date <日期> (城市)"],
             tags=["saoju"],
             metadata={"category": "utility"}
         )
@@ -232,12 +232,10 @@ class Hulaquan(BasePlugin):
     async def _on_switch_scheduled_check_task_for_users(self, msg: BaseMessage):
         if self._hulaquan_announcer_running:
             self.stop_hulaquan_announcer()
+            await msg.reply("（管理员）已关闭呼啦圈上新检测功能")
         else:
             self.start_hulaquan_announcer()
-        if flag:
             await msg.reply("(管理员）已开启呼啦圈上新检测功能")
-        else:
-            await msg.reply("（管理员）已关闭呼啦圈上新检测功能")
             
     async def on_get_update_log(self, msg: BaseMessage):
         m = f"当前版本：{self.version}\n\n版本更新日志：\n{get_update_log()}"
@@ -376,16 +374,16 @@ class Hulaquan(BasePlugin):
         #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
         return text
         
-    async def on_saoju_search_events_by_date(self, msg: BaseMessage):
+    async def on_list_hulaquan_events_by_date(self, msg: BaseMessage):
         # 最多有12小时数据延迟
         args = self.extract_args(msg)
         if not args:
-            await msg.reply_text("【缺少日期】\n/date 日期)>\n日期格式为年-月-日\n如/date 2025-06-01")
+            await msg.reply_text("【缺少日期】\n/date 日期 城市)>\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写")
             return
         date = args[0]
         city = args[1] if len(args)>1 else None
         await msg.reply_text("查询中，请稍后…")
-        result = self.saoju_data_manager.on_search_event_by_date(date, city)
+        result = self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city)
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):

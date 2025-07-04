@@ -32,10 +32,12 @@ class HulaquanDataManager(BaseDataManager):
     def __init__(self, file_path=None):
         #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
-        self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
+        
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
+        self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
+        self.data["ticket_id_to_casts"] = self.data.get("ticket_id_to_casts", {})
 
     async def get_events_dict_async(self):
         data = await self.search_all_events_async()
@@ -142,10 +144,10 @@ class HulaquanDataManager(BaseDataManager):
     # ------------------------------------------ #
 
 
-    def get_max_ticket_content_length(self, tickets):
+    def get_max_ticket_content_length(self, tickets, ticket_title_key='title'):
         max_len = 0
         for ticket in tickets:
-            s = f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
+            s = f"{ticket[ticket_title_key]} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
             max_len = max(max_len, get_display_width(s))
         return max_len
 
@@ -259,7 +261,6 @@ class HulaquanDataManager(BaseDataManager):
                     json.dump(new_data_all, f, ensure_ascii=False, indent=2)
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
 
-    
 
     def compare_tickets(self, old_data_all, new_data):
         """
@@ -319,21 +320,85 @@ class HulaquanDataManager(BaseDataManager):
                 else:
                     new_item['update_status'] = None
         return update_data
-        
+    
+    
+    async def on_message_search_event_by_date(self, saoju, date, _city=None):
+        # date: "2025-06-07"
+        try:
+            date_obj = standardize_datetime(date, with_second=False, return_str=False)
+        except Exception:
+            return f"日期格式错误，应为YYYY-MM-DD"
+        result_by_city = {}
+        city_events_count = {}
+        for eid, event in self.data["events"].items():
+            # 判断date是否在start_time和end_time之间
+            try:
+                event_start = standardize_datetime(event["start_time"], with_second=False, return_str=False)
+                event_end = standardize_datetime(event["end_time"], with_second=False, return_str=False)
+            except Exception:
+                continue
+            if not (event_start.date() <= date_obj.date() <= event_end.date()):
+                continue
+            # 遍历票务
+            for ticket in event.get("ticket_details", []):
+                t_start = ticket.get("start_time")
+                if not t_start:
+                    continue
+                try:
+                    t_start = standardize_datetime(t_start, with_second=False, return_str=False)
+                except Exception:
+                    continue
+                if t_start.date() != date_obj.date():
+                    continue
+                # city过滤
+                event_city = extract_city(event.get("location", ""))
+                if _city:
+                    if not event_city or _city not in event_city:
+                        continue
+                # 获取卡司
+                cast_str = self.get_cast_artists_str(saoju, event["title"], ticket, _city) or "无卡司信息"
+                time_key = t_start.strftime("%H:%M")
+                if event_city not in result_by_city:
+                    result_by_city[event_city] = {}
+                    result_by_city[event_city][time_key] = []
+                    city_events_count[event_city] = 1
+                elif time_key not in result_by_city[event_city]:
+                    result_by_city[event_city][time_key] = []
+                city_events_count[event_city] += 1
+                tInfo = extract_title_info(ticket.get("title", ""))
+                result_by_city[event_city][time_key].append({
+                    "event_title": tInfo['title'] + " " + ticket.get("ticket_price", "") + (f"(原价：{tInfo["full_price"]})" if tInfo["full_price"] else None),
+                    "ticket_title": ticket.get("title", ""),
+                    "cast": cast_str,
+                    "left": ticket.get("left_ticket_count", "-"),
+                    "total": ticket.get("total_ticket", "-"),
+                })
+        if not result_by_city:
+            return f"{date} {_city or ''} 当天无呼啦圈学生票场次信息。"
+        # 按时间排序输出
+        message = f"{date} {_city or ''} 呼啦圈学生票场次：\n"
+        for city_key in sorted(result_by_city, key=lambda x: result_by_city[x], reverse=True):
+            message += f"城市：{city_key}\n"
+            for t in sorted(result_by_city[city_key].keys()):
+                message += f"⏲️时间：{t}\n"
+                for item in result_by_city[t]:
+                    message += ("✨" if item['left_ticket_count'] > 0 else "❌") 
+                    + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n"                          
+        message += f"\n数据更新时间: {self.data['update_time']}\n"
+        return message
         
     async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
-        query_time = datetime.now()
         result = await self.search_eventID_by_name(eName)
         if len(result) > 1:
             queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
             return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
         elif len(result) == 1:
             eid = result[0][0]
-            return await self.generate_tickets_query_message(eid, query_time, eName, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out)
+            return await self.generate_tickets_query_message(eid, eName, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
         else:
             return "未找到该剧目。"
 
-    async def generate_tickets_query_message(self, eid, query_time, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):
+    async def generate_tickets_query_message(self, eid, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):  
         if not refresh:
             event_data = self.data["events"].get(str(eid), None)
         else:
@@ -355,11 +420,9 @@ class HulaquanDataManager(BaseDataManager):
                 "剩余票务信息:\n"
                 + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
                                 + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
-                                + ((" " + (" ".join(saoju.search_casts_by_date_and_name(eName, 
-                                                                                ticket['start_time'], 
-                                                                                city=extract_city(event_data.get("location", ""))
-                                                                                )
-                                                )
+                                + ((" " + (self.get_cast_artists_str(saoju, eName, ticket['start_time'], 
+                                                        city=extract_city(event_data.get("location", ""))
+                                                    )
                                         )
                                 ) if show_cast else "")
                                 for ticket in remaining_tickets
@@ -370,6 +433,31 @@ class HulaquanDataManager(BaseDataManager):
             return message
         else:
             return "未找到该剧目的详细信息。"
+        
+    def get_ticket_cast(self, saoju: SaojuDataManager, eName, ticket, city):
+        eid = ticket['id']
+        if eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == []):
+            response = saoju.search_for_musical_by_date(eName,
+                                                        ticket['start_time'], 
+                                                        city=city)
+            if not response:
+                return []
+            else:
+                cast = response.get("cast", [])
+                self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
+                self.data['ticket_id_to_casts'][eid]["cast"] = cast
+        else:
+            cast = self.data['ticket_id_to_casts'][eid]['cast']
+        return cast
+        
+    def get_cast_artists_str(self, saoju, eName, ticket, city=None):
+        cast = self.get_ticket_cast(self, saoju, eName, ticket, city)
+        # return 演员卡司:: "丁辰西 陈玉婷 照余辉"
+        return " ".join([i["artist"] for i in cast])
+        
+        
+                
+        
         
     async def message_update_data_async(self):
         query_time = datetime.now()
@@ -403,7 +491,7 @@ def ljust_for_chinese(s, width, fillchar=' '):
     result = s + fillchar * fill_width
     return result
 
-def standardize_datetime(dateAndTime: str, return_str=True):
+def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
     # 当前年份
     current_year = datetime.now().year
     dateAndTime = dateAndTime.replace("：", ':')
@@ -415,6 +503,10 @@ def standardize_datetime(dateAndTime: str, return_str=True):
         "%m-%d %H:%M:%S",  # 12-07 06:30:21
         "%y-%m-%d %H:%M",  # 25-12-07 06:30
         "%y/%m/%d %H:%M"   # 25/12/07 06:30
+        "%Y-%m-%d",           # 格式: 年-月-日
+        "%H:%M",              # 格式: 时:分
+        "%H:%M:%S"            # 格式: 时:分:秒
+        
     ]
     for fmt in formats:
         try:
@@ -428,7 +520,10 @@ def standardize_datetime(dateAndTime: str, return_str=True):
             if len(str(dt.second)) == 0:
                 dt = dt.replace(second=0)
             if return_str:
-                return dt.strftime("%Y-%m-%d %H:%M:%S")
+                if with_second:
+                    return dt.strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    return dt.strftime("%Y-%m-%d %H:%M")
             else:
                 return dt
         except ValueError:
@@ -451,3 +546,38 @@ def extract_city(address):
     if match:
         return match.group(1)[:-1]
     return None
+
+def extract_text_in_brackets(text):
+    # 正则表达式匹配《xxx》
+    match = re.search(r'《(.*?)》', text)
+    if match:
+        return match.group(0)  # 返回整个《xxx》内容
+    return None  # 如果没有匹配到，返回None
+
+def extract_title_info(text):
+    # 正则表达式提取《xxx》，价格和原价
+    price_match = re.findall(r'￥(\d+)', text)  # 匹配所有的￥金额
+
+    title = extract_text_in_brackets(text)
+
+    if price_match:
+        # 获取价格列表中的金额
+        price_values = [int(price) for price in price_match]
+
+        # 如果有两个金额，选择最小的为price，另一个为full_price
+        if len(price_values) == 2:
+            price = min(price_values)
+            full_price = max(price_values)
+        elif len(price_values) == 1:
+            price = price_values[0]
+            full_price = None
+        else:
+            price = full_price = None
+    else:
+        price = full_price = None
+
+    return {
+        'title': title,
+        'price': f'￥{price}' if price is not None else None,
+        'full_price': f'￥{full_price}' if full_price is not None else None
+    }
