@@ -63,6 +63,7 @@ def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
     # 尝试不同的日期时间格式
     formats = [
         "%Y-%m-%d %H:%M",  # 2025-12-07 06:30
+        "%Y-%m-%d %H:%M:%S",  # 2025-12-07 06:30
         "%m-%d %H:%M",     # 12-07 06:30
         "%m-%d %H:%M:%S",  # 12-07 06:30:21
         "%y-%m-%d %H:%M",  # 25-12-07 06:30
