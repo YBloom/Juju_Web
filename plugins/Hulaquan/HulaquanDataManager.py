@@ -326,8 +326,6 @@ class HulaquanDataManager(BaseDataManager):
         # date: "2025-06-07"
         try:
             date_obj = standardize_datetime(date, with_second=False, return_str=False)
-        except Exception:
-            return f"日期格式错误，应为YYYY-MM-DD"
         result_by_city = {}
         city_events_count = {}
         for eid, event in self.data["events"].items():

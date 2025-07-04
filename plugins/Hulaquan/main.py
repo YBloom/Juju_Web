@@ -387,11 +387,14 @@ class Hulaquan(BasePlugin):
         if not args["text_args"]:
             await msg.reply_text("【缺少日期】\n/date 日期 城市)>\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写")
             return
-        date = args["text_args"][0]
-        city = args["text_args"][1] if len(args["text_args"])>1 else None
-        mode_args = args["mode_args"]
-        await msg.reply_text("查询中，请稍后…")
-        result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city, ignore_sold_out=("-i" in mode_args))
+        try:
+            date = args["text_args"][0]
+            city = args["text_args"][1] if len(args["text_args"])>1 else None
+            mode_args = args["mode_args"]
+            await msg.reply_text("查询中，请稍后…")
+            result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city, ignore_sold_out=("-i" in mode_args))
+        except Exception:
+            self.on_traceback_message("/date查询过程中失败")
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
