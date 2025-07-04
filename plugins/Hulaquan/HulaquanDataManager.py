@@ -350,7 +350,7 @@ class HulaquanDataManager(BaseDataManager):
                 # city过滤
                 tInfo = extract_title_info(ticket.get("title", ""))
                 event_title = tInfo['title'][1:-1]
-                event_city = self.get_ticket_city(saoju, event_title, ticket)
+                event_city = self.get_ticket_city(saoju, event_title, ticket) or "未知城市"
                 if _city:
                     if not event_city or _city not in event_city:
                         continue
@@ -442,14 +442,14 @@ class HulaquanDataManager(BaseDataManager):
                                                         ticket['start_time'], 
                                                         city=city)
             if not response:
-                return []
+                return {"cast":None, "city":None}
             else:
-                if not has_no_cast:
+                if has_no_cast:
                     cast = response.get("cast", [])
                     self.data['ticket_id_to_casts'][eid] = {}
                     self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
                     self.data['ticket_id_to_casts'][eid]["cast"] = cast
-                if not has_no_city:
+                if has_no_city:
                     ticket['city'] = response['city']
         return {"cast": self.data['ticket_id_to_casts'][eid]['cast'], "city":ticket['city']}
         
