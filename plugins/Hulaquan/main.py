@@ -20,10 +20,15 @@ UPDATE_LOG = [
          "date": "2025-07-01"
         },
         
-        {"version": "⭐0.0.3", 
+        {"version": "0.0.3", 
          "description": """1.修改了一些缓存功能\n2.修复了一些bug\n3.添加了/hlq xx -R获取当下数据的功能
          """,
          "date": "2025-07-03"
+        },
+        {"version": "⭐0.0.4", 
+         "description": """1./date功能实现
+         """,
+         "date": "2025-07-05"
         },
     ]
 
@@ -44,7 +49,7 @@ def get_update_log(update_log=UPDATE_LOG):
 
 class Hulaquan(BasePlugin):
     name = "Hulaquan"  # 插件名称
-    version = "0.0.3"  # 插件版本
+    version = "0.0.4"  # 插件版本
     author = "摇摇杯"  # 插件作者
     info = "与呼啦圈学生票相关的功能"  # 插件描述
     dependencies = {
@@ -202,7 +207,7 @@ class Hulaquan(BasePlugin):
             handler=self.on_list_hulaquan_events_by_date,
             prefix="/date",
             description="根据日期通过呼啦圈查询当天学生票",
-            usage="/date 日期 城市\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写",
+            usage="/date 日期 城市\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写\n-i表示忽略已售罄场次",
             examples=["/date <日期> (城市)"],
             tags=["saoju"],
             metadata={"category": "utility"}
