@@ -66,10 +66,10 @@ def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
         "%m-%d %H:%M",     # 12-07 06:30
         "%m-%d %H:%M:%S",  # 12-07 06:30:21
         "%y-%m-%d %H:%M",  # 25-12-07 06:30
-        "%y/%m/%d %H:%M"   # 25/12/07 06:30
+        "%y/%m/%d %H:%M",   # 25/12/07 06:30
         "%Y-%m-%d",           # 格式: 年-月-日
         "%H:%M",              # 格式: 时:分
-        "%H:%M:%S"            # 格式: 时:分:秒
+        "%H:%M:%S",            # 格式: 时:分:秒
         
     ]
     for fmt in formats:
