@@ -381,7 +381,7 @@ class HulaquanDataManager(BaseDataManager):
             message += f"城市：{city_key}\n"
             for t in sorted(result_by_city[city_key].keys()):
                 message += f"⏲️时间：{t}\n"
-                for item in result_by_city[t]:
+                for item in result_by_city[city_key][t]:
                     message += ("✨" if item['left_ticket_count'] > 0 else "❌") 
                     + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n"                          
         message += f"\n数据更新时间: {self.data['update_time']}\n"

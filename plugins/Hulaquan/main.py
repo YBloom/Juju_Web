@@ -66,7 +66,7 @@ class Hulaquan(BasePlugin):
         await self._event_bus.publish_async(self.load_event)
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
-        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", 600))
+        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", 900))
         
         
     async def on_close(self, *arg, **kwd):
