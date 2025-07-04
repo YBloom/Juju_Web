@@ -338,6 +338,8 @@ class HulaquanDataManager(BaseDataManager):
                 continue
             # 遍历票务
             for ticket in event.get("ticket_details", []):
+                if ignore_sold_out and ticket.get("left_ticket_count", 0)==0:
+                    continue
                 t_start = ticket.get("start_time")
                 if not t_start:
                     continue
@@ -380,8 +382,6 @@ class HulaquanDataManager(BaseDataManager):
             for t in sorted(result_by_city[city_key].keys()):
                 message += f"⏲️时间：{t}\n"
                 for item in result_by_city[city_key][t]:
-                    if ignore_sold_out and item['left']==0:
-                        continue
                     message += (("✨" if item['left'] > 0 else "❌") + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n")                      
         message += f"\n数据更新时间: {self.data['update_time']}\n"
         return message
