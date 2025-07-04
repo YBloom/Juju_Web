@@ -367,7 +367,7 @@ class HulaquanDataManager(BaseDataManager):
                     result_by_city[event_city][time_key] = []
                 city_events_count[event_city] += 1
                 result_by_city[event_city][time_key].append({
-                    "event_title": tInfo['title'] + " " + ticket.get("ticket_price", "") + (f"(原价：{tInfo["full_price"]})" if tInfo["full_price"] else None),
+                    "event_title": tInfo['title'] + " " + tInfo["price"] + (f"(原价：{tInfo["full_price"]})" if tInfo["full_price"] else None),
                     "ticket_title": ticket.get("title", ""),
                     "cast": cast_str,
                     "left": ticket.get("left_ticket_count", "-"),
