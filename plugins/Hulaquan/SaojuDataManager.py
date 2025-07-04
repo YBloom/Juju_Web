@@ -1,64 +1,9 @@
 import requests
-import unicodedata
 import pandas as pd
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
-from plugins.Hulaquan.HulaquanDataManager import standardize_datetime
+from plugins.Hulaquan.utils import *
 
-def dateToStr(date):
-    if isinstance(date, datetime):
-        return date.strftime("%Y-%m-%d")
-    else:
-        return date
-    
-def timeToStr(_time):
-    if isinstance(_time, datetime):
-        return _time.strftime("%H:%M")
-    else:
-        return _time
-
-def dateTimeToStr(_time):
-    if isinstance(_time, datetime):
-        return _time.strftime("%Y-%m-%d %H:%M")
-    else:
-        return _time
-
-def parse_datetime(dateAndTime):
-    return standardize_datetime(dateAndTime, return_str=False)
-
-        
-def delta_time_list(start_date, end_date):
-        # 生成日期列表
-        start_date = parse_datetime(start_date)
-        end_date = parse_datetime(end_date)
-        date_list = []
-        current_date:datetime = start_date
-
-        while current_date <= end_date:
-            date_list.append(current_date)
-            current_date += timedelta(days=1)
-        return date_list   
-    
-def get_display_width(s):
-    width = 0
-    for char in s:
-        # 判断字符是否是全宽字符（通常是中文等）
-        if unicodedata.east_asian_width(char) in ['F', 'W']:  # 'F' = Fullwidth, 'W' = Wide
-            width += 3  # 全宽字符占用2个位置
-        else:
-            width += 1  # 半宽字符占用1个位置
-    return width
-    
-def ljust_for_chinese(s, width, fillchar=' '):
-    current_width = get_display_width(s)
-    if current_width >= width:
-        return s
-    fill_width = width - current_width
-    return s + fillchar * fill_width
-
-def get_max_cast_length(casts=None):
-    return 8
-        
 class SaojuDataManager(BaseDataManager):
     """
     功能：
