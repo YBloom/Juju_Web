@@ -342,22 +342,23 @@ class Hulaquan(BasePlugin):
 
     async def on_hlq_search(self, msg: BaseMessage):
         # 呼啦圈查询处理函数
-        args = self.extract_args(msg)
-        if not args:
+        all_args = self.extract_args(msg)
+        if not all_args["text_args"]:
             await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C -R")
             return
-        event_name = args[0]
+        event_name = all_args["text_args"][0]
+        args = all_args["mode_args"]
         await msg.reply_text("查询中，请稍后…")
         result = await self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=("-r" in args))
         await msg.reply_text(result if result else "未找到相关信息，请检查剧名或网络连接。")
         
 
     def extract_args(self, msg):
+        # 之后修改，不方便
         command = msg.raw_message.split(" ")
-        args = command[1:] if len(command) > 1 else []
-        args = {"command":command[0], "mode_args":[arg for arg in args if arg[0] == '-'], "text_args":[arg for arg in args if arg[0] != '-']}
+        args = {"command":command[0], "mode_args":[arg for arg in command if arg[0] == '-'], "text_args":[arg for arg in command if arg[0] != '-']}
         for i in range(len(args["mode_args"])):
-            args["mode_args"][i] = args[i].lower() # 小写处理-I -i
+            args["mode_args"][i] = args["mode_args"][i].lower() # 小写处理-I -i
         return args
     
     async def on_change_schedule_hulaquan_task_interval(self, value, msg: BaseMessage):
@@ -383,7 +384,7 @@ class Hulaquan(BasePlugin):
     async def on_list_hulaquan_events_by_date(self, msg: BaseMessage):
         # 最多有12小时数据延迟
         args = self.extract_args(msg)
-        if not args:
+        if not args["text_args"]:
             await msg.reply_text("【缺少日期】\n/date 日期 城市)>\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写")
             return
         date = args["text_args"][0]
