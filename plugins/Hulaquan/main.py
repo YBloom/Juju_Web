@@ -25,7 +25,7 @@ UPDATE_LOG = [
          """,
          "date": "2025-07-03"
         },
-        {"version": "⭐0.0.4", 
+        {"version": "0.0.4⭐", 
          "description": """1./date功能实现
          """,
          "date": "2025-07-05"

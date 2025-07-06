@@ -435,7 +435,7 @@ class HulaquanDataManager(BaseDataManager):
         
     def get_ticket_cast_and_city(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
-        has_no_city = (city is None and 'city' not in ticket)
+        has_no_city = ('city' not in ticket)
         has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
         if has_no_city or has_no_cast:
             response = saoju.search_for_musical_by_date(eName,
