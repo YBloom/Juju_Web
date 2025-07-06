@@ -60,7 +60,7 @@ class Hulaquan(BasePlugin):
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
         self._hulaquan_announcer_task = None
-        self._hulaquan_announcer_interval = 900  # 默认15分钟，可根据配置初始化
+        self._hulaquan_announcer_interval = 600  # 默认15分钟，可根据配置初始化
         self._hulaquan_announcer_running = False
         self.groups_manager: GroupsManager = None
         self.users_manager: UsersManager = None
@@ -71,7 +71,7 @@ class Hulaquan(BasePlugin):
         await self._event_bus.publish_async(self.load_event)
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
-        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", 900))
+        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", self._hulaquan_announcer_interval))
         
         
     async def on_close(self, *arg, **kwd):
@@ -290,6 +290,8 @@ class Hulaquan(BasePlugin):
             if eid in self._time_task_scheduler.get_job_status(eid):
                 continue
             valid_from = event.get("valid_from")
+            if not valid_from:
+                continue
             valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
             self.add_scheduled_task(
                 job_func=self.on_pending_tickets_announcer,
@@ -366,6 +368,7 @@ class Hulaquan(BasePlugin):
         if not self.users_manager.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
         self.stop_hulaquan_announcer()
+        self._hulaquan_announcer_interval = int(value)
         self.start_hulaquan_announcer(interval=int(value))
         await msg.reply_text(f"已修改至{task_time}秒更新一次")
     

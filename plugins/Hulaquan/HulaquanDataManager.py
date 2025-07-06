@@ -187,14 +187,21 @@ class HulaquanDataManager(BaseDataManager):
                     flag = ticket.get('update_status')
                     t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
                     if ticket["status"] == "pending" and 'update_status' in ticket.keys():
-                        valid_from = ticket["valid_from"]
+                        valid_from = ticket.get("valid_from")
                         if not valid_from or valid_from == "null":
                             valid_from = "未公开"
                         pending_message[valid_from] = []
                         pending_message[valid_from].append(t)
                     elif ticket["status"] == "active":
                         if flag == 'new':
-                            new_message.append(t)
+                            if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
+                                valid_from = ticket.get("valid_from")
+                                if not valid_from or valid_from == "null":
+                                    valid_from = "未公开（可能很快就开）"
+                                pending_message[valid_from] = []
+                                pending_message[valid_from].append(t)
+                            else:
+                                new_message.append(t)
                         elif flag == 'return':
                             return_message.append(t)
                         elif flag == 'add':
@@ -299,7 +306,7 @@ class HulaquanDataManager(BaseDataManager):
             new_id = new_item['id']
             new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']
-            if new_id not in old_data_dict:
+            if new_id not in old_data_dict or (new_total_ticket>0 and old_total_ticket==0):
                 # 如果 new_data 中存在新的 id，则标记为 "new"
                 new_item['update_status'] = 'new'
                 update_data.append(new_item)
