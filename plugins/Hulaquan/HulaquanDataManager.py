@@ -384,7 +384,11 @@ class HulaquanDataManager(BaseDataManager):
             return f"{date} {_city or ''} 当天无呼啦圈学生票场次信息。"
         # 按时间排序输出
         message = f"{date} {_city or ''} 呼啦圈学生票场次：\n"
-        for city_key in sorted(city_events_count, key=lambda x: city_events_count[x], reverse=True):
+        sorted_keys = sorted(city_events_count, key=lambda x: city_events_count[x], reverse=True)
+        if "未知城市" in sorted_keys:
+            sorted_keys.remove("未知城市")
+            sorted_keys.append("未知城市")
+        for city_key in sorted_keys:
             message += f"城市：{city_key}\n"
             for t in sorted(result_by_city[city_key].keys()):
                 message += f"⏲️时间：{t}\n"
