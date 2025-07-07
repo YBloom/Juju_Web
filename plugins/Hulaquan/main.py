@@ -403,7 +403,7 @@ class Hulaquan(BasePlugin):
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
         try:
-            await self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else None, group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else None, manual=True)
+            await self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else [], group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else [], manual=True)
             await msg.reply_text("刷新成功")
         except Exception as e:
             print(e)
