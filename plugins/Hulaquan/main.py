@@ -60,7 +60,7 @@ class Hulaquan(BasePlugin):
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
         self._hulaquan_announcer_task = None
-        self._hulaquan_announcer_interval = 600  # 默认15分钟，可根据配置初始化
+        self._hulaquan_announcer_interval = 120  # 默认15分钟，可根据配置初始化
         self._hulaquan_announcer_running = False
         self.groups_manager: GroupsManager = None
         self.users_manager: UsersManager = None
@@ -87,8 +87,11 @@ class Hulaquan(BasePlugin):
             try:
                 await self.on_hulaquan_announcer()
             except Exception as e:
-                await self.on_traceback_message(f"呼啦圈定时任务异常")
-            await asyncio.sleep(self._hulaquan_announcer_interval)
+                await self.on_traceback_message(f"呼啦圈定时任务异常: {e}")
+            try:
+                await asyncio.sleep(int(self._hulaquan_announcer_interval))
+            except Exception as e:
+                await self.on_traceback_message(f"定时任务sleep异常: {e}")
             
     def start_hulaquan_announcer(self, interval=None):
         if interval:
@@ -96,6 +99,7 @@ class Hulaquan(BasePlugin):
         if self._hulaquan_announcer_task and not self._hulaquan_announcer_task.done():
             return  # 已经在运行
         self._hulaquan_announcer_running = True
+        self._hulaquan_announcer_interval = int(self._hulaquan_announcer_interval)
         self._hulaquan_announcer_task = asyncio.create_task(self._hulaquan_announcer_loop())
         log.info("呼啦圈检测定时任务已开启")
 
@@ -354,13 +358,13 @@ class Hulaquan(BasePlugin):
         return args
     
     async def on_change_schedule_hulaquan_task_interval(self, value, msg: BaseMessage):
-        task_time = self.data['config']['scheduled_task_time']
         if not self.users_manager.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
+            return
         self.stop_hulaquan_announcer()
         self._hulaquan_announcer_interval = int(value)
         self.start_hulaquan_announcer(interval=int(value))
-        await msg.reply_text(f"已修改至{task_time}秒更新一次")
+        await msg.reply_text(f"已修改至{value}秒更新一次")
     
     def _get_help(self):
         """自动生成帮助文档"""
