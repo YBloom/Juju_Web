@@ -248,7 +248,10 @@ class Hulaquan(BasePlugin):
             is_updated = result["is_updated"]
             messages = result["messages"]
             new_pending = result["new_pending"]
-            log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
+            if not is_updated:
+                log.info("呼啦圈数据刷新成功：无更新数据")
+            else:
+                log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
         except Exception as e:
             await self.on_traceback_message(f"呼啦圈数据更新失败")
             return False
