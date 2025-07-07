@@ -478,7 +478,18 @@ class HulaquanDataManager(BaseDataManager):
     
     def get_ticket_city(self, saoju, eName, ticket):
         return self.get_ticket_cast_and_city(saoju, eName, ticket)['city']
+    
             
+    async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
+        result = await self.search_eventID_by_name(eName)
+        if len(result) > 1:
+            queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
+            return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
+        elif len(result) == 1:
+            eid = result[0][0]
+            return await self.generate_tickets_query_message(eid, eName, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
+        else:
+            return "未找到该剧目。"
         
     async def message_update_data_async(self):
         query_time = datetime.now()
