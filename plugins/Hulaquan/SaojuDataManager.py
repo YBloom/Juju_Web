@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 import pandas as pd
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
@@ -19,54 +19,43 @@ class SaojuDataManager(BaseDataManager):
         self.data["update_time_dict"].setdefault("date_dict", {})  # 确保有一个更新时间字典来存储数据
         self.refresh_expired_data()
 
-    def search_day(self, date):
-        """
-        "date": "2023-07-25"
-        "show_list":
-            "city": "X城市"
-            "musical": "XX音乐剧"
-            "theatre": "XX剧院"
-            "time": "19:30"
-            "cast":
-            {"role": "A角色", "artist": "X演员"}
-            {"role": "B角色", "artist": "Y演员"}
-        """
+    async def search_day_async(self, date):
         url = "http://y.saoju.net/yyj/api/search_day/"
         data = {"date": date}
         try:
-            response = requests.get(url, params=data)
-            response.raise_for_status()  # 如果响应状态码不是200，将抛出HTTPError异常
-            json_response = response.json()
-        except requests.exceptions.HTTPError as http_err:
-            print(f'SAOJU ERROR HTTP error occurred: {http_err}')  # 打印HTTP错误信息
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=data, timeout=10) as response:
+                    response.raise_for_status()
+                    json_response = await response.json()
+        except aiohttp.ClientError as http_err:
+            print(f'SAOJU ERROR HTTP error occurred: {http_err}')
+            return None
         except Exception as err:
-            print(f'SAOJU ERROR Other error occurred: {err}')  # 打印其他类型的错误信息
+            print(f'SAOJU ERROR Other error occurred: {err}')
+            return None
         return json_response
-    
-    def get_data_by_date(self, date, update_delta_max_hours=12):
+
+    async def get_data_by_date_async(self, date, update_delta_max_hours=12):
         if date in list(self.data["date_dict"].keys()):
             update_time = parse_datetime(self.data["update_time_dict"]["date_dict"].get(date, None))
             if update_time:
                 if (datetime.now() - update_time) < timedelta(hours=update_delta_max_hours):
                     return self.data["date_dict"][date]
-        data = self.search_day(date)
+        data = await self.search_day_async(date)
         if data:
             self.data["date_dict"][date] = data["show_list"]
             self.data["update_time_dict"]["date_dict"][date] = dateTimeToStr(datetime.now())
             return data["show_list"]
         else:
             return None
-            
-    def on_search_event_by_date(self, date, city):
-        return f"点击链接查看{date}的音乐剧排期：http://y.saoju.net/yyj/search_day/?date="+date
-        
 
-    def search_for_musical_by_date(self, search_name, date_time, city=None):
+
+    async def search_for_musical_by_date_async(self, search_name, date_time, city=None):
         # date_time: %Y-%m-%d %H:%M
         date_time = parse_datetime(date_time)
         _date = dateToStr(date_time)
         _time = timeToStr(date_time)
-        data = self.get_data_by_date(_date)
+        data = await self.get_data_by_date_async(_date)
         if not data:
             return None
         for i in range(len(data)):
@@ -74,48 +63,57 @@ class SaojuDataManager(BaseDataManager):
             if ((city in data[i]["city"]) if city else True) and _time == data[i]["time"] and ((search_name in musical) if isinstance(search_name, str) else all(i in musical for i in search_name) if isinstance(search_name, list) else False):
                 return data[i]
         return None
-    
+
     def refresh_expired_data(self):
-        """
-        检查数据是否过期
-        如果过期则刷新数据
-        """
         current_date = datetime.now()
         for date in list(self.data["update_time_dict"]["date_dict"].keys()):
             date_obj = parse_datetime(date)
             if date_obj < current_date:
-                # 如果数据过期，删除该日期的数据
                 del self.data["date_dict"][date]
                 del self.data["update_time_dict"]["date_dict"][date]
 
-    def search_for_artist(self, search_name, date):
+    async def search_for_artist_async(self, search_name, date):
         date = dateToStr(date)
-        data = self.get_data_by_date(date)
+        data = await self.get_data_by_date_async(date)
         schedule = []
+        if not data:
+            return schedule
         for i in range(len(data)):
             for cast in data[i]["cast"]:
                 if cast["artist"] == search_name:
                     schedule.append(data[i])
         return schedule
 
-    def search_artist_from_timetable(self, search_name, timetable: list[datetime]):
-        """
-        Args:
-            search_name (_type_): str
-            timetable (list[datetime]): [(2025,05,01),,]
-        Return:
-            schedule (list): [(datetime, dict), (datetime, dict)]
-        [
-            (datetime(2025, 5, 1), {"musical": "剧名", "time": "时间", "theatre": "剧场", "city": "城市", "cast": [{"role": "角色", "artist": "演员"}]})
-        ]
-        """
+    async def search_artist_from_timetable_async(self, search_name, timetable: list):
         schedule = []
         for date in timetable:
-            show = self.search_for_artist(search_name, date)
+            show = await self.search_for_artist_async(search_name, date)
             for i in show:
                 show_date = dateToStr(date=date) + " " + i["time"]
                 show_date = parse_datetime(show_date)
                 schedule.append((show_date, i))
+        schedule.sort(key=lambda x: x[0])
+        return schedule
+
+    async def check_artist_schedule_async(self, start_time, end_time, artist):
+        timetable = delta_time_list(start_time, end_time)
+        schedule = await self.search_artist_from_timetable_async(artist, timetable)
+        data = []
+        for event in schedule:
+            date = event[0]
+            info = event[1]
+            data.append({
+                '日期': date.strftime('%Y-%m-%d %H:%M'),
+                '剧名': info['musical'],
+                '时间': info['time'],
+                '剧场': info['theatre'],
+                '城市': info['city'],
+                '卡司': " ".join([i["artist"] for i in info['cast']])
+            })
+        df = pd.DataFrame(data)
+        s = "演员: {}".format(artist) + "\n" \
+            + ("从{}到{}的排期".format(start_time, end_time)) \
+            + "\n"
         schedule.sort(key=lambda x: x[0])
         return schedule
         

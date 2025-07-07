@@ -1,15 +1,14 @@
 from datetime import datetime, timedelta
 from plugins.Hulaquan.utils import *
 from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
-import requests
-import re
+from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 import aiohttp
 import os, shutil
 import copy
-import asyncio
 import json
 import random
-from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+import asyncio
+import re
 
 """
     更新思路：
@@ -329,13 +328,36 @@ class HulaquanDataManager(BaseDataManager):
         return update_data
     
     
+    async def get_ticket_cast_and_city_async(self, saoju: SaojuDataManager, eName, ticket, city=None):
+        eid = ticket['id']
+        has_no_city = ('city' not in ticket)
+        has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
+        if has_no_city or has_no_cast:
+            response = await saoju.search_for_musical_by_date_async(eName, ticket['start_time'], city=city)
+            if not response:
+                return {"cast":[], "city":None}
+            else:
+                if has_no_cast:
+                    cast = response.get("cast", [])
+                    self.data['ticket_id_to_casts'][eid] = {}
+                    self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
+                    self.data['ticket_id_to_casts'][eid]["cast"] = cast
+                if has_no_city:
+                    ticket['city'] = response.get('city', None)
+        return {"cast": self.data['ticket_id_to_casts'][eid]['cast'], "city":ticket.get('city', None)}
+
+    async def get_cast_artists_str_async(self, saoju, eName, ticket, city=None):
+        cast = (await self.get_ticket_cast_and_city_async(saoju, eName, ticket, city))['cast']
+        return " ".join([i["artist"] for i in cast])
+
+    async def get_ticket_city_async(self, saoju, eName, ticket):
+        return (await self.get_ticket_cast_and_city_async(saoju, eName, ticket))["city"]
+
     async def on_message_search_event_by_date(self, saoju, date, _city=None, ignore_sold_out=False):
-        # date: "2025-06-07"
         date_obj = standardize_datetime(date, with_second=False, return_str=False)
         result_by_city = {}
         city_events_count = {}
         for eid, event in self.data["events"].items():
-            # 判断date是否在start_time和end_time之间
             try:
                 event_start = standardize_datetime(event["start_time"], with_second=False, return_str=False)
                 event_end = standardize_datetime(event["end_time"], with_second=False, return_str=False)
@@ -343,7 +365,6 @@ class HulaquanDataManager(BaseDataManager):
                 continue
             if not (event_start.date() <= date_obj.date() <= event_end.date()):
                 continue
-            # 遍历票务
             for ticket in event.get("ticket_details", []):
                 if ignore_sold_out and ticket.get("left_ticket_count", 0)==0:
                     continue
@@ -356,15 +377,13 @@ class HulaquanDataManager(BaseDataManager):
                     continue
                 if t_start.date() != date_obj.date():
                     continue
-                # city过滤
                 tInfo = extract_title_info(ticket.get("title", ""))
                 event_title = tInfo['title'][1:-1]
-                event_city = self.get_ticket_city(saoju, event_title, ticket) or "未知城市"
+                event_city = await self.get_ticket_city_async(saoju, event_title, ticket) or "未知城市"
                 if _city:
                     if not event_city or _city not in event_city:
                         continue
-                # 获取卡司
-                cast_str = self.get_cast_artists_str(saoju, event_title, ticket, _city) or "无卡司信息"
+                cast_str = await self.get_cast_artists_str_async(saoju, event_title, ticket, _city) or "无卡司信息"
                 time_key = t_start.strftime("%H:%M")
                 if event_city not in result_by_city:
                     result_by_city[event_city] = {}
@@ -374,7 +393,7 @@ class HulaquanDataManager(BaseDataManager):
                     result_by_city[event_city][time_key] = []
                 city_events_count[event_city] += 1
                 result_by_city[event_city][time_key].append({
-                    "event_title": tInfo['title'] + " " + tInfo["price"] + (f"(原价：{tInfo["full_price"]})" if tInfo["full_price"] else ""),
+                    "event_title": tInfo['title'] + " " + tInfo["price"] + (f"(原价：{tInfo['full_price']})" if tInfo["full_price"] else ""),
                     "ticket_title": ticket.get("title", ""),
                     "cast": cast_str,
                     "left": ticket.get("left_ticket_count", "-"),
@@ -382,7 +401,6 @@ class HulaquanDataManager(BaseDataManager):
                 })
         if not result_by_city:
             return f"{date} {_city or ''} 当天无呼啦圈学生票场次信息。"
-        # 按时间排序输出
         message = f"{date} {_city or ''} 呼啦圈学生票场次：\n"
         sorted_keys = sorted(city_events_count, key=lambda x: city_events_count[x], reverse=True)
         if "未知城市" in sorted_keys:
@@ -393,20 +411,9 @@ class HulaquanDataManager(BaseDataManager):
             for t in sorted(result_by_city[city_key].keys()):
                 message += f"⏲️时间：{t}\n"
                 for item in result_by_city[city_key][t]:
-                    message += (("✨" if item['left'] > 0 else "❌") + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n")                      
+                    message += ("✨" if item['left'] > 0 else "❌") + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n"
         message += f"\n数据更新时间: {self.data['update_time']}\n"
         return message
-        
-    async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
-        result = await self.search_eventID_by_name(eName)
-        if len(result) > 1:
-            queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
-            return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
-        elif len(result) == 1:
-            eid = result[0][0]
-            return await self.generate_tickets_query_message(eid, eName, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
-        else:
-            return "未找到该剧目。"
 
     async def generate_tickets_query_message(self, eid, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):  
         if not refresh:
@@ -430,7 +437,7 @@ class HulaquanDataManager(BaseDataManager):
                 "剩余票务信息:\n"
                 + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
                                 + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
-                                + ((" " + (self.get_cast_artists_str(saoju, eName, ticket, 
+                                + ((" " + (await self.get_cast_artists_str_async(saoju, eName, ticket, 
                                                         city=extract_city(event_data.get("location", ""))
                                                     )
                                         )
@@ -461,8 +468,8 @@ class HulaquanDataManager(BaseDataManager):
                     self.data['ticket_id_to_casts'][eid]["event_id"] = ticket["event_id"]
                     self.data['ticket_id_to_casts'][eid]["cast"] = cast
                 if has_no_city:
-                    ticket['city'] = response['city']
-        return {"cast": self.data['ticket_id_to_casts'][eid]['cast'], "city":ticket['city']}
+                    ticket['city'] = response.get('city', None)
+        return {"cast": self.data['ticket_id_to_casts'][eid]['cast'], "city":ticket.get('city', None)}
         
     def get_cast_artists_str(self, saoju, eName, ticket, city=None):
         cast = self.get_ticket_cast_and_city(saoju, eName, ticket, city)['cast']
@@ -483,5 +490,4 @@ class HulaquanDataManager(BaseDataManager):
         if not is_updated:
             return {"is_updated": False, "messages": [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], "new_pending": False}
         messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
-        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}    
-    
+        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}

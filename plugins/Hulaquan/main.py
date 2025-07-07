@@ -60,7 +60,7 @@ class Hulaquan(BasePlugin):
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
         self._hulaquan_announcer_task = None
-        self._hulaquan_announcer_interval = 120  # 默认15分钟，可根据配置初始化
+        self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
         self.groups_manager: GroupsManager = None
         self.users_manager: UsersManager = None
