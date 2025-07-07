@@ -97,12 +97,14 @@ class Hulaquan(BasePlugin):
             return  # 已经在运行
         self._hulaquan_announcer_running = True
         self._hulaquan_announcer_task = asyncio.create_task(self._hulaquan_announcer_loop())
+        log.info("呼啦圈检测定时任务已开启")
 
     def stop_hulaquan_announcer(self):
         self._hulaquan_announcer_running = False
         if self._hulaquan_announcer_task:
             self._hulaquan_announcer_task.cancel()
             self._hulaquan_announcer_task = None
+            log.info("呼啦圈检测定时任务已关闭")
 
 
     def register_hulaquan_announcement_tasks(self):
@@ -147,9 +149,6 @@ class Hulaquan(BasePlugin):
             allowed_values=[30, 60, 120, 180, 300, 600, 900, 1200, 1800, 3600],
             on_change=self.on_change_schedule_hulaquan_task_interval,
         )
-        self.data["config"]["scheduled_task_time"] = 600
-        
-        
         
         self.register_admin_func(
             name="保存数据（管理员）",
@@ -160,15 +159,6 @@ class Hulaquan(BasePlugin):
             examples=["/save"],
             metadata={"category": "utility"}
         )
-        
-        """task_time = str(self.data['config']['scheduled_task_time'])
-        self.add_scheduled_task(
-            job_func=self.on_hulaquan_announcer, 
-            name=f"呼啦圈上新提醒", 
-            interval=task_time+"s", 
-            #max_runs=10, 
-            conditions=[lambda: self.data["scheduled_task_switch"]]
-        )"""
         
         self.add_scheduled_task(
             job_func=self.on_schedule_save_data, 
@@ -364,7 +354,7 @@ class Hulaquan(BasePlugin):
         return args
     
     async def on_change_schedule_hulaquan_task_interval(self, value, msg: BaseMessage):
-        task_time = str(self.data['config']['scheduled_task_time'])
+        task_time = self.data['config']['scheduled_task_time']
         if not self.users_manager.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
         self.stop_hulaquan_announcer()
@@ -424,6 +414,7 @@ class Hulaquan(BasePlugin):
         try:
             self.hlq_data_manager.save()
             self.saoju_data_manager.save()
+            log.info("🟡呼啦圈数据保存成功")
             if msg:
                 await msg.reply_text("保存成功")
             else:
