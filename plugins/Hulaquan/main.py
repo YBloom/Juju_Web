@@ -226,6 +226,16 @@ class Hulaquan(BasePlugin):
             examples=["/alias lizzie 丽兹"],
             metadata={"category": "utility"}
         )
+        self.register_user_func(
+            name="呼啦圈别名列表",
+            handler=self.on_list_aliases,
+            prefix="/aliases",
+            description="查看所有呼啦圈剧目别名",
+            usage="/aliases",
+            examples=["/aliases"],
+            tags=["呼啦圈", "别名", "查询"],
+            metadata={"category": "utility"}
+        )
         self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}
@@ -464,3 +474,26 @@ class Hulaquan(BasePlugin):
         event_id = result[0][0]
         self.hlq_data_manager.add_alias(event_id, alias)
         await msg.reply_text(f"已为剧目 {orig_name} 添加别名：{alias}")
+    
+    async def on_list_aliases(self, msg: BaseMessage):
+        alias_dict = self.hlq_data_manager.load_alias()
+        events = self.hlq_data_manager.data.get("events", {})
+        if not alias_dict:
+            await msg.reply_text("暂无别名记录。")
+            return
+        lines = []
+        for eid, info in alias_dict.items():
+            title = events.get(str(eid), {}).get("title")
+            if not title:
+                # 若缓存未加载，尝试异步获取
+                try:
+                    event = (await self.hlq_data_manager.search_eventID_by_name(str(eid)))
+                    title = event[0][1] if event else f"ID:{eid}"
+                except Exception:
+                    title = f"ID:{eid}"
+            for alias in info.get("alias", {}):
+                lines.append(f"{title}：{alias}")
+        if not lines:
+            await msg.reply_text("暂无别名记录。")
+        else:
+            await msg.reply_text("当前别名列表：\n" + "\n".join(lines))
