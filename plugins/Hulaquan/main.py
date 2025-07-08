@@ -171,6 +171,7 @@ class Hulaquan(BasePlugin):
             #max_runs=10, 
         )
         
+        
 
     def register_hlq_query(self):
         self.register_user_func(
@@ -214,6 +215,15 @@ class Hulaquan(BasePlugin):
             usage="/版本",
             examples=["/版本"],
             tags=["version"],
+            metadata={"category": "utility"}
+        )
+        self.register_admin_func(
+            name="设置剧目别名",
+            handler=self.on_set_alias,
+            prefix="/alias",
+            description="为呼啦圈剧目设置别名，解决不同平台剧名不一致问题",
+            usage="/alias <原剧名> <别名>",
+            examples=["/alias lizzie 丽兹"],
             metadata={"category": "utility"}
         )
         self.register_pending_tickets_announcer()
@@ -440,3 +450,17 @@ class Hulaquan(BasePlugin):
         traceback.print_exc()
         if announce_admin:
             await self.api.post_private_msg(self.users_manager.admin_id, error_msg)
+            
+    async def on_set_alias(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        if len(args["text_args"]) < 2:
+            await msg.reply_text("用法：/alias <原剧名> <别名>")
+            return
+        orig_name, alias = args["text_args"][0], args["text_args"][1]
+        result = await self.hlq_data_manager.search_eventID_by_name(orig_name)
+        if not result:
+            await msg.reply_text("未找到该剧目")
+            return
+        event_id = result[0][0]
+        self.hlq_data_manager.add_alias(event_id, alias)
+        await msg.reply_text(f"已为剧目 {orig_name} 添加别名：{alias}")

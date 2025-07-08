@@ -82,8 +82,52 @@ class HulaquanDataManager(BaseDataManager):
         except Exception as e:
             return f"Error fetching recommendation: {e}", False
 
+        
+    def _alias_file(self):
+            return os.path.join("data", "data_manager", "alias.json")
 
-    
+    def load_alias(self):
+        try:
+            with open(self._alias_file(), "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def save_alias(self, alias_dict):
+        with open(self._alias_file(), "w", encoding="utf-8") as f:
+            json.dump(alias_dict, f, ensure_ascii=False, indent=2)
+
+    def add_alias(self, event_id, alias):
+        alias_dict = self.load_alias()
+        event_id = str(event_id)
+        if event_id not in alias_dict:
+            alias_dict[event_id] = {"alias": {}}
+        if alias not in alias_dict[event_id]["alias"]:
+            alias_dict[event_id]["alias"][alias] = {"no_response_times": 0}
+        self.save_alias(alias_dict)
+        return True
+
+    def del_alias(self, event_id, alias):
+        alias_dict = self.load_alias()
+        event_id = str(event_id)
+        if event_id in alias_dict and alias in alias_dict[event_id]["alias"]:
+            del alias_dict[event_id]["alias"][alias]
+            self.save_alias(alias_dict)
+            return True
+        return False
+
+    def set_alias_no_response(self, event_id, alias, reset=False):
+        alias_dict = self.load_alias()
+        event_id = str(event_id)
+        if event_id in alias_dict and alias in alias_dict[event_id]["alias"]:
+            if reset:
+                alias_dict[event_id]["alias"][alias]["no_response_times"] = 0
+            else:
+                alias_dict[event_id]["alias"][alias]["no_response_times"] += 1
+                if alias_dict[event_id]["alias"][alias]["no_response_times"] >= 2:
+                    del alias_dict[event_id]["alias"][alias]
+            self.save_alias(alias_dict)
+
     async def _update_events_data_async(self, data_dict=None, __dump=True):
         data_dict = data_dict or await self.get_events_dict_async()
         self.updating = True
@@ -334,6 +378,16 @@ class HulaquanDataManager(BaseDataManager):
         has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
         if has_no_city or has_no_cast:
             response = await saoju.search_for_musical_by_date_async(eName, ticket['start_time'], city=city)
+            if not response:
+                alias_dict = self.load_alias()
+                aliases = alias_dict.get(str(eid), {}).get("alias", {})
+                for alias in list(aliases.keys()):
+                    response = await saoju.search_for_musical_by_date_async(alias, ticket['start_time'], city=city)
+                    if response:
+                        self.set_alias_no_response(eid, alias, reset=True)
+                        break
+                    else:
+                        self.set_alias_no_response(eid, alias, reset=False)
             if not response:
                 return {"cast":[], "city":None}
             else:
