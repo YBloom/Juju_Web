@@ -364,17 +364,21 @@ class HulaquanDataManager(BaseDataManager):
             new_id = new_item['id']
             new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']     
-            old_item = old_data_dict[new_id]
-            old_left_ticket_count = old_item['left_ticket_count']
-            old_total_ticket = old_item['total_ticket']
-            if new_id not in old_data_dict or (new_total_ticket>0 and old_total_ticket==0):
+            
+            if new_id not in old_data_dict:
                 # 如果 new_data 中存在新的 id，则标记为 "new"
                 new_item['update_status'] = 'new'
                 update_data.append(new_item)
             else:
+                old_item = old_data_dict[new_id]
+                old_left_ticket_count = old_item['left_ticket_count']
+                old_total_ticket = old_item['total_ticket']
+                if (new_total_ticket>0 and old_total_ticket==0):
+                    new_item['update_status'] = 'new'
+                    update_data.append(new_item)
                 # 获取 old_data 中对应 id 的旧数据
                 #print("new_item", new_item, "\nold item", old_item)
-                if old_total_ticket is None or (new_total_ticket > (old_total_ticket or 0)):
+                elif old_total_ticket is None or (new_total_ticket > (old_total_ticket or 0)):
                     # 如果 total_ticket 增加了，则标记为 "add"
                     new_item['update_status'] = 'add'
                     update_data.append(new_item)
