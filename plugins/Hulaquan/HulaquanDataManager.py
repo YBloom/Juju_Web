@@ -405,8 +405,10 @@ class HulaquanDataManager(BaseDataManager):
         has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
         if has_no_city or has_no_cast:
             response = await saoju.search_for_musical_by_date_async(eName, ticket['start_time'], city=city)
+            print(response)
             if not response:
                 alias_dict = self.load_alias()
+                print("alias_dict", alias_dict)
                 aliases = alias_dict.get(str(event_id), {}).get("alias", {})
                 for alias in list(aliases.keys()):
                     response = await saoju.search_for_musical_by_date_async(alias, ticket['start_time'], city=city)
