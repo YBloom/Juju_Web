@@ -311,7 +311,7 @@ class Hulaquan(BasePlugin):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
                     for m in messages:
-                        message = f"呼啦圈上新提醒：\n{m}"
+                        message = f"@所有人 呼啦圈上新提醒：\n{m}"
                         await self.api.post_group_msg(group_id, message)
             if new_pending:
                 self.register_pending_tickets_announcer()
