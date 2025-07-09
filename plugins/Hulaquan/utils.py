@@ -56,34 +56,54 @@ def get_max_cast_length(casts=None):
     return 8
 
 def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
-    # 当前年份
     current_year = datetime.now().year
-    dateAndTime = dateAndTime.replace("：", ':')
-    
-    # 尝试不同的日期时间格式
+    dateAndTime = dateAndTime.replace("：", ':').strip()
+    # 支持的格式
     formats = [
-        "%Y-%m-%d %H:%M",  # 2025-12-07 06:30
-        "%Y-%m-%d %H:%M:%S",  # 2025-12-07 06:30
-        "%m-%d %H:%M",     # 12-07 06:30
-        "%m-%d %H:%M:%S",  # 12-07 06:30:21
-        "%y-%m-%d %H:%M",  # 25-12-07 06:30
-        "%y/%m/%d %H:%M",   # 25/12/07 06:30
-        "%Y-%m-%d",           # 格式: 年-月-日
-        "%H:%M",              # 格式: 时:分
-        "%H:%M:%S",            # 格式: 时:分:秒
-        
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%m-%d %H:%M:%S",
+        "%m-%d %H:%M",
+        "%y-%m-%d %H:%M:%S",
+        "%y-%m-%d %H:%M",
+        "%y/%m/%d %H:%M:%S",
+        "%y/%m/%d %H:%M",
+        "%Y-%m-%d",
+        "%m-%d",
+        "%m/%d",
+        "%H:%M:%S",
+        "%H:%M",
     ]
     for fmt in formats:
         try:
-            # 如果年份不在字符串中, 默认使用当前年份
-            if fmt[0] == "%y" or fmt[0] == "%Y":
-                if dateAndTime[:2].isdigit() and len(dateAndTime.split()[0]) == 7:  # "25/12/07"
-                    dateAndTime = str(current_year) + "-" + dateAndTime
-                dt = datetime.strptime(dateAndTime, fmt)
-            else:
-                dt = datetime.strptime(dateAndTime, fmt)
-            if len(str(dt.second)) == 0:
-                dt = dt.replace(second=0)
+            fmt_try = fmt.replace("/", "-")
+            dt_str = dateAndTime
+            # 年份补全
+            if fmt_try.startswith("%m-") or fmt_try.startswith("%m/"):
+                dt_str = f"{current_year}-{dt_str}"
+                fmt_try = "%Y-" + fmt_try
+            # 只时间，补全年月日
+            if fmt_try.startswith("%H"):
+                dt_str = f"{current_year}-01-01 {dt_str}"
+                fmt_try = "%Y-%m-%d " + fmt_try
+            # 只日期，补全时间
+            if fmt_try.endswith("%m-%d") or fmt_try.endswith("%m/%d"):
+                dt_str = f"{dt_str} 00:00:00"
+                fmt_try = fmt_try + " %H:%M:%S"
+            elif fmt_try.endswith("%Y-%m-%d"):
+                dt_str = f"{dt_str} 00:00:00"
+                fmt_try = fmt_try + " %H:%M:%S"
+            elif fmt_try.endswith("%y-%m-%d"):
+                dt_str = f"{dt_str} 00:00:00"
+                fmt_try = fmt_try + " %H:%M:%S"
+            # 只时间，补全年月日
+            if fmt_try == "%Y-%m-%d %H:%M":
+                if len(dt_str.split()) == 1:
+                    dt_str = f"{dt_str} 00:00"
+            if fmt_try == "%Y-%m-%d %H:%M:%S":
+                if len(dt_str.split()) == 1:
+                    dt_str = f"{dt_str} 00:00:00"
+            dt = datetime.strptime(dt_str, fmt_try)
             if return_str:
                 if with_second:
                     return dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -91,7 +111,7 @@ def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
                     return dt.strftime("%Y-%m-%d %H:%M")
             else:
                 return dt
-        except ValueError:
+        except Exception:
             continue
     raise ValueError("无法解析该日期时间格式")
         
