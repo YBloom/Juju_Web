@@ -526,6 +526,7 @@ class HulaquanDataManager(BaseDataManager):
             message = (
                 f"剧名: {title}\n"
                 f"购票链接：{url}\n"
+                f"最后更新时间：{event_data.get('update_time', '未知')}\n"
                 "剩余票务信息:\n"
                 + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
                                 + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
