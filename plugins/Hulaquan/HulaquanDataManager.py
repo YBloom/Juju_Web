@@ -127,11 +127,16 @@ class HulaquanDataManager(BaseDataManager):
     def set_alias_no_response(self, alias, search_name, reset=False):
         if alias in self.alias_dict:
             if reset:
-                self.alias_dict[alias][search_name]["no_response_times"] = 0
+                self.alias_dict[alias]["search_names"][search_name]["no_response_times"] = 0
             else:
-                self.alias_dict[alias][search_name]["no_response_times"] += 1
-                if self.alias_dict[alias][search_name]["no_response_times"] >= 2:
+                self.alias_dict[alias]["search_names"][search_name]["no_response_times"] += 1
+                if self.alias_dict[alias]["search_names"][search_name]["no_response_times"] >= 2:
                     del self.alias_dict[alias]
+
+    def alias_search_names(self, alias):
+        if alias in self.alias_dict:
+            return list(self.alias_dict[alias]["search_names"].keys())
+        return []
 
     async def _update_events_data_async(self, data_dict=None, __dump=True):
         data_dict = data_dict or await self.get_events_dict_async()
@@ -414,7 +419,7 @@ class HulaquanDataManager(BaseDataManager):
                 # 如果使用呼啦圈中标记的剧名没有结果，则在别名中使用对应eventid的search_name
                 for alias, content in self.alias_dict.items():
                     if content["event_id"] == event_id:
-                        for search_name in content["search_names"]:
+                        for search_name in list(content["search_names"].keys()):
                             response = await saoju.search_for_musical_by_date_async(search_name, ticket['start_time'], city=city)
                             if response:
                                 self.set_alias_no_response(alias, search_name, reset=True)
@@ -570,7 +575,7 @@ class HulaquanDataManager(BaseDataManager):
     async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
         result = []
         if eName in self.alias_dict.keys():
-            eNames = self.alias_dict[eName]['search_names']
+            eNames = self.alias_search_names(eName)
             for search_name in eNames:
                 result = await self.search_eventID_by_name(search_name)
                 if len(result) == 1:
@@ -579,8 +584,7 @@ class HulaquanDataManager(BaseDataManager):
                     return await self.generate_tickets_query_message(eid, search_name, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
                 else:
                     self.set_alias_no_response(eName, search_name, reset=False)
-        else:
-            result = await self.search_eventID_by_name(eName)
+        result = await self.search_eventID_by_name(eName)
         if len(result) > 1:
             queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
             return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
