@@ -508,23 +508,20 @@ class Hulaquan(BasePlugin):
             return
     
     async def on_list_aliases(self, msg: BaseMessage):
-        alias_dict = self.hlq_data_manager.load_alias()
+        alias_dict = self.hlq_data_manager.alias_dict
         events = self.hlq_data_manager.data.get("events", {})
         if not alias_dict:
             await msg.reply_text("暂无别名记录。")
             return
         lines = []
-        for eid, info in alias_dict.items():
-            title = events.get(str(eid), {}).get("title")
-            if not title:
-                # 若缓存未加载，尝试异步获取
-                try:
-                    event = (await self.hlq_data_manager.search_eventID_by_name(str(eid)))
-                    title = event[0][1] if event else f"ID:{eid}"
-                except Exception:
-                    title = f"ID:{eid}"
-            for alias in info.get("alias", {}):
-                lines.append(f"{title}：{alias}")
+        for alias, content in alias_dict.items():
+            event_id = content.get("event_id")
+            if event_id and event_id in events:
+                event_name = events[event_id].get("title", "未知剧目")
+                search_names = ", ".join(content["search_names"].keys())
+                lines.append(f"{alias}（{event_name}）: {search_names}")
+            else:
+                lines.append(f"{alias}: 无对应剧目")
         if not lines:
             await msg.reply_text("暂无别名记录。")
         else:
