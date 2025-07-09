@@ -31,7 +31,7 @@ class HulaquanDataManager(BaseDataManager):
     def __init__(self, file_path=None):
         #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
-        
+        self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
@@ -141,19 +141,34 @@ class HulaquanDataManager(BaseDataManager):
         return self.data
 
     async def _update_ticket_details_async(self, event_id, data_dict=None):
-            json_data = await self.search_event_by_id_async(event_id)
-            keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
-            ticket_list = json_data["ticket_details"]
-            for i in range(len(ticket_list)):
-                ticket_list[i] = {key: ticket_list[i].get(key, None) for key in keys_to_extract}
-                if ticket_list[i]["total_ticket"] is None and ticket_list[i]["left_ticket_count"] is None:
-                    del ticket_list[i]
-            if data_dict is None:
-                self.data["events"][event_id]["ticket_details"] = ticket_list
-                return self.data
-            else:
-                data_dict["events"][event_id]["ticket_details"] = ticket_list
-                return data_dict
+        retry = 0
+        while retry < 3:
+            async with self.semaphore:
+                try:
+                    json_data = await self.search_event_by_id_async(event_id)
+                    keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
+                    ticket_list = json_data["ticket_details"]
+                    for i in range(len(ticket_list)):
+                        ticket_list[i] = {key: ticket_list[i].get(key, None) for key in keys_to_extract}
+                        if ticket_list[i]["total_ticket"] is None and ticket_list[i]["left_ticket_count"] is None:
+                            del ticket_list[i]
+                    if data_dict is None:
+                        self.data["events"][event_id]["ticket_details"] = ticket_list
+                        return self.data
+                    else:
+                        data_dict["events"][event_id]["ticket_details"] = ticket_list
+                        return data_dict
+                except asyncio.TimeoutError:
+                    retry += 1
+                    if retry >= 3:
+                        print(f"event_id {event_id} 请求超时，已重试2次，跳过")
+                        return
+                    else:
+                        print(f"event_id {event_id} 请求超时，重试第{retry}次……")
+                        await asyncio.sleep(1)
+                except Exception as e:
+                    print(f"event_id {event_id} 请求异常：{e}")
+                    return
 
     
     async def return_events_data(self):
@@ -174,7 +189,7 @@ class HulaquanDataManager(BaseDataManager):
     async def search_event_by_id_async(self, event_id):
         event_url = f"https://clubz.cloudsation.com/event/getEventDetails.html?id={event_id}"
         async with aiohttp.ClientSession() as session:
-            async with session.get(event_url, timeout=8) as resp:
+            async with session.get(event_url, timeout=15) as resp:
                 json_data = await resp.text()
                 json_data = json_data.encode().decode("utf-8-sig")  # 关键：去除BOM
                 return json.loads(json_data)
