@@ -1,9 +1,11 @@
 from datetime import timedelta
 import traceback, time, asyncio
+import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 from .HulaquanDataManager import HulaquanDataManager
 from .SaojuDataManager import SaojuDataManager
+from .StatsDataManager import StatsDataManager
 from plugins.AdminPlugin import GroupsManager, UsersManager
 from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
@@ -25,8 +27,13 @@ UPDATE_LOG = [
          """,
          "date": "2025-07-03"
         },
-        {"version": "0.0.4⭐", 
+        {"version": "0.0.4", 
          "description": """1./date功能实现
+         """,
+         "date": "2025-07-05"
+        },
+        {"version": "0.0.5⭐", 
+         "description": """
          """,
          "date": "2025-07-05"
         },
@@ -66,6 +73,7 @@ class Hulaquan(BasePlugin):
         self.users_manager: UsersManager = None
         self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
         self.saoju_data_manager: SaojuDataManager = SaojuDataManager()
+        self.stats_data_manager: StatsDataManager = StatsDataManager()
         self.register_handler("AdminPlugin.pass_managers", self.get_managers)
         self.load_event = Event("Hulaquan.load_plugin", data={})
         await self._event_bus.publish_async(self.load_event)
@@ -80,6 +88,7 @@ class Hulaquan(BasePlugin):
         self.stop_hulaquan_announcer()
         self.hlq_data_manager.on_close()
         self.saoju_data_manager.on_close()
+        self.stats_data_manager.on_close()
         return await super().on_close(*arg, **kwd)
     
     async def _hulaquan_announcer_loop(self):
@@ -241,6 +250,20 @@ class Hulaquan(BasePlugin):
         {name}-{description}:使用方式 {usage}
         """
         
+    def user_command_wrapper(self, command_name):
+        def decorator(func):
+            @functools.wraps(func)
+            async def wrapper(this, *args, **kwargs):
+                this.stats_data_manager.on_command(command_name)
+                return await func(this, *args, **kwargs)
+            return wrapper
+        return decorator
+
+    @property
+    def user_command_wrapped(self):
+        # 便于注册时引用
+        return self.user_command_wrapper
+        
     async def get_managers(self, event):
         if event.data:
             self.groups_manager = event.data["managers"][1]
@@ -260,7 +283,7 @@ class Hulaquan(BasePlugin):
         m = f"当前版本：{self.version}\n\n版本更新日志：\n{get_update_log()}"
         await msg.reply(m)
         
-
+    @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
         try:
@@ -317,7 +340,8 @@ class Hulaquan(BasePlugin):
                 kwargs={"eid":eid, "message":event.get("message")},
                 max_runs=1,
             )
-            
+    
+    @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str):
         try:
             for user_id, user in self.users_manager.users().items():
@@ -333,7 +357,6 @@ class Hulaquan(BasePlugin):
         except Exception as e:
             await self.on_traceback_message(f"呼啦圈开票提醒失败")
         del self.hlq_data_manager.data["pending_events_dict"][eid]
-        
         
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id
@@ -359,6 +382,7 @@ class Hulaquan(BasePlugin):
         elif mode == "0":
             await msg.reply("已关闭呼啦圈上新推送。")
 
+    @user_command_wrapper("hulaquan_search")
     async def on_hlq_search(self, msg: BaseMessage):
         # 呼啦圈查询处理函数
         all_args = self.extract_args(msg)
@@ -400,7 +424,8 @@ class Hulaquan(BasePlugin):
         #for conf in self._configs:
         #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
         return text
-        
+       
+    @user_command_wrapper("search_by_date") 
     async def on_list_hulaquan_events_by_date(self, msg: BaseMessage):
         # 最多有12小时数据延迟
         args = self.extract_args(msg)
@@ -429,6 +454,8 @@ class Hulaquan(BasePlugin):
     async def on_schedule_save_data(self):
         await self.save_data_managers()
         
+        
+    @user_command_wrapper("help")
     async def on_help(self, msg: BaseMessage):
         text = self._get_help()
         send = text["user"]
@@ -452,7 +479,8 @@ class Hulaquan(BasePlugin):
                     #await self.api.post_private_msg(user_id, "自动保存成功")
         except Exception as e:
             await self.on_traceback_message(f"呼啦圈自动保存失败")
-                
+    
+    @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
         #log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
         error_msg = f"{context}：\n" + traceback.format_exc()
@@ -460,7 +488,8 @@ class Hulaquan(BasePlugin):
         traceback.print_exc()
         if announce_admin:
             await self.api.post_private_msg(self.users_manager.admin_id, error_msg)
-            
+    
+    @user_command_wrapper("add_alias")        
     async def on_set_alias(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if len(args["text_args"]) < 2:

@@ -218,8 +218,12 @@ class HulaquanDataManager(BaseDataManager):
         else:
             old_data_all = self.data
             new_data_all = await self._update_events_data_async()
-        return self.__compare_to_database(old_data_all, new_data_all)
-        
+        try:
+            return self.__compare_to_database(old_data_all, new_data_all)
+        except Exception as e:
+            self.save_data_cache(old_data_all, new_data_all, "error_announcement_cache")
+            raise  # 重新抛出异常，便于外层捕获和处理
+
     def __compare_to_database(self, old_data_all, new_data_all):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
@@ -302,11 +306,11 @@ class HulaquanDataManager(BaseDataManager):
             ) + "\n".join(message))
             is_updated = True
             if is_updated:
-                self.save_data_cache(old_data_all, new_data_all)
+                self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
 
-    def save_data_cache(self, old_data_all, new_data_all):
-        cache_root = os.path.join(os.getcwd(), "update_data_cache")
+    def save_data_cache(self, old_data_all, new_data_all, cache_folder_name):
+        cache_root = os.path.join(os.getcwd(), cache_folder_name)
         os.makedirs(cache_root, exist_ok=True)
                 # 清理超过48小时的缓存
         now = datetime.now()
