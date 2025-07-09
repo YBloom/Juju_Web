@@ -491,16 +491,21 @@ class Hulaquan(BasePlugin):
     async def on_set_alias(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if len(args["text_args"]) < 2:
-            await msg.reply_text("用法：/alias <原剧名> <别名>")
+            await msg.reply_text("用法：/alias <搜索名> <别名>")
             return
         orig_name, alias = args["text_args"][0], args["text_args"][1]
-        result = await self.hlq_data_manager.search_eventID_by_name(orig_name)
-        if not result:
+        result = await self.hlq_data_manager.search_eventID_by_name(orig_name)  
+        if len(result) > 1:
+            queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
+            return await msg.reply_text(f"根据搜索名，找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue))
+        elif len(result) == 1:
+            event_id = result[0][0]
+            self.hlq_data_manager.add_alias(event_id, orig_name, alias)
+            await msg.reply_text(f"已为剧目 {result[0][1]} 添加别名：{alias}，对应搜索名：{orig_name}")
+            return
+        else:
             await msg.reply_text("未找到该剧目")
             return
-        event_id = result[0][0]
-        self.hlq_data_manager.add_alias(event_id, alias)
-        await msg.reply_text(f"已为剧目 {orig_name} 添加别名：{alias}")
     
     async def on_list_aliases(self, msg: BaseMessage):
         alias_dict = self.hlq_data_manager.load_alias()

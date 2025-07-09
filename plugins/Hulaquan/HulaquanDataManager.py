@@ -32,6 +32,11 @@ class HulaquanDataManager(BaseDataManager):
         #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
+        self.alias_dict = self.load_alias()
+        
+    def on_close(self):
+        self.save_alias(self.alias_dict)
+        return super().on_close()
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
@@ -84,7 +89,7 @@ class HulaquanDataManager(BaseDataManager):
 
         
     def _alias_file(self):
-            return os.path.join("data", "data_manager", "alias.json")
+        return os.path.join("data", "data_manager", "alias.json")
 
     def load_alias(self):
         try:
@@ -97,36 +102,36 @@ class HulaquanDataManager(BaseDataManager):
         with open(self._alias_file(), "w", encoding="utf-8") as f:
             json.dump(alias_dict, f, ensure_ascii=False, indent=2)
 
-    def add_alias(self, event_id, alias):
-        alias_dict = self.load_alias()
+    def add_alias(self, event_id, search_name, alias):
         event_id = str(event_id)
-        if event_id not in alias_dict:
-            alias_dict[event_id] = {"alias": {}}
-        if alias not in alias_dict[event_id]["alias"]:
-            alias_dict[event_id]["alias"][alias] = {"no_response_times": 0}
-        self.save_alias(alias_dict)
+        if alias not in self.alias_dict:
+            self.alias_dict[alias] = {"alias": alias, "search_names":{search_name: {"no_response_times": 0}}, "event_id":event_id}
+        else:
+            if event_id == self.alias_dict["event_id"] and search_name not in self.alias_dict['search_names']:
+                self.alias_dict[alias]["search_names"][search_name] = {"no_response_times": 0}
+            elif event_id != self.alias_dict["event_id"]:
+                # 如果已有别名对应的event_id与新添加的event_id不同，则覆盖
+                self.alias_dict[alias]["search_names"] = {search_name: {"no_response_times": 0}}
+                self.alias_dict[alias]["event_id"] = event_id
+                self.alias_dict[alias]["no_response_times"] = 0
+            self.alias_dict[alias]
         return True
 
-    def del_alias(self, event_id, alias):
-        alias_dict = self.load_alias()
-        event_id = str(event_id)
-        if event_id in alias_dict and alias in alias_dict[event_id]["alias"]:
-            del alias_dict[event_id]["alias"][alias]
-            self.save_alias(alias_dict)
+    def del_alias(self, alias):
+        self.alias_dict = self.load_alias()
+        if alias in self.alias_dict:
+            del self.alias_dict[alias]
             return True
         return False
 
-    def set_alias_no_response(self, event_id, alias, reset=False):
-        alias_dict = self.load_alias()
-        event_id = str(event_id)
-        if event_id in alias_dict and alias in alias_dict[event_id]["alias"]:
+    def set_alias_no_response(self, alias, search_name, reset=False):
+        if alias in self.alias_dict:
             if reset:
-                alias_dict[event_id]["alias"][alias]["no_response_times"] = 0
+                self.alias_dict[alias][search_name]["no_response_times"] = 0
             else:
-                alias_dict[event_id]["alias"][alias]["no_response_times"] += 1
-                if alias_dict[event_id]["alias"][alias]["no_response_times"] >= 2:
-                    del alias_dict[event_id]["alias"][alias]
-            self.save_alias(alias_dict)
+                self.alias_dict[alias][search_name]["no_response_times"] += 1
+                if self.alias_dict[alias][search_name]["no_response_times"] >= 2:
+                    del self.alias_dict[alias]
 
     async def _update_events_data_async(self, data_dict=None, __dump=True):
         data_dict = data_dict or await self.get_events_dict_async()
@@ -406,15 +411,16 @@ class HulaquanDataManager(BaseDataManager):
         if has_no_city or has_no_cast:
             response = await saoju.search_for_musical_by_date_async(eName, ticket['start_time'], city=city)
             if not response:
-                alias_dict = self.load_alias()
-                aliases = alias_dict.get(str(event_id), {}).get("alias", {})
-                for alias in list(aliases.keys()):
-                    response = await saoju.search_for_musical_by_date_async(alias, ticket['start_time'], city=city)
-                    if response:
-                        self.set_alias_no_response(event_id, alias, reset=True)
-                        break
-                    else:
-                        self.set_alias_no_response(event_id, alias, reset=False)
+                # 如果使用呼啦圈中标记的剧名没有结果，则在别名中使用对应eventid的search_name
+                for alias, content in self.alias_dict.items():
+                    if content["event_id"] == event_id:
+                        for search_name in content["search_names"]:
+                            response = await saoju.search_for_musical_by_date_async(search_name, ticket['start_time'], city=city)
+                            if response:
+                                self.set_alias_no_response(alias, search_name, reset=True)
+                                break
+                            else:
+                                self.set_alias_no_response(alias, search_name, reset=False)
             if not response:
                 return {"cast":[], "city":None}
             else:
@@ -562,7 +568,19 @@ class HulaquanDataManager(BaseDataManager):
     
             
     async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
-        result = await self.search_eventID_by_name(eName)
+        result = []
+        if eName in self.alias_dict.keys():
+            eNames = self.alias_dict[eName]['search_names']
+            for search_name in eNames:
+                result = await self.search_eventID_by_name(search_name)
+                if len(result) == 1:
+                    eid = result[0][0]
+                    self.set_alias_no_response(eName, search_name, reset=True)
+                    return await self.generate_tickets_query_message(eid, search_name, saoju, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
+                else:
+                    self.set_alias_no_response(eName, search_name, reset=False)
+        else:
+            result = await self.search_eventID_by_name(eName)
         if len(result) > 1:
             queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
             return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
