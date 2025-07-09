@@ -54,6 +54,16 @@ def get_update_log(update_log=UPDATE_LOG):
     return log_text.strip()
 
 
+def user_command_wrapper(command_name):
+        def decorator(func):
+            @functools.wraps(func)
+            async def wrapper(this, *args, **kwargs):
+                this.stats_data_manager.on_command(command_name)
+                return await func(this, *args, **kwargs)
+            return wrapper
+        return decorator
+
+
 class Hulaquan(BasePlugin):
     name = "Hulaquan"  # 插件名称
     version = "0.0.4"  # 插件版本
@@ -250,19 +260,7 @@ class Hulaquan(BasePlugin):
         {name}-{description}:使用方式 {usage}
         """
         
-    def user_command_wrapper(self, command_name):
-        def decorator(func):
-            @functools.wraps(func)
-            async def wrapper(this, *args, **kwargs):
-                this.stats_data_manager.on_command(command_name)
-                return await func(this, *args, **kwargs)
-            return wrapper
-        return decorator
-
-    @property
-    def user_command_wrapped(self):
-        # 便于注册时引用
-        return self.user_command_wrapper
+    
         
     async def get_managers(self, event):
         if event.data:
