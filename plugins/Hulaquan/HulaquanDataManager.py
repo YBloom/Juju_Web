@@ -302,29 +302,32 @@ class HulaquanDataManager(BaseDataManager):
             ) + "\n".join(message))
             is_updated = True
             if is_updated:
-                cache_root = os.path.join(os.getcwd(), "update_data_cache")
-                os.makedirs(cache_root, exist_ok=True)
-                # 清理超过48小时的缓存
-                now = datetime.now()
-                for d in os.listdir(cache_root):
-                    dir_path = os.path.join(cache_root, d)
-                    if os.path.isdir(dir_path):
-                        try:
-                            # 目录名格式为"2025-07-03_12-34-56"
-                            dir_time = datetime.strptime(d, "%Y-%m-%d_%H-%M-%S")
-                            if now - dir_time > timedelta(hours=48):
-                                shutil.rmtree(dir_path)
-                        except Exception:
-                            continue
-                # 新建本次缓存
-                update_time_str = str(self.data['update_time']).replace(":", "-").replace(" ", "_")
-                cache_dir = os.path.join(cache_root, update_time_str)
-                os.makedirs(cache_dir, exist_ok=True)
-                with open(os.path.join(cache_dir, "old_data_all.json"), "w", encoding="utf-8") as f:
-                    json.dump(old_data_all, f, ensure_ascii=False, indent=2)
-                with open(os.path.join(cache_dir, "new_data_all.json"), "w", encoding="utf-8") as f:
-                    json.dump(new_data_all, f, ensure_ascii=False, indent=2)
+                self.save_data_cache(old_data_all, new_data_all)
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
+
+    def save_data_cache(self, old_data_all, new_data_all):
+        cache_root = os.path.join(os.getcwd(), "update_data_cache")
+        os.makedirs(cache_root, exist_ok=True)
+                # 清理超过48小时的缓存
+        now = datetime.now()
+        for d in os.listdir(cache_root):
+            dir_path = os.path.join(cache_root, d)
+            if os.path.isdir(dir_path):
+                try:
+                            # 目录名格式为"2025-07-03_12-34-56"
+                    dir_time = datetime.strptime(d, "%Y-%m-%d_%H-%M-%S")
+                    if now - dir_time > timedelta(hours=48):
+                        shutil.rmtree(dir_path)
+                except Exception:
+                    continue
+                # 新建本次缓存
+        update_time_str = str(self.data['update_time']).replace(":", "-").replace(" ", "_")
+        cache_dir = os.path.join(cache_root, update_time_str)
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(os.path.join(cache_dir, "old_data_all.json"), "w", encoding="utf-8") as f:
+            json.dump(old_data_all, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(cache_dir, "new_data_all.json"), "w", encoding="utf-8") as f:
+            json.dump(new_data_all, f, ensure_ascii=False, indent=2)
 
 
     def compare_tickets(self, old_data_all, new_data):
@@ -393,20 +396,21 @@ class HulaquanDataManager(BaseDataManager):
     
     async def get_ticket_cast_and_city_async(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
+        event_id = ticket['event_id']
         has_no_city = ('city' not in ticket)
         has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
         if has_no_city or has_no_cast:
             response = await saoju.search_for_musical_by_date_async(eName, ticket['start_time'], city=city)
             if not response:
                 alias_dict = self.load_alias()
-                aliases = alias_dict.get(str(eid), {}).get("alias", {})
+                aliases = alias_dict.get(str(event_id), {}).get("alias", {})
                 for alias in list(aliases.keys()):
                     response = await saoju.search_for_musical_by_date_async(alias, ticket['start_time'], city=city)
                     if response:
-                        self.set_alias_no_response(eid, alias, reset=True)
+                        self.set_alias_no_response(event_id, alias, reset=True)
                         break
                     else:
-                        self.set_alias_no_response(eid, alias, reset=False)
+                        self.set_alias_no_response(event_id, alias, reset=False)
             if not response:
                 return {"cast":[], "city":None}
             else:
