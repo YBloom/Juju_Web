@@ -600,11 +600,11 @@ class Hulaquan(BasePlugin):
         
         if not match:
             return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_NEW_REPO_USAGE}")
-            # 获取匹配到的信息，并创建字典
-        title = match.group(1).strip(),
-        date = match.group(2).strip(),
-        seat = match.group(3).strip(),
-        price = match.group(4).strip(),
+        # 获取匹配到的信息，并创建字典
+        title = match.group(1).strip()
+        date = match.group(2).strip()
+        seat = match.group(3).strip()
+        price = match.group(4).strip()
         content = match.group(5).strip()
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
