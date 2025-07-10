@@ -643,7 +643,7 @@ class Hulaquan(BasePlugin):
             user_id=msg.user_id,
             content=content,
         )
-        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n\n感谢您的反馈！")
+        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n感谢您的反馈！")
         
     @user_command_wrapper("get_repo")
     async def on_hulaquan_get_repo(self, msg: BaseMessage):
