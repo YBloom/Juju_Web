@@ -676,8 +676,8 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("错误反馈内容过长，请控制在500字以内。")
             return
         # 这里可以添加将错误反馈保存到数据库或发送给管理员的逻辑
-        await self.stats_data_manager.report_repo_error(report_id, msg.user_id)
-        await msg.reply_text("感谢您的反馈，我们会尽快处理！")
+        message = self.stats_data_manager.report_repo_error(report_id, msg.user_id)
+        await msg.reply_text(f"{message}\n感谢您的反馈，我们会尽快处理！")
     
     @user_command_wrapper("my_repo")
     async def on_hulaquan_my_repo(self, msg: BaseMessage):
