@@ -656,7 +656,7 @@ class Hulaquan(BasePlugin):
         event = await self.get_eventID_by_name(event_name, msg, notFoundAndRegister=True)
         event_id = event[0]
         event_title = event[1]
-        result = await self.stats_data_manager.get_event_student_seat_repo(event_id, event_price)
+        result = self.stats_data_manager.get_event_student_seat_repo(event_id, event_price)
         if not result:
             await msg.reply_text(f"未找到剧目 {event_title} 的学生票座位记录，快来上传吧！")
             return
