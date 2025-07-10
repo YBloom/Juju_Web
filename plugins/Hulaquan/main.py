@@ -566,7 +566,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("用法：/alias <搜索名> <别名>")
             return
         search_name, alias = args["text_args"][0], args["text_args"][1]
-        result = await self.get_eventID_by_name(search_name, msg)  
+        result = await self.get_eventID_by_name(search_name, msg)
         if result:
             event_id = result[0]
             self.hlq_data_manager.add_alias(event_id, search_name, alias)
@@ -653,7 +653,7 @@ class Hulaquan(BasePlugin):
             return
         event_name = args["text_args"][0]
         event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
-        event = await self.get_eventID_by_name(event_name, msg, notFoundAndRegister=True)[0]
+        event = await self.get_eventID_by_name(event_name, msg, notFoundAndRegister=True)
         event_id = event[0]
         event_title = event[1]
         result = await self.stats_data_manager.get_event_student_seat_repo(event_id, event_price)
