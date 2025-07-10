@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 from plugins.Hulaquan.utils import *
+import copy
+
 
 ON_COMMAND_TIMES = "on_command_times"
 HLQ_TICKETS_REPO = "hlq_tickets_repo"
@@ -65,7 +67,7 @@ class StatsDataManager(BaseDataManager):
             if report_id in event:
                 if event[report_id][USER_ID] != user_id:
                     return False
-                repo = event[report_id].deepcopy()
+                repo = copy.deepcopy(event[report_id])
                 del event[report_id]
                 return self.generate_repo_report_messages([repo])
         return False
