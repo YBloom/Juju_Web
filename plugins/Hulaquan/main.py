@@ -623,11 +623,11 @@ class Hulaquan(BasePlugin):
         if not match:
             return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_NEW_REPO_USAGE}")
         # 获取匹配到的信息，并创建字典
-        title = match.group(1).strip()
-        date = match.group(2).strip()
-        seat = match.group(3).strip()
-        price = match.group(4).strip()
-        content = match.group(5).strip()
+        title = match.group(1).strip() if match.group(1) else None
+        date = match.group(2).strip() if match.group(2) else None
+        seat = match.group(3).strip() if match.group(3) else None
+        price = match.group(4).strip() if match.group(4) else None
+        content = match.group(5).strip() if match.group(5) else None
         print(f"{msg.user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
@@ -705,14 +705,14 @@ class Hulaquan(BasePlugin):
         if not match:
             return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_MODIFY_REPO_USAGE}")
         # 获取匹配到的信息，并创建字典
-        repoID = match.group(1).strip()
+        repoID = match.group(1).strip() if match.group(1) else None
         if not repoID:
             return await msg.reply(f"repoID必填！可输入/我的repo查看repoID\n{HLQ_MODIFY_REPO_USAGE}")
-        title = match.group(2).strip()
-        date = match.group(3).strip()
-        seat = match.group(4).strip()
-        price = match.group(5).strip()
-        content = match.group(6).strip()
+        title = match.group(2).strip() if match.group(2) else None
+        date = match.group(3).strip() if match.group(3) else None
+        seat = match.group(4).strip() if match.group(4) else None
+        price = match.group(5).strip() if match.group(5) else None
+        content = match.group(6).strip() if match.group(6) else None
         repos = self.stats_data_manager.modify_repo(
             msg.user_id,
             repoID, 
