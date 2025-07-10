@@ -593,7 +593,7 @@ class Hulaquan(BasePlugin):
     async def on_new_student_seat_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/学生票座位记录\n剧名:(.*?)\n日期:(.*?)\n座位:(.*?)\n价格:(.*?)\n描述:(.*?)", re.DOTALL)
+        pattern = re.compile(r"/新建repo\n剧名:(.*?)\n日期:(.*?)\n座位:(.*?)\n价格:(.*?)\n描述:(.*?)", re.DOTALL)
         record = msg.raw_message
         # 使用正则表达式进行匹配
         match = pattern.match(record)
