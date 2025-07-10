@@ -62,7 +62,7 @@ repoID:
 价格:
 描述:
 -------
-例如：/新建repo
+例如：/修改repo
 repoID:100001
 日期:
 座位:9-5
@@ -91,3 +91,7 @@ repoID可在/查询repo或/我的repo中获得
 HLQ_MY_REPO_NAME = "获取我创建的repo"
 HLQ_MY_REPO_DESCRIPTION = "获取我创建的所有repo"
 HLQ_MY_REPO_USAGE = """/我的repo"""
+
+HLQ_DEL_REPO_NAME = "删除我创建的repo"
+HLQ_DEL_REPO_DESCRIPTION = "删除我创建的repo"
+HLQ_DEL_REPO_USAGE = """/删除repo repoID\n不知道repoID的可以通过/我的repo查看"""

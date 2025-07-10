@@ -60,8 +60,15 @@ class StatsDataManager(BaseDataManager):
                                                             }
         return report_id
     
-    def del_repo(self, event_id, report_id):
-        del self.data[HLQ_TICKETS_REPO][event_id][report_id]
+    def del_repo(self, report_id, user_id):
+        for eid, event in self.data[HLQ_TICKETS_REPO].items():
+            if report_id in event:
+                if event[report_id][USER_ID] != user_id:
+                    return False
+                repo = event[report_id].deepcopy()
+                del event[report_id]
+                return self.generate_repo_report_messages([repo])
+        return False
     
     def get_repos(self, event_id, price=None):
         if event_id not in self.data[HLQ_TICKETS_REPO]:

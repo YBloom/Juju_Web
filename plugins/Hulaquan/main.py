@@ -313,6 +313,17 @@ class Hulaquan(BasePlugin):
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
+        
+        self.register_user_func(
+            name=HLQ_DEL_REPO_NAME,
+            handler=self.on_delete_self_repo,
+            prefix="/删除repo",
+            description=HLQ_DEL_REPO_DESCRIPTION,
+            usage=HLQ_DEL_REPO_USAGE,
+            examples=["/报错repo"],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
         self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}
@@ -657,7 +668,7 @@ class Hulaquan(BasePlugin):
             return
         args = self.extract_args(msg)
         if not args["text_args"]:
-            await msg.reply_text(HLQ_REPORT_ERROR_USAGE)
+            await msg.reply_text("缺少参数！\n"+HLQ_REPORT_ERROR_USAGE)
             return
         report_id = args["text_args"][0]
         error_content = " ".join(args["text_args"][1:])
@@ -686,7 +697,7 @@ class Hulaquan(BasePlugin):
     async def on_modify_self_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/新建repo\nrepoID:(.*?)\n剧名:(.*?)\n日期:(.*?)\n座位:(.*?)\n价格:(.*?)\n描述:(.*?)", re.DOTALL)
+        pattern = re.compile(r"/修改repo\nrepoID:(.*?)\n剧名:(.*?)\n日期:(.*?)\n座位:(.*?)\n价格:(.*?)\n描述:(.*?)", re.DOTALL)
         record = msg.raw_message
         # 使用正则表达式进行匹配
         match = pattern.match(record)
@@ -711,9 +722,22 @@ class Hulaquan(BasePlugin):
             isOP=self.users_manager.is_op(msg.user_id)
         )
         if not repos:
-            await msg.reply_text("未找到原记录，请输入/我的repo查看正确的repoID")
+            await msg.reply_text("未找到原记录或无修改权限，请输入/我的repo查看正确的repoID")
             return
         await msg.reply_text("修改成功！现repo如下：\n"+repos[0])
+    
+    @user_command_wrapper("del_repo")
+    async def on_delete_self_repo(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        if not args["text_args"]:
+            await msg.reply_text("需填写要删除的repoID\n")
+            return
+        report_id = args["text_args"][0]
+        repo = self.stats_data_manager.del_repo(report_id, msg.user_id)
+        if not repo:
+            return await msg.reply_text("删除失败！未找到对应的repo或你不是这篇repo的主人。")
+        await msg.reply_text("删除成功！原repo如下：\n"+repo[0])
+        
 
 
     async def output_messages_by_pages(self, messages, msg: BaseMessage, page_size=10):
