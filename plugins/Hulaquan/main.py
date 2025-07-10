@@ -273,10 +273,10 @@ class Hulaquan(BasePlugin):
         self.register_user_func(
             name=HLQ_GET_REPO_NAME,
             handler=self.on_hulaquan_get_repo,
-            prefix="/获取repo",
+            prefix="/查询repo",
             description=HLQ_GET_REPO_DESCRIPTION,
             usage=HLQ_GET_REPO_USAGE,
-            examples=["/获取repo"],
+            examples=["/查询repo"],
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
