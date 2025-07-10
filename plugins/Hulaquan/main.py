@@ -1,5 +1,5 @@
 from datetime import timedelta
-import traceback, time, asyncio
+import traceback, time, asyncio, re
 import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
@@ -7,6 +7,7 @@ from .HulaquanDataManager import HulaquanDataManager
 from .SaojuDataManager import SaojuDataManager
 from .StatsDataManager import StatsDataManager
 from plugins.AdminPlugin import GroupsManager, UsersManager
+from .user_func_help import *
 from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 log = get_log()
@@ -144,11 +145,11 @@ class Hulaquan(BasePlugin):
         )
         
         self.register_user_func(
-            name="切换呼啦圈上新推送模式",
+            name=HLQ_SWITCH_ANNOUNCER_MODE_NAME,
             handler=self.on_switch_scheduled_check_task,
             prefix="/上新",
-            description="切换呼啦圈上新推送模式",
-            usage="/上新 模式编号\n2：关注呼啦圈检测的推送（定时检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格",
+            description=HLQ_SWITCH_ANNOUNCER_MODE_DESCRIPTION,
+            usage=HLQ_SWITCH_ANNOUNCER_MODE_USAGE,
             examples=["/上新"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
@@ -194,11 +195,11 @@ class Hulaquan(BasePlugin):
 
     def register_hlq_query(self):
         self.register_user_func(
-            name="呼啦圈查询",
+            name=HLQ_QUERY_NAME,
             handler=self.on_hlq_search,
             prefix="/hlq",
-            description="呼啦圈查学生票余票/数量/排期",
-            usage="/hlq 剧名 -I -C -R\n-I表示不显示已售罄场次，-C表示显示卡司阵容，-R表示检测此时此刻的数据，而非每15分钟自动更新的数据（但由于频繁请求容易造成请求失败或者其他问题，不建议多使用此功能），参数间需要有空格",
+            description=HLQ_QUERY_DESCRIPTION,
+            usage=HLQ_QUERY_USAGE,
             # 这里的 -I 是一个可选参数，表示忽略已售罄场次
             examples=["/hlq 连璧 -I -C"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
@@ -217,11 +218,11 @@ class Hulaquan(BasePlugin):
         )
         
         self.register_user_func(
-            name="扫剧查询某日演出",
+            name=HLQ_DATE_NAME,
             handler=self.on_list_hulaquan_events_by_date,
             prefix="/date",
-            description="根据日期通过呼啦圈查询当天学生票",
-            usage="/date 日期 城市\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写\n-i表示忽略已售罄场次",
+            description=HLQ_DATE_DESCRIPTION,
+            usage=HLQ_DATE_USAGE,
             examples=["/date <日期> (城市)"],
             tags=["saoju"],
             metadata={"category": "utility"}
@@ -236,7 +237,7 @@ class Hulaquan(BasePlugin):
             tags=["version"],
             metadata={"category": "utility"}
         )
-        self.register_admin_func(
+        self.register_user_func(
             name="设置剧目别名",
             handler=self.on_set_alias,
             prefix="/alias",
@@ -253,6 +254,17 @@ class Hulaquan(BasePlugin):
             usage="/aliases",
             examples=["/aliases"],
             tags=["呼啦圈", "别名", "查询"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_user_func(
+            name=HLQ_NEW_REPO_NAME,
+            handler=self.on_new_student_seat_repo,
+            prefix="/学生票座位记录",
+            description=HLQ_NEW_REPO_DESCRIPTION,
+            usage="/学生票座位记录",
+            examples=["/学生票座位记录"],
+            tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
         self.register_pending_tickets_announcer()
@@ -310,8 +322,10 @@ class Hulaquan(BasePlugin):
                 if (manual and group_id not in group_lists):
                     continue
                 if manual or mode=="2" or (mode=="1" and is_updated):
+                    if messages:
+                        messages[0] = f"@所有人：{messages[0]}"  # 确保第一条消息是标题
                     for m in messages:
-                        message = f"@所有人 呼啦圈上新提醒：\n{m}"
+                        message = f"呼啦圈上新提醒：\n{m}"
                         await self.api.post_group_msg(group_id, message)
             if new_pending:
                 self.register_pending_tickets_announcer()
@@ -389,9 +403,10 @@ class Hulaquan(BasePlugin):
             return
         event_name = all_args["text_args"][0]
         args = all_args["mode_args"]
-        await msg.reply_text("查询中，请稍后…")
+        if isinstance(msg, PrivateMessage):
+            await msg.reply_text("查询中，请稍后…")
         result = await self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=("-r" in args))
-        await msg.reply_text(result if result else "未找到相关信息，请检查剧名或网络连接。")
+        await msg.reply_text(result if result else "未找到相关信息，请尝试更换搜索名")
         
 
     def extract_args(self, msg):
@@ -494,19 +509,31 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("用法：/alias <搜索名> <别名>")
             return
         search_name, alias = args["text_args"][0], args["text_args"][1]
-        result = await self.hlq_data_manager.search_eventID_by_name(search_name)  
-        if len(result) > 1:
-            queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
-            return await msg.reply_text(f"根据搜索名，找到多个匹配的剧名，请更换为唯一的搜索关键词：\n" + "\n".join(queue))
-        elif len(result) == 1:
-            event_id = result[0][0]
+        result = await self.get_eventID_by_name(search_name, msg)  
+        if result:
+            event_id = result[0]
             self.hlq_data_manager.add_alias(event_id, search_name, alias)
-            await msg.reply_text(f"已为剧目 {result[0][1]} 添加别名：{alias}，对应搜索名：{search_name}")
+            await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
             return
-        else:
-            await msg.reply_text("未找到该剧目")
-            return
-    
+        
+    async def get_eventID_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False):
+        # return :: (event_id, event_name) or False
+        result = await self.hlq_data_manager.search_eventID_by_name(search_name)
+        if not result:
+            if notFoundAndRegister:
+                event_id = self.stats_data_manager.register_event(search_name)
+                msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
+                return (event_id, search_name)
+            if msg:
+                await msg.reply_text(msg_prefix+"未找到该剧目")
+            return False
+        if len(result) > 1:
+            if msg:
+                queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
+                await msg.reply_text(msg_prefix+f"根据搜索名，找到多个匹配的剧名，请更换为唯一的搜索关键词：\n" + "\n".join(queue))
+            return False
+        return result[0]
+
     async def on_list_aliases(self, msg: BaseMessage):
         alias_dict = self.hlq_data_manager.alias_dict
         events = self.hlq_data_manager.data.get("events", {})
@@ -526,3 +553,94 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("暂无别名记录。")
         else:
             await msg.reply_text("当前别名列表：\n" + "\n".join(lines))
+    
+    @user_command_wrapper("new_repo")    
+    async def on_new_student_seat_repo(self, msg: BaseMessage):
+        if isinstance(msg, GroupMessage):
+            return
+        pattern = re.compile(r"/学生票座位记录\n剧名:(.*?)\n日期:(.*?)\n座位:(.*?)\n价格:(.*?)\n描述:(.*?)", re.DOTALL)
+        record = msg.raw_message
+        # 使用正则表达式进行匹配
+        match = pattern.match(record)
+        
+        if not match:
+            return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_NEW_REPO_USAGE}")
+            # 获取匹配到的信息，并创建字典
+        title = match.group(1).strip(),
+        date = match.group(2).strip(),
+        seat = match.group(3).strip(),
+        price = match.group(4).strip(),
+        content = match.group(5).strip()
+        result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
+        event_id = result[0]
+        title = result[1]
+        if not event_id:
+            event_id = self.stats_data_manager.register_event(title) 
+        self.stats_data_manager.new_feedback(
+            event_id=event_id,
+            title=title,
+            price=price,
+            seat=seat,
+            date=date,
+            user_id=msg.user_id,
+            content=content,
+        )
+        await msg.reply_text(f"学生票座位记录已创建成功！\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n\n感谢您的反馈！")
+        
+    @user_command_wrapper("get_repo")
+    async def get_event_student_seat_repo(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        if not args["text_args"]:
+            await msg.reply_text("请提供剧名，例如: /学生票座位记录 连璧")
+            return
+        event_name = args["text_args"][0]
+        event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
+        event = await self.get_eventID_by_name(event_name, msg, notFoundAndRegister=True)[0]
+        event_id = event[0]
+        event_title = event[1]
+        result = await self.stats_data_manager.get_feedback(event_id, event_price)
+        if not result:
+            await msg.reply_text(f"未找到剧目 {event_title} 的学生票座位记录，快来上传吧！")
+            return
+        await msg.reply_text(result)
+        
+    @user_command_wrapper("report_error_feedback")
+    async def report_feedback_error(self, msg: BaseMessage):
+        if isinstance(msg, GroupMessage):
+            return
+        args = self.extract_args(msg)
+        if not args["text_args"]:
+            await msg.reply_text("请提供错误反馈内容，例如: /report_feedback_error repoID 错误信息")
+            return
+        report_id = args["text_args"][0]
+        error_content = " ".join(args["text_args"][1:])
+        if len(error_content) > 500:
+            await msg.reply_text("错误反馈内容过长，请控制在500字以内。")
+            return
+        # 这里可以添加将错误反馈保存到数据库或发送给管理员的逻辑
+        await self.stats_data_manager.report_feedback_error(report_id, msg.user_id)
+        await msg.reply_text("感谢您的反馈，我们会尽快处理！")
+    
+    @user_command_wrapper("get_user_feedback")
+    async def get_user_feedback(self, msg: BaseMessage):
+        if isinstance(msg, GroupMessage):
+            return
+        user_id = msg.user_id
+        if self.users_manager.is_op(user_id):
+            args = self.extract_args(msg)
+            user_id = args["text_args"][0] if args["text_args"] else user_id
+        feedbacks = self.stats_data_manager.get_users_feedback(user_id)
+        if not feedbacks:
+            await msg.reply_text("您还没有提交过任何学生票座位记录。")
+            return
+        self.output_messages_by_pages(feedbacks, msg, page_size=15)
+
+
+    async def output_messages_by_pages(self, messages, msg: BaseMessage, page_size=10):
+        # 分页输出消息
+        total_pages = (len(messages) + page_size - 1) // page_size
+        for i in range(total_pages):
+            start = i * page_size
+            end = start + page_size
+            page_messages = messages[start:end]
+            await msg.reply_text("\n".join(page_messages))

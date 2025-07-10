@@ -166,3 +166,6 @@ def extract_title_info(text):
         'price': f'￥{price}' if price is not None else None,
         'full_price': f'￥{full_price}' if full_price is not None else None
     }
+    
+def now_time_str():
+    return datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
