@@ -80,11 +80,13 @@ class StatsDataManager(BaseDataManager):
             return {k: v for k, v in events.items() if v["price"] == price}
         return events
     
-    def modify_repo(self, user_id, report_id, price=None, seat=None, content=None, isOP=False):
+    def modify_repo(self, user_id, report_id, date=None, price=None, seat=None, content=None, isOP=False):
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 if user_id != event[report_id][USER_ID] and not isOP:
                     return False
+                if date is not None:
+                    event[report_id]["date"] = date
                 if price is not None:
                     event[report_id]["price"] = price
                 if seat is not None:

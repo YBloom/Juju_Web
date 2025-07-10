@@ -716,7 +716,8 @@ class Hulaquan(BasePlugin):
         repos = self.stats_data_manager.modify_repo(
             msg.user_id,
             repoID, 
-            date=date, seat=seat, 
+            date=date, 
+            seat=seat, 
             price=price, 
             content=content, 
             isOP=self.users_manager.is_op(msg.user_id)
