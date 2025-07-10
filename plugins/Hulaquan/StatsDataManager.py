@@ -3,15 +3,15 @@ from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 from plugins.Hulaquan.utils import *
 
 ON_COMMAND_TIMES = "on_command_times"
-HLQ_TICKETS_FEEDBACK = "hlq_tickets_feedback"
+HLQ_TICKETS_REPO = "hlq_tickets_repo"
 USER_ID = 'user_id'
 REPORT_ID = 'report_id'  # 报错ID
-LATEST_FEEDBACK_ID = 'latest_feedback_id'
+LATEST_REPO_ID = 'latest_repo_id'
 REPORT_ERROR_DETAILS = 'report_error_details'  # 报错用户ID
 EVENT_ID_TO_EVENT_TITLE = 'event_id_to_event_title'
 LATEST_EVENT_ID = 'latest_event_id'
 
-maxErrorTimes = 2  # 报错次数超过2次则删除report
+maxErrorTimes = 3  # 报错次数超过2次则删除report
 
 class StatsDataManager(BaseDataManager):
     """
@@ -23,9 +23,9 @@ class StatsDataManager(BaseDataManager):
 
     def _check_data(self):
         self.data.setdefault(ON_COMMAND_TIMES, {})
-        self.data.setdefault(HLQ_TICKETS_FEEDBACK, {})
+        self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
-        self.data.setdefault(LATEST_FEEDBACK_ID, 1000)
+        self.data.setdefault(LATEST_REPO_ID, 1000)
         self.data.setdefault(LATEST_EVENT_ID, 100000)
 
     def on_command(self, command_name):
@@ -39,14 +39,14 @@ class StatsDataManager(BaseDataManager):
         self.data[id_key] += 1
         return str(self.data[id_key])
     
-    def new_feedback(self, event_id, title, date, price, seat, content, user_id, img=None):
+    def new_repo(self, event_id, title, date, price, seat, content, user_id, img=None):
         #用户输入price，content，img，seat
         price = str(price)
-        if event_id not in self.data[HLQ_TICKETS_FEEDBACK]:
-            self.data[HLQ_TICKETS_FEEDBACK][event_id] = {}
-        report_id = self.new_id(LATEST_FEEDBACK_ID)
-        self.data[HLQ_TICKETS_FEEDBACK][event_id].setdefault(report_id, {})
-        self.data[HLQ_TICKETS_FEEDBACK][event_id][report_id] = {USER_ID:user_id, 
+        if event_id not in self.data[HLQ_TICKETS_REPO]:
+            self.data[HLQ_TICKETS_REPO][event_id] = {}
+        report_id = self.new_id(LATEST_REPO_ID)
+        self.data[HLQ_TICKETS_REPO][event_id].setdefault(report_id, {})
+        self.data[HLQ_TICKETS_REPO][event_id][report_id] = {USER_ID:user_id, 
                                                                 "content":content, 
                                                                 "price": price,
                                                                 "seat":seat,
@@ -60,19 +60,19 @@ class StatsDataManager(BaseDataManager):
                                                             }
         return report_id
     
-    def del_feedback(self, event_id, report_id):
-        del self.data[HLQ_TICKETS_FEEDBACK][event_id][report_id]
+    def del_repo(self, event_id, report_id):
+        del self.data[HLQ_TICKETS_REPO][event_id][report_id]
     
-    def get_feedbacks(self, event_id, price=None):
-        if event_id not in self.data[HLQ_TICKETS_FEEDBACK]:
+    def get_repos(self, event_id, price=None):
+        if event_id not in self.data[HLQ_TICKETS_REPO]:
             return None
-        events = self.data[HLQ_TICKETS_FEEDBACK][event_id]
+        events = self.data[HLQ_TICKETS_REPO][event_id]
         if price is not None:
             return {k: v for k, v in events.items() if v["price"] == price}
         return events
     
-    def modify_feedback(self, user_id, report_id, price=None, seat=None, content=None):
-        for eid, event in self.data[HLQ_TICKETS_FEEDBACK].items():
+    def modify_repo(self, user_id, report_id, price=None, seat=None, content=None):
+        for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 if user_id != event[report_id][USER_ID]:
                     return False
@@ -85,19 +85,19 @@ class StatsDataManager(BaseDataManager):
                 break
         return True
     
-    def get_users_feedback(self, user_id, is_other=False):
-        feedback = []
-        for eid, event in self.data[HLQ_TICKETS_FEEDBACK].items():
+    def get_users_repo(self, user_id, is_other=False):
+        repo = []
+        for eid, event in self.data[HLQ_TICKETS_REPO].items():
             for report_id, report in event.items():
                 if report[USER_ID] == user_id:
-                    feedback.append(report)
-        messages = self.generate_feedback_report_messages(feedback)
+                    repo.append(report)
+        messages = self.generate_repo_report_messages(repo)
         if messages:
             prefix = user_id if is_other else "您"
             messages.insert(0, f"{prefix}共有{len(messages)}条学生票座位记录：\n")
         return messages
 
-    def generate_feedback_report_messages(self, events):
+    def generate_repo_report_messages(self, events):
         messages = []
         for report_id, event in events.items():
             content = event["content"]
@@ -106,38 +106,42 @@ class StatsDataManager(BaseDataManager):
             date = event["date"]
             title = event["event_title"]
             create_time = event["create_time"]
+            error_details = list(event.get(REPORT_ERROR_DETAILS, {}).values())
+            error_msg = "\n".join([f"{i}.{error_details[i]}" for i in range(len(error_details))] if error_details else [])
             img = event.get("img", None)
-            report_msg = f"repoID: {report_id}\n剧名：{title}\n{price}💰 {seat}\n演出日期: {date}\n座位描述: {content}\n创建时间: {create_time}"
+            report_msg = f"repoID: {report_id}\n剧名：{title}\n{price}💰 {seat}\n演出日期: {date}\n座位描述: {content}\n"
+            if error_details:
+                report_msg += f"她人汇报repo错误（可能由于时间跨度或各种随机因素导致）: {error_msg}\n"
             messages.append(report_msg)
         return messages
 
     def get_event_student_seat_repo(self, event_id, price=None):
-        events = self.get_feedbacks(event_id, price)
-        messages = self.generate_feedback_report_messages(events)
+        events = self.get_repos(event_id, price)
+        messages = self.generate_repo_report_messages(events)
         return messages
 
-    def report_feedback_error(self, report_id, report_user_id, error_reason=""):
-        for eid, event in self.data[HLQ_TICKETS_FEEDBACK].items():
+    def report_repo_error(self, report_id, report_user_id, error_reason=""):
+        for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 event_id = eid
                 break
-        if report_user_id not in self.data[HLQ_TICKETS_FEEDBACK][event_id][report_id][REPORT_ERROR_DETAILS].keys():
-            self.data[HLQ_TICKETS_FEEDBACK][event_id][report_id][REPORT_ERROR_DETAILS][report_user_id] = []
-        self.data[HLQ_TICKETS_FEEDBACK][event_id][report_id][REPORT_ERROR_DETAILS][report_user_id].append(error_reason)
+        if report_user_id not in self.data[HLQ_TICKETS_REPO][event_id][report_id][REPORT_ERROR_DETAILS].keys():
+            self.data[HLQ_TICKETS_REPO][event_id][report_id][REPORT_ERROR_DETAILS][report_user_id] = []
+        self.data[HLQ_TICKETS_REPO][event_id][report_id][REPORT_ERROR_DETAILS][report_user_id].append(error_reason)
         times = self.check_error_times(event_id, report_id)
         if times >= maxErrorTimes:
             return "由于报错次数过多，已删除该report"
         return f"已记录报错，当前报错次数：{times}次"
 
     def check_error_times(self, event_id, report_id):
-        if event_id not in self.data[HLQ_TICKETS_FEEDBACK]:
+        if event_id not in self.data[HLQ_TICKETS_REPO]:
             return -1
-        if report_id not in self.data[HLQ_TICKETS_FEEDBACK][event_id]:
+        if report_id not in self.data[HLQ_TICKETS_REPO][event_id]:
             return -1
-        repo = self.data[HLQ_TICKETS_FEEDBACK][event_id][report_id][REPORT_ERROR_DETAILS]
+        repo = self.data[HLQ_TICKETS_REPO][event_id][report_id][REPORT_ERROR_DETAILS]
         times = len(repo)
         if times >= maxErrorTimes:
-            self.del_feedback(event_id, report_id)
+            self.del_repo(event_id, report_id)
         return times
     
     def register_event(self, title):
@@ -157,7 +161,7 @@ class StatsDataManager(BaseDataManager):
     def del_event(self, event_id):
         if event_id in self.data[EVENT_ID_TO_EVENT_TITLE]:
             del self.data[EVENT_ID_TO_EVENT_TITLE][event_id]
-            if event_id in self.data[HLQ_TICKETS_FEEDBACK]:
-                del self.data[HLQ_TICKETS_FEEDBACK][event_id]
+            if event_id in self.data[HLQ_TICKETS_REPO]:
+                del self.data[HLQ_TICKETS_REPO][event_id]
             return True
         return False

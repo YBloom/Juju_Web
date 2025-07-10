@@ -35,8 +35,10 @@ UPDATE_LOG = [
         },
         {"version": "0.0.5⭐", 
          "description": """
+         1.学生票repo功能
+         2.区别于呼啦圈系统中存在的剧，为不存在的那些剧也声明了eventid
          """,
-         "date": "2025-07-05"
+         "date": "2025-07-10"
         },
     ]
 
@@ -260,10 +262,43 @@ class Hulaquan(BasePlugin):
         self.register_user_func(
             name=HLQ_NEW_REPO_NAME,
             handler=self.on_new_student_seat_repo,
-            prefix="/学生票座位记录",
+            prefix="/新建repo",
             description=HLQ_NEW_REPO_DESCRIPTION,
-            usage="/学生票座位记录",
-            examples=["/学生票座位记录"],
+            usage=HLQ_NEW_REPO_USAGE,
+            examples=["/新建repo"],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_user_func(
+            name=HLQ_GET_REPO_NAME,
+            handler=self.get_event_student_seat_repo,
+            prefix="/获取repo",
+            description=HLQ_GET_REPO_DESCRIPTION,
+            usage=HLQ_GET_REPO_USAGE,
+            examples=["/获取repo"],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_user_func(
+            name=HLQ_MY_REPO_NAME,
+            handler=self.get_user_repo,
+            prefix="/我的repo",
+            description=HLQ_MY_REPO_DESCRIPTION,
+            usage=HLQ_MY_REPO_USAGE,
+            examples=["/我的repo"],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        
+        self.register_user_func(
+            name=HLQ_REPORT_ERROR_NAME,
+            handler=self.report_repo_error,
+            prefix="/报错repo",
+            description=HLQ_REPORT_ERROR_DESCRIPTION,
+            usage=HLQ_REPORT_ERROR_USAGE,
+            examples=["/报错repo"],
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
@@ -576,7 +611,7 @@ class Hulaquan(BasePlugin):
         title = result[1]
         if not event_id:
             event_id = self.stats_data_manager.register_event(title) 
-        self.stats_data_manager.new_feedback(
+        self.stats_data_manager.new_repo(
             event_id=event_id,
             title=title,
             price=price,
@@ -591,26 +626,26 @@ class Hulaquan(BasePlugin):
     async def get_event_student_seat_repo(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
-            await msg.reply_text("请提供剧名，例如: /学生票座位记录 连璧")
+            await msg.reply_text("请提供剧名，用法："+HLQ_GET_REPO_USAGE)
             return
         event_name = args["text_args"][0]
         event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
         event = await self.get_eventID_by_name(event_name, msg, notFoundAndRegister=True)[0]
         event_id = event[0]
         event_title = event[1]
-        result = await self.stats_data_manager.get_feedback(event_id, event_price)
+        result = await self.stats_data_manager.get_event_student_seat_repo(event_id, event_price)
         if not result:
             await msg.reply_text(f"未找到剧目 {event_title} 的学生票座位记录，快来上传吧！")
             return
-        await msg.reply_text(result)
-        
-    @user_command_wrapper("report_error_feedback")
-    async def report_feedback_error(self, msg: BaseMessage):
+        await self.output_messages_by_pages(result, msg, page_size=10)
+
+    @user_command_wrapper("report_error_repo")
+    async def report_repo_error(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
         args = self.extract_args(msg)
         if not args["text_args"]:
-            await msg.reply_text("请提供错误反馈内容，例如: /report_feedback_error repoID 错误信息")
+            await msg.reply_text(HLQ_REPORT_ERROR_USAGE)
             return
         report_id = args["text_args"][0]
         error_content = " ".join(args["text_args"][1:])
@@ -618,22 +653,22 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("错误反馈内容过长，请控制在500字以内。")
             return
         # 这里可以添加将错误反馈保存到数据库或发送给管理员的逻辑
-        await self.stats_data_manager.report_feedback_error(report_id, msg.user_id)
+        await self.stats_data_manager.report_repo_error(report_id, msg.user_id)
         await msg.reply_text("感谢您的反馈，我们会尽快处理！")
     
-    @user_command_wrapper("get_user_feedback")
-    async def get_user_feedback(self, msg: BaseMessage):
+    @user_command_wrapper("my_repo")
+    async def get_user_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
         user_id = msg.user_id
         if self.users_manager.is_op(user_id):
             args = self.extract_args(msg)
             user_id = args["text_args"][0] if args["text_args"] else user_id
-        feedbacks = self.stats_data_manager.get_users_feedback(user_id)
-        if not feedbacks:
+        repos = self.stats_data_manager.get_users_repo(user_id)
+        if not repos:
             await msg.reply_text("您还没有提交过任何学生票座位记录。")
             return
-        self.output_messages_by_pages(feedbacks, msg, page_size=15)
+        await self.output_messages_by_pages(repos, msg, page_size=15)
 
 
     async def output_messages_by_pages(self, messages, msg: BaseMessage, page_size=10):
