@@ -324,6 +324,8 @@ class Hulaquan(BasePlugin):
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
+        
+        
         self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}

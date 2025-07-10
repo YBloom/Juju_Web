@@ -74,7 +74,7 @@ class StatsDataManager(BaseDataManager):
     
     def get_repos(self, event_id, price=None):
         if event_id not in self.data[HLQ_TICKETS_REPO]:
-            return None
+            return {}
         events = self.data[HLQ_TICKETS_REPO][event_id]
         if price is not None:
             return {k: v for k, v in events.items() if v["price"] == price}
