@@ -261,7 +261,7 @@ class Hulaquan(BasePlugin):
         
         self.register_user_func(
             name=HLQ_NEW_REPO_NAME,
-            handler=self.on_new_student_seat_repo,
+            handler=self.on_hulaquan_new_repo,
             prefix="/新建repo",
             description=HLQ_NEW_REPO_DESCRIPTION,
             usage=HLQ_NEW_REPO_USAGE,
@@ -272,7 +272,7 @@ class Hulaquan(BasePlugin):
         
         self.register_user_func(
             name=HLQ_GET_REPO_NAME,
-            handler=self.get_event_student_seat_repo,
+            handler=self.on_hulaquan_get_repo,
             prefix="/获取repo",
             description=HLQ_GET_REPO_DESCRIPTION,
             usage=HLQ_GET_REPO_USAGE,
@@ -283,7 +283,7 @@ class Hulaquan(BasePlugin):
         
         self.register_user_func(
             name=HLQ_MY_REPO_NAME,
-            handler=self.get_user_repo,
+            handler=self.on_hulaquan_my_repo,
             prefix="/我的repo",
             description=HLQ_MY_REPO_DESCRIPTION,
             usage=HLQ_MY_REPO_USAGE,
@@ -294,7 +294,7 @@ class Hulaquan(BasePlugin):
         
         self.register_user_func(
             name=HLQ_REPORT_ERROR_NAME,
-            handler=self.report_repo_error,
+            handler=self.on_hulaquan_report_error,
             prefix="/报错repo",
             description=HLQ_REPORT_ERROR_DESCRIPTION,
             usage=HLQ_REPORT_ERROR_USAGE,
@@ -320,7 +320,7 @@ class Hulaquan(BasePlugin):
             prefix="/删除repo",
             description=HLQ_DEL_REPO_DESCRIPTION,
             usage=HLQ_DEL_REPO_USAGE,
-            examples=["/报错repo"],
+            examples=[""],
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
@@ -612,7 +612,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("当前别名列表：\n" + "\n".join(lines))
     
     @user_command_wrapper("new_repo")    
-    async def on_new_student_seat_repo(self, msg: BaseMessage):
+    async def on_hulaquan_new_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
         pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*)", re.DOTALL)
@@ -634,7 +634,7 @@ class Hulaquan(BasePlugin):
         title = result[1]
         if not event_id:
             event_id = self.stats_data_manager.register_event(title) 
-        self.stats_data_manager.new_repo(
+        report_id = self.stats_data_manager.new_repo(
             event_id=event_id,
             title=title,
             price=price,
@@ -643,10 +643,10 @@ class Hulaquan(BasePlugin):
             user_id=msg.user_id,
             content=content,
         )
-        await msg.reply_text(f"学生票座位记录已创建成功！\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n\n感谢您的反馈！")
+        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n\n感谢您的反馈！")
         
     @user_command_wrapper("get_repo")
-    async def get_event_student_seat_repo(self, msg: BaseMessage):
+    async def on_hulaquan_get_repo(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
             await msg.reply_text("请提供剧名，用法："+HLQ_GET_REPO_USAGE)
@@ -663,7 +663,7 @@ class Hulaquan(BasePlugin):
         await self.output_messages_by_pages(result, msg, page_size=10)
 
     @user_command_wrapper("report_error_repo")
-    async def report_repo_error(self, msg: BaseMessage):
+    async def on_hulaquan_report_error(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
         args = self.extract_args(msg)
@@ -680,7 +680,7 @@ class Hulaquan(BasePlugin):
         await msg.reply_text("感谢您的反馈，我们会尽快处理！")
     
     @user_command_wrapper("my_repo")
-    async def get_user_repo(self, msg: BaseMessage):
+    async def on_hulaquan_my_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
         user_id = msg.user_id
@@ -733,11 +733,14 @@ class Hulaquan(BasePlugin):
         if not args["text_args"]:
             await msg.reply_text("需填写要删除的repoID\n")
             return
-        report_id = args["text_args"][0]
-        repo = self.stats_data_manager.del_repo(report_id, msg.user_id)
-        if not repo:
-            return await msg.reply_text("删除失败！未找到对应的repo或你不是这篇repo的主人。")
-        await msg.reply_text("删除成功！原repo如下：\n"+repo[0])
+        messages = []
+        for report_id in args["text_args"]:
+            repo = self.stats_data_manager.del_repo(report_id.strip(), msg.user_id)
+            if not repo:
+                messages.append(f"{report_id}删除失败！未找到对应的repo或你不是这篇repo的主人。")
+            else:
+                messages.append("删除成功！原repo如下：\n"+repo[0])
+        await msg.reply_text("\n".join(messages))
         
 
 

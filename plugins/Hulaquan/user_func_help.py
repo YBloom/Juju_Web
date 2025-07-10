@@ -94,4 +94,4 @@ HLQ_MY_REPO_USAGE = """/我的repo"""
 
 HLQ_DEL_REPO_NAME = "删除我创建的repo"
 HLQ_DEL_REPO_DESCRIPTION = "删除我创建的repo"
-HLQ_DEL_REPO_USAGE = """/删除repo repoID\n不知道repoID的可以通过/我的repo查看"""
+HLQ_DEL_REPO_USAGE = """/删除repo repoID\n不知道repoID的可以通过/我的repo查看，可以删除多个repo，用空格分开id"""
