@@ -615,7 +615,7 @@ class Hulaquan(BasePlugin):
     async def on_new_student_seat_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*?)", re.DOTALL)
+        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*)", re.DOTALL)
         record = msg.raw_message
         # 使用正则表达式进行匹配
         match = pattern.match(record)
@@ -697,7 +697,7 @@ class Hulaquan(BasePlugin):
     async def on_modify_self_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/修改repo\nrepoID:(.*?)\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*?)", re.DOTALL)
+        pattern = re.compile(r"/修改repo\nrepoID:(.*?)\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*)", re.DOTALL)
         record = msg.raw_message
         # 使用正则表达式进行匹配
         match = pattern.match(record)
