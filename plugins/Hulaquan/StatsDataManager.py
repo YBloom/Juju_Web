@@ -71,10 +71,10 @@ class StatsDataManager(BaseDataManager):
             return {k: v for k, v in events.items() if v["price"] == price}
         return events
     
-    def modify_repo(self, user_id, report_id, price=None, seat=None, content=None):
+    def modify_repo(self, user_id, report_id, price=None, seat=None, content=None, isOP=False):
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
-                if user_id != event[report_id][USER_ID]:
+                if user_id != event[report_id][USER_ID] and not isOP:
                     return False
                 if price is not None:
                     event[report_id]["price"] = price
@@ -82,29 +82,31 @@ class StatsDataManager(BaseDataManager):
                     event[report_id]["seat"] = seat
                 if content is not None:
                     event[report_id]["content"] = content
-                break
-        return True
+                repo = event[report_id]
+                return self.generate_repo_report_messages([repo])
+        return False
     
     def get_users_repo(self, user_id, is_other=False):
-        repo = []
+        repos = []
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             for report_id, report in event.items():
                 if report[USER_ID] == user_id:
-                    repo.append(report)
-        messages = self.generate_repo_report_messages(repo)
+                    repos.append(report)
+        messages = self.generate_repo_report_messages(repos)
         if messages:
             prefix = user_id if is_other else "您"
             messages.insert(0, f"{prefix}共有{len(messages)}条学生票座位记录：\n")
         return messages
 
-    def generate_repo_report_messages(self, events):
+    def generate_repo_report_messages(self, events: list):
         messages = []
-        for report_id, event in events.items():
+        for event in events:
             content = event["content"]
             price = event["price"]
             seat = event["seat"]
             date = event["date"]
             title = event["event_title"]
+            report_id = event[REPORT_ID]
             create_time = event["create_time"]
             error_details = list(event.get(REPORT_ERROR_DETAILS, {}).values())
             error_msg = "\n".join([f"{i}.{error_details[i]}" for i in range(len(error_details))] if error_details else [])
@@ -116,7 +118,7 @@ class StatsDataManager(BaseDataManager):
         return messages
 
     def get_event_student_seat_repo(self, event_id, price=None):
-        events = self.get_repos(event_id, price)
+        events = list(self.get_repos(event_id, price).values())
         messages = self.generate_repo_report_messages(events)
         return messages
 

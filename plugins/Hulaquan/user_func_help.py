@@ -30,7 +30,7 @@ HLQ_DATE_USAGE = """
 如/date 2025-06-01
 城市可以不写,-i表示忽略已售罄场次
 """
-HLQ_NEW_REPO_NAME = "创建一个学生座位repo"
+HLQ_NEW_REPO_NAME = "创建一个学生票座位repo"
 HLQ_NEW_REPO_DESCRIPTION = "创建一个学生座位repo"
 HLQ_NEW_REPO_USAGE = """
 "创建一个学生座位repo，格式为:
@@ -48,6 +48,29 @@ HLQ_NEW_REPO_USAGE = """
 价格:199
 描述:整体视野不错，在山顶，地板戏有遮挡(可不填)
 建议直接复制格式。"
+"""
+
+HLQ_MODIFY_REPO_NAME = "修改自己的一个学生票座位repo"
+HLQ_MODIFY_REPO_DESCRIPTION = "修改自己的一个学生票座位repo"
+HLQ_MODIFY_REPO_USAGE = """
+"修改自己的一个学生座位repo，格式为:
+/修改repo
+repoID:
+剧名:
+日期:
+座位:
+价格:
+描述:
+-------
+例如：/新建repo
+repoID:100001
+日期:
+座位:9-5
+描述:整体视野不错，在山顶，地板戏有遮挡
+-------
+留空或去掉该项表示不更改此项，
+剧名目前不支持修改，
+repoID必填，建议直接复制格式。"
 """
 
 HLQ_GET_REPO_NAME = "获取学生票座位repo"

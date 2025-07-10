@@ -302,6 +302,17 @@ class Hulaquan(BasePlugin):
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
+        
+        self.register_user_func(
+            name=HLQ_MODIFY_REPO_NAME,
+            handler=self.on_modify_self_repo,
+            prefix="/修改repo",
+            description=HLQ_MODIFY_REPO_DESCRIPTION,
+            usage=HLQ_MODIFY_REPO_USAGE,
+            examples=["/报错repo"],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
         self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}
@@ -606,6 +617,7 @@ class Hulaquan(BasePlugin):
         seat = match.group(3).strip()
         price = match.group(4).strip()
         content = match.group(5).strip()
+        print(f"{msg.user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
         title = result[1]
@@ -669,6 +681,39 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("您还没有提交过任何学生票座位记录。")
             return
         await self.output_messages_by_pages(repos, msg, page_size=15)
+        
+    @user_command_wrapper("modify_repo")
+    async def on_modify_self_repo(self, msg: BaseMessage):
+        if isinstance(msg, GroupMessage):
+            return
+        pattern = re.compile(r"/新建repo\nrepoID:(.*?)\n剧名:(.*?)\n日期:(.*?)\n座位:(.*?)\n价格:(.*?)\n描述:(.*?)", re.DOTALL)
+        record = msg.raw_message
+        # 使用正则表达式进行匹配
+        match = pattern.match(record)
+        
+        if not match:
+            return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_MODIFY_REPO_USAGE}")
+        # 获取匹配到的信息，并创建字典
+        repoID = match.group(1).strip()
+        if not repoID:
+            return await msg.reply(f"repoID必填！可输入/我的repo查看repoID\n{HLQ_MODIFY_REPO_USAGE}")
+        title = match.group(2).strip()
+        date = match.group(3).strip()
+        seat = match.group(4).strip()
+        price = match.group(5).strip()
+        content = match.group(6).strip()
+        repos = self.stats_data_manager.modify_repo(
+            msg.user_id,
+            repoID, 
+            date=date, seat=seat, 
+            price=price, 
+            content=content, 
+            isOP=self.users_manager.is_op(msg.user_id)
+        )
+        if not repos:
+            await msg.reply_text("未找到原记录，请输入/我的repo查看正确的repoID")
+            return
+        await msg.reply_text("修改成功！现repo如下：\n"+repos[0])
 
 
     async def output_messages_by_pages(self, messages, msg: BaseMessage, page_size=10):
