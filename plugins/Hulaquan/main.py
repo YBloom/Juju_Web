@@ -620,25 +620,10 @@ class Hulaquan(BasePlugin):
         if isinstance(msg, GroupMessage):
             if not self.users_manager.is_op(msg.user_id):
                 return await msg.reply_text("此功能当前仅限私聊使用。")
-        """pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?(?:描述:(.*?)\n)(?:qq:(\d+))?", re.DOTALL)
-
-        record = msg.raw_message
-        # 使用正则表达式进行匹配
-        match = pattern.match(record)
-        
-        if not match:
-            return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_NEW_REPO_USAGE}")
-        # 获取匹配到的信息，并创建字典
-        title = match.group(1).strip() if match.group(1) else None
-        date = match.group(2).strip() if match.group(2) else None
-        seat = match.group(3).strip() if match.group(3) else None
-        price = match.group(4).strip() if match.group(4) else None
-        content = match.group(5).strip() if match.group(5) else None
-        user_id = match.group(6).strip() if match.group(6) else msg.user_id"""
         
         match, mandatory_check = parse_text_to_dict_with_mandatory_check(msg.raw_message, HLQ_NEW_REPO_INPUT_DICT ,with_prefix=True)
         if mandatory_check:
-            return await msg.reply_text(f"缺少以下必要字段：{' '.join(mandatory_check)}")
+            return await msg.reply_text(f"缺少以下必要字段：{' '.join(mandatory_check)}\n{HLQ_NEW_REPO_USAGE}")
         user_id = msg.user_id if not match["user_id"] else match["user_id"]
         title = match["title"]
         date = match["date"]
@@ -675,7 +660,9 @@ class Hulaquan(BasePlugin):
             return
         event_name = args["text_args"][0]
         event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
-        event = await self.get_eventID_by_name(event_name, msg, notFoundAndRegister=True)
+        event = await self.get_eventID_by_name(event_name, msg)
+        if not event:
+            return
         event_id = event[0]
         event_title = event[1]
         result = self.stats_data_manager.get_event_student_seat_repo(event_id, event_price)

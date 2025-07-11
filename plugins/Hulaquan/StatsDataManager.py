@@ -214,3 +214,4 @@ class StatsDataManager(BaseDataManager):
                 del self.data[HLQ_TICKETS_REPO][event_id]
             return True
         return False
+    
