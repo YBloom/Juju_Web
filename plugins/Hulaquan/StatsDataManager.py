@@ -122,6 +122,8 @@ class StatsDataManager(BaseDataManager):
         for event in events:
             content = event["content"]
             price = event["price"]
+            payable = event['payable']
+            category = event['category']
             seat = event["seat"]
             date = event["date"]
             title = event["event_title"]
@@ -130,7 +132,7 @@ class StatsDataManager(BaseDataManager):
             error_details = list(event.get(REPORT_ERROR_DETAILS, {}).values())
             error_msg = "\n".join([f"{i}.{error_details[i]}" for i in range(len(error_details))] if error_details else [])
             img = event.get("img", None)
-            report_msg = f"repoID: {report_id}\n剧名：{title}\n{price}💰 {seat}\n演出日期: {date}\n座位描述: {content}\n"
+            report_msg = f"repoID: {report_id}\n剧名：{title}\n{category} ￥{price}（原价￥{payable}）💰 \n座位：{seat}\n演出日期: {date}\n座位描述: {content}\n"
             if error_details:
                 report_msg += f"她人汇报repo错误（可能由于时间跨度或各种随机因素导致）: {error_msg}\n"
             messages.append(report_msg)
