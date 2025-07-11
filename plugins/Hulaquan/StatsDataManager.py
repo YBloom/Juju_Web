@@ -42,7 +42,7 @@ class StatsDataManager(BaseDataManager):
         self.data[id_key] += 1
         return str(self.data[id_key])
     
-    def new_repo(self, title, date, price, seat, content, user_id, img=None, event_id=None):
+    def new_repo(self, title, date, price, seat, content, user_id, category, img=None, event_id=None):
         #用户输入price，content，img，seat
         price = str(price)
         event_id = self.register_event(title, event_id)
@@ -56,6 +56,7 @@ class StatsDataManager(BaseDataManager):
                                                                 "seat":seat,
                                                                 "img":img,
                                                                 "date":date,
+                                                                "category":category,
                                                                 "create_time":now_time_str(),
                                                                 "event_title": title,
                                                                 "event_id": event_id,
@@ -82,13 +83,15 @@ class StatsDataManager(BaseDataManager):
             return {k: v for k, v in events.items() if v["price"] == price}
         return events
     
-    def modify_repo(self, user_id, report_id, date=None, price=None, seat=None, content=None, isOP=False):
+    def modify_repo(self, user_id, report_id, date=None, price=None, seat=None, content=None, category=None, isOP=False):
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 if user_id != event[report_id][USER_ID] and not isOP:
                     return False
                 if date is not None:
                     event[report_id]["date"] = date
+                if category is not None:
+                    event[report_id]["category"] = category
                 if price is not None:
                     event[report_id]["price"] = price
                 if seat is not None:

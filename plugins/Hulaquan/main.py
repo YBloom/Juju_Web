@@ -630,6 +630,7 @@ class Hulaquan(BasePlugin):
         seat = match["seat"]
         price = match["price"]
         content = match["content"]
+        category = match["category"]
         
         print(f"{user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
@@ -645,8 +646,9 @@ class Hulaquan(BasePlugin):
             user_id=user_id,
             content=content,
             event_id=event_id,
+            category=category,
         )
-        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n感谢您的反馈！")
+        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n类型: {category}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n感谢您的反馈！")
         
     @user_command_wrapper("get_repo")
     async def on_hulaquan_get_repo(self, msg: BaseMessage):
@@ -706,22 +708,6 @@ class Hulaquan(BasePlugin):
     async def on_modify_self_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        """pattern = re.compile(r"/修改repo\nrepoID:(.*?)\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*)", re.DOTALL)
-        record = msg.raw_message
-        # 使用正则表达式进行匹配
-        match = pattern.match(record)
-        
-        if not match:
-            return await msg.reply(f"可能格式错误了，请尝试按照标准格式填写！\n{HLQ_MODIFY_REPO_USAGE}")
-        # 获取匹配到的信息，并创建字典
-        repoID = match.group(1).strip() if match.group(1) else None
-        if not repoID:
-            return await msg.reply(f"repoID必填！可输入/我的repo查看repoID\n{HLQ_MODIFY_REPO_USAGE}")
-        title = match.group(2).strip() if match.group(2) else None
-        date = match.group(3).strip() if match.group(3) else None
-        seat = match.group(4).strip() if match.group(4) else None
-        price = match.group(5).strip() if match.group(5) else None
-        content = match.group(6).strip() if match.group(6) else None"""
         
         match, mandatory_check = parse_text_to_dict_with_mandatory_check(msg.raw_message, HLQ_MODIFY_REPO_INPUT_DICT ,with_prefix=True)
         if mandatory_check:
@@ -731,6 +717,7 @@ class Hulaquan(BasePlugin):
         seat = match["seat"]
         price = match["price"]
         content = match["content"]
+        category = match["category"]
         
         repos = self.stats_data_manager.modify_repo(
             msg.user_id,
@@ -739,6 +726,7 @@ class Hulaquan(BasePlugin):
             seat=seat, 
             price=price, 
             content=content, 
+            category=category,
             isOP=self.users_manager.is_op(msg.user_id)
         )
         if not repos:

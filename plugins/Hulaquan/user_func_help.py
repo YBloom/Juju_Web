@@ -36,6 +36,7 @@ HLQ_NEW_REPO_USAGE = """
 "创建一个学生座位repo，格式为:
 /新建repo
 剧名:
+类型:
 日期:
 座位:
 价格:
@@ -43,6 +44,7 @@ HLQ_NEW_REPO_USAGE = """
 -------
 例如：/新建repo
 剧名:海雾
+类型:学生票
 日期:2025-06-11(可不填)
 座位:9-7
 价格:199
@@ -52,6 +54,7 @@ HLQ_NEW_REPO_USAGE = """
 
 HLQ_NEW_REPO_INPUT_DICT = {
     "剧名": {"name":"title", "mandatory":True},
+    "类型": {"name":"category", "mandatory":False},
     "日期": {"name":"date", "mandatory":False},
     "座位": {"name":"seat", "mandatory":True},
     "价格": {"name":"price", "mandatory":True},
@@ -66,12 +69,14 @@ HLQ_MODIFY_REPO_USAGE = """
 /修改repo
 repoID:
 日期:
+类型:
 座位:
 价格:
 描述:
 -------
 例如：/修改repo
 repoID:100001
+类型:早鸟票
 日期:
 座位:9-5
 描述:整体视野不错，在山顶，地板戏有遮挡
@@ -83,6 +88,7 @@ repoID必填，建议直接复制格式。"
 
 HLQ_MODIFY_REPO_INPUT_DICT = {
     "repoID": {"name":"repoID", "mandatory":True},
+    "类型": {"name":"category", "mandatory":False},
     "日期": {"name":"date", "mandatory":False},
     "座位": {"name":"seat", "mandatory":False},
     "价格": {"name":"price", "mandatory":False},
