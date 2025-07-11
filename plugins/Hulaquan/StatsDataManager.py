@@ -12,7 +12,9 @@ LATEST_REPO_ID = 'latest_repo_id'
 REPORT_ERROR_DETAILS = 'report_error_details'  # 报错用户ID
 EVENT_ID_TO_EVENT_TITLE = 'event_id_to_event_title'
 LATEST_EVENT_ID = 'latest_event_id'
+LATEST_20_REPOS = 'latest_20_repos'
 
+maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
 
 class StatsDataManager(BaseDataManager):
@@ -29,6 +31,7 @@ class StatsDataManager(BaseDataManager):
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
         self.data.setdefault(LATEST_REPO_ID, 1000)
         self.data.setdefault(LATEST_EVENT_ID, 100000)
+        self.data.setdefault(LATEST_20_REPOS, []) #[(event_id, report_id]
         self.check_events_to_title_dict()
 
     def on_command(self, command_name):
@@ -64,6 +67,7 @@ class StatsDataManager(BaseDataManager):
                                                                 REPORT_ID: report_id,
                                                                 REPORT_ERROR_DETAILS: {},
                                                             }
+        self.add_in_latest_20_repos(report_id, event_id)
         return report_id
     
     def del_repo(self, report_id, user_id):
@@ -75,6 +79,27 @@ class StatsDataManager(BaseDataManager):
                 del event[report_id]
                 return self.generate_repo_report_messages([repo])
         return False
+    
+    def add_in_latest_20_repos(self, repo_id, event_id):
+        tpl = (repo_id, event_id)
+        if tpl in self.data[LATEST_20_REPOS]:
+            self.data[LATEST_20_REPOS].pop(self.data[LATEST_20_REPOS].index(tpl))
+        while len(self.data[LATEST_20_REPOS]) >= maxLatestReposCount:
+            self.data[LATEST_20_REPOS].pop(0)
+        self.data[LATEST_20_REPOS].append(tpl)
+        return tpl
+    
+    def show_latest_repos(self, count):
+        if count > maxLatestReposCount:
+            return False
+        if count > len(self.data[LATEST_20_REPOS]):
+            count = len(self.data[LATEST_20_REPOS])
+        events = []
+        for i in self.data[LATEST_20_REPOS][::-1][:count]:
+            repo_id, event_id = i
+            events.append(self.data[HLQ_TICKETS_REPO][event_id][repo_id])
+        return self.generate_repo_report_messages(events)
+
     
     def get_repos(self, event_id, price=None):
         if event_id not in self.data[HLQ_TICKETS_REPO]:
@@ -102,6 +127,7 @@ class StatsDataManager(BaseDataManager):
                 if content:
                     event[report_id]["content"] = content
                 repo = event[report_id]
+                self.add_in_latest_20_repos(report_id, eid)
                 return self.generate_repo_report_messages([repo])
         return False
     

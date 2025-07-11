@@ -5,7 +5,7 @@ from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 from .HulaquanDataManager import HulaquanDataManager
 from .SaojuDataManager import SaojuDataManager
-from .StatsDataManager import StatsDataManager
+from .StatsDataManager import StatsDataManager, maxLatestReposCount
 from plugins.AdminPlugin import GroupsManager, UsersManager
 from .user_func_help import *
 from .utils import parse_text_to_dict_with_mandatory_check
@@ -326,6 +326,16 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
+        self.register_user_func(
+            name=HLQ_DEL_REPO_NAME,
+            handler=self.on_delete_self_repo,
+            prefix="/最新repo",
+            description=HLQ_DEL_REPO_DESCRIPTION,
+            usage=HLQ_DEL_REPO_USAGE,
+            examples=[""],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
         
         self.register_pending_tickets_announcer()
         """
@@ -754,6 +764,21 @@ class Hulaquan(BasePlugin):
             else:
                 messages.append("删除成功！原repo如下：\n"+repo[0])
         await msg.reply_text("\n".join(messages))
+        
+    @user_command_wrapper("latest_repos")
+    async def on_get_latest_repos(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        count = 10
+        if args["text_args"]:
+            if args["text_args"][0] > maxLatestReposCount:
+                return await msg.reply_text(f"数字必须小于{maxLatestReposCount}")
+            else:
+                count = int(args["text_args"][0])
+        repos = self.stats_data_manager.show_latest_repos(count)
+        if not repos:
+            await msg.reply_text("暂无数据")
+            return
+        await self.output_messages_by_pages(repos, msg, page_size=15)
         
 
 

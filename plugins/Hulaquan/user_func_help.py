@@ -121,6 +121,10 @@ HLQ_MY_REPO_NAME = "获取我创建的repo"
 HLQ_MY_REPO_DESCRIPTION = "获取我创建的所有repo"
 HLQ_MY_REPO_USAGE = """/我的repo"""
 
+HLQ_LATEST_REPOS_NAME = "获取最新的N个repo"
+HLQ_LATEST_REPOS_DESCRIPTION = "获取最新的N个repo（N≤20）"
+HLQ_LATEST_REPOS_USAGE = """/最新repo 数字\n数字必须小于等于20"""
+
 HLQ_DEL_REPO_NAME = "删除我创建的repo"
 HLQ_DEL_REPO_DESCRIPTION = "删除我创建的repo"
 HLQ_DEL_REPO_USAGE = """/删除repo repoID\n不知道repoID的可以通过/我的repo查看，可以删除多个repo，用空格分开id"""
