@@ -654,6 +654,7 @@ class Hulaquan(BasePlugin):
             if "-l" in args["mode_args"]:
                 messages = self.stats_data_manager.get_repos_list()
                 await msg.reply_text("\n".join(messages))
+                return
             await msg.reply_text("请提供剧名，用法："+HLQ_GET_REPO_USAGE)
             return
         event_name = args["text_args"][0]

@@ -29,6 +29,7 @@ class StatsDataManager(BaseDataManager):
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
         self.data.setdefault(LATEST_REPO_ID, 1000)
         self.data.setdefault(LATEST_EVENT_ID, 100000)
+        self.check_events_to_title_dict()
 
     def on_command(self, command_name):
         self.data[ON_COMMAND_TIMES].setdefault(command_name, 0)
@@ -201,6 +202,9 @@ class StatsDataManager(BaseDataManager):
             return title
         return self.data[EVENT_ID_TO_EVENT_TITLE][eid]['title']
 
+    def check_events_to_title_dict(self):
+        for eid in list(self.data[HLQ_TICKETS_REPO][eid].keys()):
+            self.get_event_title(eid)
     
     def del_event(self, event_id):
         if event_id in self.data[EVENT_ID_TO_EVENT_TITLE]:
