@@ -667,7 +667,7 @@ class Hulaquan(BasePlugin):
             return
         event_name = args["text_args"][0]
         event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
-        event = await self.get_eventID_by_name(event_name, msg)
+        event = await self.get_eventID_by_name(event_name, msg, foundInState=True)
         if not event:
             return
         event_id = event[0]
