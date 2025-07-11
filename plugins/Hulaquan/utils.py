@@ -137,7 +137,7 @@ def extract_text_in_brackets(text):
     match = re.search(r'《(.*?)》', text)
     if match:
         return match.group(0)  # 返回整个《xxx》内容
-    return None  # 如果没有匹配到，返回None
+    return text  # 如果没有匹配到，返回None
 
 def extract_title_info(text):
     # 正则表达式提取《xxx》，价格和原价
