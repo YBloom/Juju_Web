@@ -175,7 +175,8 @@ class StatsDataManager(BaseDataManager):
     def register_event(self, title, eid=None):
         title = extract_text_in_brackets(title)
         if eid is not None and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
-            title = self.data[HLQ_TICKETS_REPO][eid].values()[0]['title']
+            if eid in self.data[HLQ_TICKETS_REPO]:
+                title = self.data[HLQ_TICKETS_REPO][eid].values()[0]['title']
             self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
             return eid
         else:
