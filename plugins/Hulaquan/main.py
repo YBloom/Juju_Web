@@ -577,7 +577,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
             return
         
-    async def get_eventID_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False):
+    async def get_eventID_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False):
         # return :: (event_id, event_name) or False
         result = await self.hlq_data_manager.search_eventID_by_name(search_name)
         if not result:
@@ -585,6 +585,9 @@ class Hulaquan(BasePlugin):
                 event_id = self.stats_data_manager.register_event(search_name)
                 await msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
                 return (event_id, search_name)
+            if foundInState:
+                if eid := self.stats_data_manager.get_event_id(search_name):
+                    return (eid, self.stats_data_manager.get_event_title(eid))
             if msg:
                 await msg.reply_text(msg_prefix+"未找到该剧目")
             return False
@@ -650,7 +653,7 @@ class Hulaquan(BasePlugin):
             event_id=event_id,
             category=category,
         )
-        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n类型: {category}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n感谢您的反馈！")
+        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n类型: {category}\n时间: {date}\n座位: {seat}\n实付: {price}\n原价：{payable}\n描述: {content}\n感谢您的反馈！")
         
     @user_command_wrapper("get_repo")
     async def on_hulaquan_get_repo(self, msg: BaseMessage):

@@ -196,7 +196,7 @@ class StatsDataManager(BaseDataManager):
     
     def get_event_id(self, title):
         for eid, event in self.data[EVENT_ID_TO_EVENT_TITLE].items():
-            if event['title'] == title or title in event['title']:
+            if title in event['title']:
                 return eid
         return 0
     
