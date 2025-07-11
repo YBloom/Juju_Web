@@ -56,7 +56,7 @@ class StatsDataManager(BaseDataManager):
                                                                 "img":img,
                                                                 "date":date,
                                                                 "create_time":now_time_str(),
-                                                                "event_title": title,
+                                                                "title": title,
                                                                 "event_id": event_id,
                                                                 REPORT_ID: report_id,
                                                                 REPORT_ERROR_DETAILS: {},
@@ -117,7 +117,7 @@ class StatsDataManager(BaseDataManager):
             price = event["price"]
             seat = event["seat"]
             date = event["date"]
-            title = event["event_title"]
+            title = event["title"]
             report_id = event[REPORT_ID]
             create_time = event["create_time"]
             error_details = list(event.get(REPORT_ERROR_DETAILS, {}).values())
@@ -193,9 +193,9 @@ class StatsDataManager(BaseDataManager):
         if eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if len(self.data[HLQ_TICKETS_REPO][eid]) <= 0:
                 return False
-            title = extract_text_in_brackets(list(self.data[HLQ_TICKETS_REPO][eid].values())[0]["event_title"])
+            title = extract_text_in_brackets(list(self.data[HLQ_TICKETS_REPO][eid].values())[0]["title"])
             for report_id in list(self.data[HLQ_TICKETS_REPO][eid].keys()):
-                self.data[HLQ_TICKETS_REPO][eid][report_id]["event_title"] = title
+                self.data[HLQ_TICKETS_REPO][eid][report_id]["title"] = title
             self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
             return title
         return self.data[EVENT_ID_TO_EVENT_TITLE][eid]['title']
