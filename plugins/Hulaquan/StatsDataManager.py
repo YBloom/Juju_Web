@@ -193,7 +193,9 @@ class StatsDataManager(BaseDataManager):
         if eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if len(self.data[HLQ_TICKETS_REPO][eid]) <= 0:
                 return False
-            title = self.data[HLQ_TICKETS_REPO][eid].values()[0]['title'] = extract_text_in_brackets(self.data[HLQ_TICKETS_REPO][eid].values()[0]['title'])
+            title = extract_text_in_brackets(list(self.data[HLQ_TICKETS_REPO][eid].values())[0]['title'])
+            for report_id in list(self.data[HLQ_TICKETS_REPO][eid].keys()):
+                self.data[HLQ_TICKETS_REPO][eid][report_id]["event_title"] = title
             self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
             return title
         return self.data[EVENT_ID_TO_EVENT_TITLE][eid]['title']
