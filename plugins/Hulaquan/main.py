@@ -327,11 +327,11 @@ class Hulaquan(BasePlugin):
         )
         
         self.register_user_func(
-            name=HLQ_DEL_REPO_NAME,
-            handler=self.on_delete_self_repo,
+            name=HLQ_LATEST_REPOS_NAME,
+            handler=self.on_get_latest_repos,
             prefix="/最新repo",
-            description=HLQ_DEL_REPO_DESCRIPTION,
-            usage=HLQ_DEL_REPO_USAGE,
+            description=HLQ_LATEST_REPOS_DESCRIPTION,
+            usage=HLQ_LATEST_REPOS_USAGE,
             examples=[""],
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
