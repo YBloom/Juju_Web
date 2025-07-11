@@ -8,6 +8,7 @@ from .SaojuDataManager import SaojuDataManager
 from .StatsDataManager import StatsDataManager
 from plugins.AdminPlugin import GroupsManager, UsersManager
 from .user_func_help import *
+from .utils import parse_text_to_dict_with_mandatory_check
 from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 log = get_log()
@@ -617,8 +618,9 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("new_repo")    
     async def on_hulaquan_new_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
-            return
-        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?(?:描述:(.*?)\n)(?:qq:(\d+))?", re.DOTALL)
+            if not self.users_manager.is_op(msg.user_id):
+                return await msg.reply_text("此功能当前仅限私聊使用。")
+        """pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?(?:描述:(.*?)\n)(?:qq:(\d+))?", re.DOTALL)
 
         record = msg.raw_message
         # 使用正则表达式进行匹配
@@ -632,7 +634,18 @@ class Hulaquan(BasePlugin):
         seat = match.group(3).strip() if match.group(3) else None
         price = match.group(4).strip() if match.group(4) else None
         content = match.group(5).strip() if match.group(5) else None
-        user_id = match.group(6).strip() if match.group(6) else msg.user_id
+        user_id = match.group(6).strip() if match.group(6) else msg.user_id"""
+        
+        match, mandatory_check = parse_text_to_dict_with_mandatory_check(msg.raw_message, HLQ_NEW_REPO_INPUT_DICT ,with_prefix=True)
+        if mandatory_check:
+            return await msg.reply_text(f"缺少以下必要字段：{' '.join(mandatory_check)}")
+        user_id = msg.user_id if not match["user_id"] else match["user_id"]
+        title = match["title"]
+        date = match["date"]
+        seat = match["seat"]
+        price = match["price"]
+        content = match["content"]
+        
         print(f"{user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
@@ -706,7 +719,7 @@ class Hulaquan(BasePlugin):
     async def on_modify_self_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/修改repo\nrepoID:(.*?)\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*)", re.DOTALL)
+        """pattern = re.compile(r"/修改repo\nrepoID:(.*?)\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*)", re.DOTALL)
         record = msg.raw_message
         # 使用正则表达式进行匹配
         match = pattern.match(record)
@@ -721,7 +734,17 @@ class Hulaquan(BasePlugin):
         date = match.group(3).strip() if match.group(3) else None
         seat = match.group(4).strip() if match.group(4) else None
         price = match.group(5).strip() if match.group(5) else None
-        content = match.group(6).strip() if match.group(6) else None
+        content = match.group(6).strip() if match.group(6) else None"""
+        
+        match, mandatory_check = parse_text_to_dict_with_mandatory_check(msg.raw_message, HLQ_MODIFY_REPO_INPUT_DICT ,with_prefix=True)
+        if mandatory_check:
+            return await msg.reply_text(f"缺少以下必要字段：{' '.join(mandatory_check)}")
+        repoID = match["repoID"]
+        date = match["date"]
+        seat = match["seat"]
+        price = match["price"]
+        content = match["content"]
+        
         repos = self.stats_data_manager.modify_repo(
             msg.user_id,
             repoID, 

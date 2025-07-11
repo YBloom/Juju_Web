@@ -50,13 +50,21 @@ HLQ_NEW_REPO_USAGE = """
 建议直接复制格式。"
 """
 
+HLQ_NEW_REPO_INPUT_DICT = {
+    "剧名": {"name":"title", "mandatory":True},
+    "日期": {"name":"date", "mandatory":False},
+    "座位": {"name":"seat", "mandatory":True},
+    "价格": {"name":"price", "mandatory":True},
+    "描述": {"name":"content", "mandatory":False},
+    "qq": {"name":"user_id", "mandatory":False},
+    }
+
 HLQ_MODIFY_REPO_NAME = "修改自己的一个学生票座位repo"
 HLQ_MODIFY_REPO_DESCRIPTION = "修改自己的一个学生票座位repo"
 HLQ_MODIFY_REPO_USAGE = """
 "修改自己的一个学生座位repo，格式为:
 /修改repo
 repoID:
-剧名:
 日期:
 座位:
 价格:
@@ -72,6 +80,14 @@ repoID:100001
 剧名目前不支持修改，
 repoID必填，建议直接复制格式。"
 """
+
+HLQ_MODIFY_REPO_INPUT_DICT = {
+    "repoID": {"name":"repoID", "mandatory":True},
+    "日期": {"name":"date", "mandatory":False},
+    "座位": {"name":"seat", "mandatory":False},
+    "价格": {"name":"price", "mandatory":False},
+    "描述": {"name":"content", "mandatory":False},
+    }
 
 HLQ_GET_REPO_NAME = "查询学生票座位repo"
 HLQ_GET_REPO_DESCRIPTION = "查询学生票座位repo"

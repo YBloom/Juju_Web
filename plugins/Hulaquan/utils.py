@@ -169,3 +169,37 @@ def extract_title_info(text):
     
 def now_time_str():
     return datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
+
+def parse_text_to_dict(text, with_prefix=True):
+    text = text.replace("：", ":")
+    lines = text.strip().split('\n')
+    result = {}
+    
+    # 第一行是prefix
+    if with_prefix:
+        result['prefix'] = lines[0]
+        lines = lines[1:]
+    
+    # 处理后面的行
+    for line in lines:
+        key, value = line.split(':', 1)
+        result[key.strip()] = value.strip()
+    
+    return result
+
+def parse_text_to_dict_with_mandatory_check(text, input_dict, with_prefix=True):
+    parsed_data = parse_text_to_dict(text, with_prefix)
+    result = {}
+    mandatory_missing = []
+    for field, info in input_dict.items():
+        name = info["name"]
+        mandatory = info["mandatory"]
+        if field in parsed_data:
+            result[name] = parsed_data[field]
+        else:
+            result[name] = None
+            if mandatory:
+                mandatory_missing.append(field)
+    
+    # 返回最终结果
+    return result, mandatory_missing
