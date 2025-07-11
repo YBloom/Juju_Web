@@ -581,7 +581,7 @@ class Hulaquan(BasePlugin):
         if not result:
             if notFoundAndRegister:
                 event_id = self.stats_data_manager.register_event(search_name)
-                msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
+                await msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
                 return (event_id, search_name)
             if msg:
                 await msg.reply_text(msg_prefix+"未找到该剧目")
@@ -617,7 +617,8 @@ class Hulaquan(BasePlugin):
     async def on_hulaquan_new_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*?)(?:\nqq:(\d+))?", re.DOTALL)
+        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*?)(?:qq:(\d+))?", re.DOTALL)
+
         record = msg.raw_message
         # 使用正则表达式进行匹配
         match = pattern.match(record)
