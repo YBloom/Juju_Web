@@ -617,7 +617,7 @@ class Hulaquan(BasePlugin):
     async def on_hulaquan_new_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
             return
-        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?描述:(.*?)(?:qq:(\d+))?", re.DOTALL)
+        pattern = re.compile(r"/新建repo\n(?:剧名:(.*?)\n)?(?:日期:(.*?)\n)?(?:座位:(.*?)\n)?(?:价格:(.*?)\n)?(?:描述:(.*?)\n)(?:qq:(\d+))?", re.DOTALL)
 
         record = msg.raw_message
         # 使用正则表达式进行匹配
@@ -631,8 +631,8 @@ class Hulaquan(BasePlugin):
         seat = match.group(3).strip() if match.group(3) else None
         price = match.group(4).strip() if match.group(4) else None
         content = match.group(5).strip() if match.group(5) else None
-        user_id = match.group(6).strip() if match.group(6) else None
-        print(f"{msg.user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
+        user_id = match.group(6).strip() if match.group(6) else msg.user_id
+        print(f"{user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
         title = result[1]
@@ -643,7 +643,7 @@ class Hulaquan(BasePlugin):
             price=price,
             seat=seat,
             date=date,
-            user_id=msg.user_id if not user_id else user_id,
+            user_id=user_id,
             content=content,
             event_id=event_id,
         )
