@@ -39,7 +39,8 @@ HLQ_NEW_REPO_USAGE = """
 类型:
 日期:
 座位:
-价格:
+实付:
+票面价格：
 描述:
 -------
 例如：/新建repo
@@ -47,7 +48,8 @@ HLQ_NEW_REPO_USAGE = """
 类型:学生票
 日期:2025-06-11(可不填)
 座位:9-7
-价格:199
+实付:199
+票面价格：299
 描述:整体视野不错，在山顶，地板戏有遮挡(可不填)
 建议直接复制格式。"
 """
@@ -57,7 +59,8 @@ HLQ_NEW_REPO_INPUT_DICT = {
     "类型": {"name":"category", "mandatory":False},
     "日期": {"name":"date", "mandatory":False},
     "座位": {"name":"seat", "mandatory":True},
-    "价格": {"name":"price", "mandatory":True},
+    "实付": {"name":"price", "mandatory":True},
+    "票面价格":{"name":"payable", "mandatory":False},
     "描述": {"name":"content", "mandatory":False},
     "qq": {"name":"user_id", "mandatory":False},
     }
@@ -71,7 +74,8 @@ repoID:
 日期:
 类型:
 座位:
-价格:
+实付:
+票面价格：
 描述:
 -------
 例如：/修改repo
@@ -79,6 +83,7 @@ repoID:100001
 类型:早鸟票
 日期:
 座位:9-5
+票面价格：299
 描述:整体视野不错，在山顶，地板戏有遮挡
 -------
 留空或去掉该项表示不更改此项，
@@ -91,7 +96,8 @@ HLQ_MODIFY_REPO_INPUT_DICT = {
     "类型": {"name":"category", "mandatory":False},
     "日期": {"name":"date", "mandatory":False},
     "座位": {"name":"seat", "mandatory":False},
-    "价格": {"name":"price", "mandatory":False},
+    "实付": {"name":"price", "mandatory":False},
+    "票面价格":{"name":"payable", "mandatory":False},
     "描述": {"name":"content", "mandatory":False},
     }
 

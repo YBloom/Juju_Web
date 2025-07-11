@@ -42,7 +42,7 @@ class StatsDataManager(BaseDataManager):
         self.data[id_key] += 1
         return str(self.data[id_key])
     
-    def new_repo(self, title, date, price, seat, content, user_id, category, img=None, event_id=None):
+    def new_repo(self, title, date, price, seat, content, user_id, category, payable, img=None, event_id=None):
         #用户输入price，content，img，seat
         price = str(price)
         event_id = self.register_event(title, event_id)
@@ -57,6 +57,7 @@ class StatsDataManager(BaseDataManager):
                                                                 "img":img,
                                                                 "date":date,
                                                                 "category":category,
+                                                                "payable":payable,
                                                                 "create_time":now_time_str(),
                                                                 "event_title": title,
                                                                 "event_id": event_id,
@@ -79,24 +80,26 @@ class StatsDataManager(BaseDataManager):
         if event_id not in self.data[HLQ_TICKETS_REPO]:
             return {}
         events = self.data[HLQ_TICKETS_REPO][event_id]
-        if price is not None:
+        if price:
             return {k: v for k, v in events.items() if v["price"] == price}
         return events
     
-    def modify_repo(self, user_id, report_id, date=None, price=None, seat=None, content=None, category=None, isOP=False):
+    def modify_repo(self, user_id, report_id, date=None, price=None, seat=None, content=None, category=None, payable=None, isOP=False):
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 if user_id != event[report_id][USER_ID] and not isOP:
                     return False
-                if date is not None:
+                if date:
                     event[report_id]["date"] = date
-                if category is not None:
+                if category:
                     event[report_id]["category"] = category
-                if price is not None:
+                if price:
                     event[report_id]["price"] = price
-                if seat is not None:
+                if seat:
                     event[report_id]["seat"] = seat
-                if content is not None:
+                if payable:
+                    event[report_id]["payable"] = payable
+                if content:
                     event[report_id]["content"] = content
                 repo = event[report_id]
                 return self.generate_repo_report_messages([repo])
@@ -177,7 +180,7 @@ class StatsDataManager(BaseDataManager):
     
     def register_event(self, title, eid=None):
         title = extract_text_in_brackets(title)
-        if eid is not None and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
+        if eid and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if eid in self.data[HLQ_TICKETS_REPO]:
                 title = list(self.data[HLQ_TICKETS_REPO][eid].values())[0]['event_title']
             self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str()}  # 修正为调用函数

@@ -631,6 +631,7 @@ class Hulaquan(BasePlugin):
         price = match["price"]
         content = match["content"]
         category = match["category"]
+        payable = match["payable"]
         
         print(f"{user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
@@ -643,6 +644,7 @@ class Hulaquan(BasePlugin):
             price=price,
             seat=seat,
             date=date,
+            payable=payable,
             user_id=user_id,
             content=content,
             event_id=event_id,
@@ -718,7 +720,7 @@ class Hulaquan(BasePlugin):
         price = match["price"]
         content = match["content"]
         category = match["category"]
-        
+        payable = match["payable"]
         repos = self.stats_data_manager.modify_repo(
             msg.user_id,
             repoID, 
@@ -727,6 +729,7 @@ class Hulaquan(BasePlugin):
             price=price, 
             content=content, 
             category=category,
+            payable=payable,
             isOP=self.users_manager.is_op(msg.user_id)
         )
         if not repos:
