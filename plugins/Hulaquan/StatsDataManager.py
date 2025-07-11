@@ -145,6 +145,7 @@ class StatsDataManager(BaseDataManager):
         counts = sorted(cnt.items(), key=lambda x: x[1], reverse=True)
         for title, i in counts:
             messages.append(f"{title}   {i}") 
+        return messages
 
     def report_repo_error(self, report_id, report_user_id, error_reason=""):
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
