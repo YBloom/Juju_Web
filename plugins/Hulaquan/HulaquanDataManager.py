@@ -306,7 +306,7 @@ class HulaquanDataManager(BaseDataManager):
                 if add_message:
                     message.append("🟢补票场次：\n"+'\n'.join(add_message))
                 if return_message:
-                    message.append("🟢回流（？）场次：\n"+'\n'.join(return_message))
+                    message.append("🟢回流场次：\n"+'\n'.join(return_message))
             else:
                 continue
             messages.append((

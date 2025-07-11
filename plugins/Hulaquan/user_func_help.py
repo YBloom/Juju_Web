@@ -73,11 +73,12 @@ repoID:100001
 repoID必填，建议直接复制格式。"
 """
 
-HLQ_GET_REPO_NAME = "获取学生票座位repo"
-HLQ_GET_REPO_DESCRIPTION = "获取学生票座位repo"
+HLQ_GET_REPO_NAME = "查询学生票座位repo"
+HLQ_GET_REPO_DESCRIPTION = "查询学生票座位repo"
 HLQ_GET_REPO_USAGE = """/查询repo 剧名 价格
 例如/查询repo 连璧 199
 价格可不加
+或使用/查询repo -L 查询现存repo数量
 """
 
 HLQ_REPORT_ERROR_NAME = "报错学生票座位repo"

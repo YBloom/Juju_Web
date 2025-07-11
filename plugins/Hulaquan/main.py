@@ -637,13 +637,13 @@ class Hulaquan(BasePlugin):
         if not event_id:
             event_id = self.stats_data_manager.register_event(title) 
         report_id = self.stats_data_manager.new_repo(
-            event_id=event_id,
             title=title,
             price=price,
             seat=seat,
             date=date,
             user_id=msg.user_id,
             content=content,
+            event_id=event_id,
         )
         await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n感谢您的反馈！")
         
@@ -651,6 +651,9 @@ class Hulaquan(BasePlugin):
     async def on_hulaquan_get_repo(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
+            if "-l" in args["mode_args"]:
+                messages = self.stats_data_manager.get_repos_list()
+                await msg.reply_text("\n".join(messages))
             await msg.reply_text("请提供剧名，用法："+HLQ_GET_REPO_USAGE)
             return
         event_name = args["text_args"][0]

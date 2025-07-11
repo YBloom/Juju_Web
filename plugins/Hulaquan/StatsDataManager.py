@@ -41,9 +41,10 @@ class StatsDataManager(BaseDataManager):
         self.data[id_key] += 1
         return str(self.data[id_key])
     
-    def new_repo(self, event_id, title, date, price, seat, content, user_id, img=None):
+    def new_repo(self, title, date, price, seat, content, user_id, img=None, event_id=None):
         #用户输入price，content，img，seat
         price = str(price)
+        event_id = self.register_event(title, event_id)
         if event_id not in self.data[HLQ_TICKETS_REPO]:
             self.data[HLQ_TICKETS_REPO][event_id] = {}
         report_id = self.new_id(LATEST_REPO_ID)
@@ -132,6 +133,18 @@ class StatsDataManager(BaseDataManager):
         events = list(self.get_repos(event_id, price).values())
         messages = self.generate_repo_report_messages(events)
         return messages
+    
+    def get_repos_list(self):
+        messages = []
+        messages.append("剧名   repo数量")
+        cnt = {}
+        for eid in list(self.data[HLQ_TICKETS_REPO].keys()):
+            title = self.get_event_title(eid)
+            cnt.setdefault(title, 0)
+            cnt[title] += 1
+        counts = sorted(cnt.items(), key=lambda x: x[1], reverse=True)
+        for title, i in counts:
+            messages.append(f"{title}   {i}") 
 
     def report_repo_error(self, report_id, report_user_id, error_reason=""):
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
@@ -157,19 +170,34 @@ class StatsDataManager(BaseDataManager):
             self.del_repo(event_id, report_id)
         return times
     
-    def register_event(self, title):
+    def register_event(self, title, eid=None):
         title = extract_text_in_brackets(title) or title
-        if eid := self.get_event_id(title):
+        if eid is not None and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
+            title = self.data[HLQ_TICKETS_REPO][eid].values()[0]['title']
+            self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
             return eid
-        event_id = self.new_id(LATEST_EVENT_ID)
-        self.data[EVENT_ID_TO_EVENT_TITLE][event_id] = {'title':title, 'create_time':now_time_str()}
-        return event_id
+        else:
+            if eid := self.get_event_id(title):
+                return eid
+            event_id = self.new_id(LATEST_EVENT_ID)
+            self.data[EVENT_ID_TO_EVENT_TITLE][event_id] = {'title':title, 'create_time':now_time_str()}
+            return event_id
     
     def get_event_id(self, title):
         for eid, event in self.data[EVENT_ID_TO_EVENT_TITLE].items():
             if event['title'] == title or title in event['title']:
                 return eid
         return 0
+    
+    def get_event_title(self, eid):
+        if eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
+            if len(self.data[HLQ_TICKETS_REPO][eid]) <= 0:
+                return False
+            title = self.data[HLQ_TICKETS_REPO][eid].values()[0]['title']
+            self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
+            return title
+        return self.data[EVENT_ID_TO_EVENT_TITLE][eid]['title']
+
     
     def del_event(self, event_id):
         if event_id in self.data[EVENT_ID_TO_EVENT_TITLE]:
