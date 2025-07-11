@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 
 class BaseDataManager:
     def __init__(self, file_path):
@@ -36,6 +37,7 @@ class BaseDataManager:
             else:
                 open(self.file_path, "w", encoding="utf-8").write(json.dumps({}))
         except Exception as e:
+            traceback.print_exc()
             raise RuntimeError(self.__class__.__name__, f"加载持久化数据时出错: {e.title()} - {e}")
         
     def load(self):
@@ -54,6 +56,7 @@ class BaseDataManager:
                 json.dump(self.data, f, ensure_ascii=False, indent=4)
                 return {"success":True, "updating":False}
         except Exception as e:
+            traceback.print_exc()
             raise RuntimeError(f"保存持久化数据时出错: {e}")
         
     def _check_data(self):
