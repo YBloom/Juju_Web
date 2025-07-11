@@ -371,6 +371,9 @@ class Hulaquan(BasePlugin):
             is_updated = result["is_updated"]
             messages = result["messages"]
             new_pending = result["new_pending"]
+            if len(messages) >= 10:
+                log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
+                log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
             if not is_updated:
                 log.info("呼啦圈数据刷新成功：无更新数据")
             else:
