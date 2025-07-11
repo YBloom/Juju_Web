@@ -542,6 +542,7 @@ class Hulaquan(BasePlugin):
                 await asyncio.sleep(0.5)
             self.saoju_data_manager.save()
             self.hlq_data_manager.save()
+            self.stats_data_manager.save()
             log.info("🟡呼啦圈数据保存成功")
             if msg:
                 await msg.reply_text("保存成功")
