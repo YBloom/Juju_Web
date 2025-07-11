@@ -176,14 +176,14 @@ class StatsDataManager(BaseDataManager):
         title = extract_text_in_brackets(title)
         if eid is not None and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if eid in self.data[HLQ_TICKETS_REPO]:
-                title = self.data[HLQ_TICKETS_REPO][eid].values()[0]['title']
-            self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
+                title = list(self.data[HLQ_TICKETS_REPO][eid].values())[0]['event_title']
+            self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str()}  # 修正为调用函数
             return eid
         else:
             if eid := self.get_event_id(title):
                 return eid
             event_id = self.new_id(LATEST_EVENT_ID)
-            self.data[EVENT_ID_TO_EVENT_TITLE][event_id] = {'title':title, 'create_time':now_time_str()}
+            self.data[EVENT_ID_TO_EVENT_TITLE][event_id] = {'title':title, 'create_time':now_time_str()}  # 修正为调用函数
             return event_id
     
     def get_event_id(self, title):
@@ -199,7 +199,7 @@ class StatsDataManager(BaseDataManager):
             title = extract_text_in_brackets(list(self.data[HLQ_TICKETS_REPO][eid].values())[0]["event_title"])
             for report_id in list(self.data[HLQ_TICKETS_REPO][eid].keys()):
                 self.data[HLQ_TICKETS_REPO][eid][report_id]["event_title"] = title
-            self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str}
+            self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str()}  # 修正为调用函数
             return title
         return self.data[EVENT_ID_TO_EVENT_TITLE][eid]['title']
 
