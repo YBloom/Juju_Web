@@ -203,7 +203,7 @@ class StatsDataManager(BaseDataManager):
         return self.data[EVENT_ID_TO_EVENT_TITLE][eid]['title']
 
     def check_events_to_title_dict(self):
-        for eid in list(self.data[HLQ_TICKETS_REPO][eid].keys()):
+        for eid in list(self.data[HLQ_TICKETS_REPO].keys()):
             self.get_event_title(eid)
     
     def del_event(self, event_id):

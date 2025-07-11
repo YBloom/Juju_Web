@@ -38,7 +38,7 @@ class BaseDataManager:
                 open(self.file_path, "w", encoding="utf-8").write(json.dumps({}))
         except Exception as e:
             traceback.print_exc()
-            raise RuntimeError(self.__class__.__name__, f"加载持久化数据时出错: {e.title()} - {e}")
+            raise RuntimeError(self.__class__.__name__, f"加载持久化数据时出错: {e}")
         
     def load(self):
         with open(self.file_path, "r", encoding="utf-8") as f:
