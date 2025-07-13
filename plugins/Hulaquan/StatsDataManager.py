@@ -175,7 +175,8 @@ class StatsDataManager(BaseDataManager):
         cnt = {}
         for eid in list(self.data[HLQ_TICKETS_REPO].keys()):
             title = self.get_event_title(eid)
-            cnt.setdefault(title, 0)
+            if title not in cnt:
+                cnt[title] = 0
             cnt[title] += 1
         counts = sorted(cnt.items(), key=lambda x: x[1], reverse=True)
         for title, i in counts:
