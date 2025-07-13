@@ -175,11 +175,12 @@ class StatsDataManager(BaseDataManager):
     def get_repos_list(self):
         
         def get_max_length(lst):
-            max_length = ""
+            max_width = 0
             for i in lst:
-                if len(i)>len(max_length):
-                    max_length = i
-            return get_display_width(i)
+                width = get_display_width(i)
+                if width > max_width:
+                    max_width = width
+            return max_width
         
         messages = []
         title_list = self.data[HLQ_TICKETS_REPO].keys()
