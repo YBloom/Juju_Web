@@ -183,13 +183,18 @@ class StatsDataManager(BaseDataManager):
             return max_width
         
         messages = []
-        title_list = self.data[HLQ_TICKETS_REPO].keys()
+        title_list = []
+        eid_list = list(self.data[HLQ_TICKETS_REPO].keys())
+        for eid in eid_list:
+            title = self.get_event_title(eid)
+            title_list.append(title)
         title_width = get_max_length(title_list)
         count_width = 4
         messages.append(f"{ljust_for_chinese('剧名', title_width)}{'repo数量'.ljust(count_width)}")
         cnt = {}
-        for eid in list(self.data[HLQ_TICKETS_REPO].keys()):
-            title = self.get_event_title(eid)
+        for i in range(len(eid_list)):
+            eid = eid_list[i]
+            title = title_list[i]
             cnt[title] = len(self.data[HLQ_TICKETS_REPO][eid])
         counts = sorted(cnt.items(), key=lambda x: x[1], reverse=True)
         for title, i in counts:
