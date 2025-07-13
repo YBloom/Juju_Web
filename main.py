@@ -25,29 +25,6 @@ async def on_group_message(msg: GroupMessage):
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):
     _log.info(msg)
-    key, args = parse_args_of_messages(msg)
-    if key:
-        if any(word in key for word in HELLOWORDS):
-            for m in hello_message():
-                await bot.api.post_private_msg(msg.user_id, text=m)
-    else:
-        pass
-    
-        
-@bot.request_event()
-async def handle_request(self, msg):
-    comment = msg.comment
-    if msg.request_type == "friend": 
-        if "剧剧" in comment:
-            self.users_manager.add_user(msg.user_id)
-            await msg.reply(True, comment="加好友请求已通过")
-            """for m in hello_message():
-                await bot.api.post_private_msg(msg.user_id, text=m)"""
-        else:
-            await msg.reply(False, comment="加好友请求被拒绝")
-    else:
-        self.groups_manager.add_group(msg.group_id)
-        await msg.reply(True, comment="加群请求已通过")
 
 def hello_message():
     msg = []
