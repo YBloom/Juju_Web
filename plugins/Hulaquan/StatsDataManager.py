@@ -48,6 +48,7 @@ class StatsDataManager(BaseDataManager):
     def new_repo(self, title, date, price, seat, content, user_id, category, payable, img=None, event_id=None):
         #用户输入price，content，img，seat
         price = str(price)
+        user_id = str(user_id)
         event_id = self.register_event(title, event_id)
         if event_id not in self.data[HLQ_TICKETS_REPO]:
             self.data[HLQ_TICKETS_REPO][event_id] = {}
@@ -110,6 +111,7 @@ class StatsDataManager(BaseDataManager):
         return events
     
     def modify_repo(self, user_id, report_id, date=None, price=None, seat=None, content=None, category=None, payable=None, isOP=False):
+        user_id = str(user_id)
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 if user_id != event[report_id][USER_ID] and not isOP:
@@ -119,11 +121,11 @@ class StatsDataManager(BaseDataManager):
                 if category:
                     event[report_id]["category"] = category
                 if price:
-                    event[report_id]["price"] = price
+                    event[report_id]["price"] = str(price)
                 if seat:
                     event[report_id]["seat"] = seat
                 if payable:
-                    event[report_id]["payable"] = payable
+                    event[report_id]["payable"] = str(payable)
                 if content:
                     event[report_id]["content"] = content
                 repo = event[report_id]
@@ -131,7 +133,8 @@ class StatsDataManager(BaseDataManager):
                 return self.generate_repo_report_messages([repo])
         return False
     
-    def get_users_repo(self, user_id, is_other=False):
+    def get_users_repo(self, user_id: str, is_other=False):
+        user_id = str(user_id)
         repos = []
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             for report_id, report in event.items():
@@ -180,7 +183,7 @@ class StatsDataManager(BaseDataManager):
         
         messages = []
         title_list = self.data[HLQ_TICKETS_REPO].keys()
-        title_width = get_display_width(title_list)
+        title_width = get_max_length(title_list)
         count_width = 4
         messages.append(f"{'剧名'.ljust(title_width)}{'repo数量'.ljust(count_width)}")
         cnt = {}
@@ -192,7 +195,8 @@ class StatsDataManager(BaseDataManager):
             messages.append(f"{title.ljust(title_width)}{str(i).ljust(count_width)}")
         return messages
 
-    def report_repo_error(self, report_id, report_user_id, error_reason=""):
+    def report_repo_error(self, report_id, report_user_id: str, error_reason=""):
+        report_user_id = str(report_user_id)
         for eid, event in self.data[HLQ_TICKETS_REPO].items():
             if report_id in event:
                 event_id = eid
