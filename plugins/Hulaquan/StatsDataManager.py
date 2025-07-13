@@ -148,8 +148,8 @@ class StatsDataManager(BaseDataManager):
         for event in events:
             content = event["content"]
             price = event["price"]
-            payable = event['payable']
-            category = event['category']
+            payable = event.get('payable', "")
+            category =  event.get('category', "学生票")
             seat = event["seat"]
             date = event["date"]
             title = event["event_title"]
