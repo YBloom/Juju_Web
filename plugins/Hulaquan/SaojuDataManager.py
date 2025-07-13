@@ -149,8 +149,12 @@ class SaojuDataManager(BaseDataManager):
             
     async def get_artist_events_data(self, cast_name):
         updated = False
-        if 'artists_map' not in self.data or cast_name not in self.data['artists_map']:
-            self.data['artists_map'] = self.fetch_saoju_artist_list()
+        try:
+            if 'artists_map' not in self.data or cast_name not in self.data['artists_map']:
+                self.data['artists_map'] = await self.fetch_saoju_artist_list()
+                updated = True
+        except:
+            self.data['artists_map'] = await self.fetch_saoju_artist_list()
             updated = True
         if updated and cast_name not in self.data['artists_map']:
             return False
