@@ -522,7 +522,7 @@ class Hulaquan(BasePlugin):
         if not args["text_args"]:
             await msg.reply_text("【缺少参数】以下是/同场演员 的用法"+HLQ_QUERY_CO_CASTS_USAGE)
             return
-        casts = args["text_args"].split(" ")
+        casts = args["text_args"]
         show_others = "-o" in args["mode_args"]
         messages = self.saoju_data_manager.match_co_casts(casts, show_others=show_others)
         await msg.reply("\n".join(messages))
