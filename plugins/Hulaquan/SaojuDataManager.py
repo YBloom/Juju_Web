@@ -1,4 +1,9 @@
-import aiohttp, asyncio
+if __name__ == '__main__':
+    import os
+    os.chdir("f:/MusicalBot/")
+    import sys
+    sys.path.append("f:/MusicalBot")
+import aiohttp, asyncio, json
 import pandas as pd
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
@@ -172,7 +177,7 @@ class SaojuDataManager(BaseDataManager):
         result = []
         for event in events:
             others = event['others'].split(" ")
-            if _co_casts in others:
+            if all(cast in others for cast in _co_casts):
                 if show_others:
                     event['others'] = "\n同场其他演员：" + " ".join([item for item in others if item not in _co_casts])
                 else:
@@ -186,7 +191,7 @@ class SaojuDataManager(BaseDataManager):
         
     
     async def fetch_saoju_artist_list(self):
-        data = await fetch_page_async("http://y.saoju.net/yyj/api/artist/")
+        data = json.loads(await fetch_page_async("http://y.saoju.net/yyj/api/artist/"))
         name_to_pk = {item["fields"]["name"]: item["pk"] for item in data}
         return name_to_pk
 
@@ -202,7 +207,7 @@ class SaojuDataManager(BaseDataManager):
             if len(cols) < 5:
                 continue  # 如果列数不对，跳过这一行
             
-            date = cols[0].text.strip()
+            date = re.sub(r'\s+', ' ', cols[0].text.strip().replace("\n", ""))
             title = cols[1].find('a').text.strip() if cols[1].find('a') else cols[1].text.strip()
             role = cols[2].text.strip()
             others = " ".join([a.text.strip() for a in cols[3].find_all('a')])
@@ -295,4 +300,14 @@ def match_artists_on_schedule(
     print("演员: {}".format(", ".join(artists)))
     print("所有演员都空闲的指定时间段日期：")
     print(df)
-    
+
+if __name__ == "__main__":
+    import asyncio
+    async def test_match_co_casts():
+        manager = SaojuDataManager()
+        # 示例演员列表，替换为实际存在的演员名
+        co_casts = ["丁辰西", "陈玉婷"]
+        messages = await manager.match_co_casts(co_casts, show_others=True)
+        for msg in messages:
+            print(msg)
+    asyncio.run(test_match_co_casts())
