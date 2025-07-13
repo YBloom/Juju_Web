@@ -41,8 +41,8 @@ async def handle_request(self, msg):
         if "剧剧" in comment:
             self.users_manager.add_user(msg.user_id)
             await msg.reply(True, comment="加好友请求已通过")
-            for m in hello_message():
-                await bot.api.post_private_msg(msg.user_id, text=m)
+            """for m in hello_message():
+                await bot.api.post_private_msg(msg.user_id, text=m)"""
         else:
             await msg.reply(False, comment="加好友请求被拒绝")
     else:

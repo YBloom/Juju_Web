@@ -395,7 +395,11 @@ class Hulaquan(BasePlugin):
             mode = user.get("attention_to_hulaquan")
             if (manual and user_id not in user_lists):
                 continue
-            if manual or mode=="2" or (mode=="1" and is_updated):
+            if (not mode):
+                continue
+            if manual or is_updated:
+                if mode == "2":
+                    self.users_manager.switch_attention_to_hulaquan(user_id, 1)
                 for m in messages:
                     message = f"呼啦圈上新提醒：\n{m}"
                     await self.api.post_private_msg(user_id, message)
@@ -450,10 +454,10 @@ class Hulaquan(BasePlugin):
         user_id = msg.user_id
         group_id = None
         mode = msg.raw_message.split(" ")
-        if (not len(mode)<2) and (mode[1] in ["0", "1", "2"]):
+        if (not len(mode)<2) and (mode[1] in ["0", "1"]):
             pass
         else:
-            return await msg.reply("请输入存在的模式\n用法：/上新 模式编号\n2：关注呼啦圈检测的推送（定时检测一次并通知）\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格")
+            return await msg.reply("请输入存在的模式\n用法：/上新 模式编号\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格")
         mode = mode[1]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
@@ -464,7 +468,7 @@ class Hulaquan(BasePlugin):
         else:
             self.users_manager.switch_attention_to_hulaquan(user_id, mode)
         if mode == "2":
-            await msg.reply("已关注呼啦圈上新检测的全部推送！")
+            await msg.reply("此功能已删除！目前只有模式0和1！")
         elif mode == "1":
             await msg.reply("已关注呼啦圈的上新推送（仅上新时推送）")
         elif mode == "0":

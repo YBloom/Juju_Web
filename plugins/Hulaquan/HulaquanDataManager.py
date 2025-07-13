@@ -160,7 +160,7 @@ class HulaquanDataManager(BaseDataManager):
                     ticket_list = json_data["ticket_details"]
                     for i in range(len(ticket_list)):
                         ticket_list[i] = {key: ticket_list[i].get(key, None) for key in keys_to_extract}
-                        if ticket_list[i]["total_ticket"] is None and ticket_list[i]["left_ticket_count"] is None:
+                        if ticket_list[i]["total_ticket"] is None or not ticket_list[i]['start_time']:
                             del ticket_list[i]
                     if data_dict is None:
                         self.data["events"][event_id]["ticket_details"] = ticket_list
@@ -381,7 +381,8 @@ class HulaquanDataManager(BaseDataManager):
             new_id = new_item['id']
             new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']     
-            
+            if not new_item['title'] and not new_total_ticket:
+                continue
             if new_id not in old_data_dict:
                 # 如果 new_data 中存在新的 id，则标记为 "new"
                 new_item['update_status'] = 'new'
@@ -411,6 +412,8 @@ class HulaquanDataManager(BaseDataManager):
     async def get_ticket_cast_and_city_async(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
         event_id = ticket['event_id']
+        if not ticket['start_time']:
+            return []
         has_no_city = ('city' not in ticket)
         has_no_cast = (eid not in self.data['ticket_id_to_casts'] or (self.data['ticket_id_to_casts'][eid]['cast'] == [])) 
         if has_no_city or has_no_cast:
