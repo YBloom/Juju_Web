@@ -160,6 +160,7 @@ class AdminPlugin(BasePlugin):
     @bot.private_event()
     async def on_private_message(self, msg: PrivateMessage):
         self.users_manager.add_user(msg.user_id)
+        self.users_manager.add_chats_count(msg.user_id)
             
     @bot.request_event()
     async def handle_request(self, msg):
