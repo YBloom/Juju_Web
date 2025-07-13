@@ -43,6 +43,8 @@ class UsersManager:
         }
         
     def add_chats_count(self, user_id):
+        if not isinstance(user_id, str):
+            user_id = str(user_id)
         if "chats_count" not in self.data['users'][user_id]:
             self.data["users"][user_id]["chats_count"] = 0
         self.data["users"][user_id]["chats_count"] += 1
