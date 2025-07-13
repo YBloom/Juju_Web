@@ -524,7 +524,7 @@ class Hulaquan(BasePlugin):
             return
         casts = args["text_args"]
         show_others = "-o" in args["mode_args"]
-        messages = self.saoju_data_manager.match_co_casts(casts, show_others=show_others)
+        messages = await self.saoju_data_manager.match_co_casts(casts, show_others=show_others)
         await msg.reply("\n".join(messages))
     
        
