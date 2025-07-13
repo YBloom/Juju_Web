@@ -664,7 +664,7 @@ class Hulaquan(BasePlugin):
         category = match["category"]
         payable = match["payable"]
         
-        print(f"{user_id}上传了一份repo：剧名: {title}\n时间: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
+        print(f"{user_id}上传了一份repo：剧名: {title}\n日期: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
         result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
         title = result[1]
@@ -681,7 +681,7 @@ class Hulaquan(BasePlugin):
             event_id=event_id,
             category=category,
         )
-        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n类型: {category}\n时间: {date}\n座位: {seat}\n实付: {price}\n原价：{payable}\n描述: {content}\n感谢您的反馈！")
+        await msg.reply_text(f"学生票座位记录已创建成功！\nrepoID：{report_id}\n剧名: {title}\n类型: {category}\n日期: {date}\n座位: {seat}\n实付: {price}\n原价：{payable}\n描述: {content}\n感谢您的反馈！")
         
     @user_command_wrapper("get_repo")
     async def on_hulaquan_get_repo(self, msg: BaseMessage):
