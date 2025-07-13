@@ -1,8 +1,10 @@
-import aiohttp
+import aiohttp, asyncio
 import pandas as pd
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 from plugins.Hulaquan.utils import *
+import requests
+from bs4 import BeautifulSoup
 
 class SaojuDataManager(BaseDataManager):
     """
@@ -143,6 +145,86 @@ class SaojuDataManager(BaseDataManager):
         + df.to_string(index=False, justify='left')
         return s
     
+    
+            
+    async def get_artist_events_data(self, cast_name):
+        updated = False
+        if 'artists_map' not in self.data or cast_name not in self.data['artists_map']:
+            self.data['artists_map'] = self.fetch_saoju_artist_list()
+            updated = True
+        if updated and cast_name not in self.data['artists_map']:
+            return False
+        else:
+            pk = self.data['artists_map'][cast_name]
+        html_data = await fetch_page_async(f"http://y.saoju.net/yyj/artist/{pk}/?other=1&musical=")
+        events = self.parse_artist_html(html_data)
+        return events
+    
+    async def match_co_casts(self, co_casts: list, show_others=True):
+        messages = []
+        search_name = co_casts[0]
+        _co_casts = co_casts[1:]
+        events = await self.get_artist_events_data(search_name)
+        result = []
+        for event in events:
+            others = event['others'].split(" ")
+            if _co_casts in others:
+                if show_others:
+                    event['others'] = "\n同场其他演员：" + " ".join([item for item in others if item not in _co_casts])
+                else:
+                    event['others'] = ""
+                result.append(event)
+        messages.append(" ".join(co_casts)+f"同场的音乐剧演出，目前有{len(result)}场。")
+        for event in result:
+            messages.append(f"{event['date']} {event['city']} {event['title']}{event['others']}")
+        return messages
+
+        
+    
+    async def fetch_saoju_artist_list(self):
+        data = await fetch_page_async("http://y.saoju.net/yyj/api/artist/")
+        name_to_pk = {item["fields"]["name"]: item["pk"] for item in data}
+        return name_to_pk
+
+    # 解析网页内容
+    def parse_artist_html(self, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        table = soup.find('table', class_='ui striped celled pink unstackable compact table')
+        
+        musicals = []
+        for row in table.find_all('tr')[1:]:  # 跳过表头
+            cols = row.find_all('td')
+            
+            if len(cols) < 5:
+                continue  # 如果列数不对，跳过这一行
+            
+            date = cols[0].text.strip()
+            title = cols[1].find('a').text.strip() if cols[1].find('a') else cols[1].text.strip()
+            role = cols[2].text.strip()
+            others = " ".join([a.text.strip() for a in cols[3].find_all('a')])
+            city = cols[4].find_all('a')[0].text.strip() if cols[4].find_all('a') else ''
+            location = cols[4].find_all('a')[1].text.strip() if len(cols[4].find_all('a')) > 1 else ''
+            
+            musical_data = {
+                'date': date,
+                'title': title,
+                'role': role,
+                'others': others,
+                'city': city,
+                'location': location
+            }
+            
+            musicals.append(musical_data)
+
+        return musicals
+
+    
+    
+async def fetch_page_async(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()    
+    
 def match_artists_on_schedule(
     artists, 
     start_time, 
@@ -210,17 +292,3 @@ def match_artists_on_schedule(
     print("所有演员都空闲的指定时间段日期：")
     print(df)
     
-if __name__ == '__main__':
-    #check_artist_schedule("2025-05-19", "2025-08-30", "丁辰西")
-    #match_artists_on_schedule(["丁辰西", "陈玉婷", "郑涵一"], "2025-05-19", "2025-06-10")
-    week_time_slots = [
-        ["20:00"], ["20:00"], ["20:00"], ["20:00"], ["20:00"],  # 周一到周五
-        ["14:00", "17:00", "20:00"], ["14:00", "17:00", "20:00"]  # 周六周日
-    ]
-    match_artists_on_schedule(
-        ["丁辰西", "党韫葳", "邓贤凌"], 
-        "2025-05-19", 
-        "2025-06-10", 
-        week_time_slots, 
-        target_city="上海", 
-    )

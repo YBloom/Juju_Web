@@ -63,7 +63,10 @@ def user_command_wrapper(command_name):
             @functools.wraps(func)
             async def wrapper(this, *args, **kwargs):
                 this.stats_data_manager.on_command(command_name)
-                return await func(this, *args, **kwargs)
+                try:
+                    return await func(this, *args, **kwargs)
+                except Exception as e:
+                    await this.on_traceback_message(f"{command_name} 命令异常: {e}")
             return wrapper
         return decorator
 
@@ -337,6 +340,17 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
+        self.register_user_func(
+            name=HLQ_QUERY_CO_CASTS_NAME,
+            handler=self.on_get_co_casts,
+            prefix="/同场演员",
+            description=HLQ_QUERY_CO_CASTS_DESCRIPTION,
+            usage=HLQ_QUERY_CO_CASTS_USAGE,
+            examples=[""],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        
         self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}
@@ -366,45 +380,37 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
-        try:
-            result = await self.hlq_data_manager.message_update_data_async()
-            is_updated = result["is_updated"]
-            messages = result["messages"]
-            new_pending = result["new_pending"]
-            if len(messages) >= 10:
-                log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
-                log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
-            if not is_updated:
-                log.info("呼啦圈数据刷新成功：无更新数据")
-            else:
-                log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
-        except Exception as e:
-            await self.on_traceback_message(f"呼啦圈数据更新失败")
-            return False
-        try:
-            for user_id, user in self.users_manager.users().items():
-                mode = user.get("attention_to_hulaquan")
-                if (manual and user_id not in user_lists):
-                    continue
-                if manual or mode=="2" or (mode=="1" and is_updated):
-                    for m in messages:
-                        message = f"呼啦圈上新提醒：\n{m}"
-                        await self.api.post_private_msg(user_id, message)
-            for group_id, group in self.groups_manager.groups().items():
-                mode = group.get("attention_to_hulaquan")
-                if (manual and group_id not in group_lists):
-                    continue
-                if manual or mode=="2" or (mode=="1" and is_updated):
-                    if messages:
-                        messages[0] = f"@所有人：{messages[0]}"  # 确保第一条消息是标题
-                    for m in messages:
-                        message = f"呼啦圈上新提醒：\n{m}"
-                        await self.api.post_group_msg(group_id, message)
-            if new_pending:
-                self.register_pending_tickets_announcer()
-        except Exception as e:
-            await self.on_traceback_message(f"呼啦圈上新提醒在提醒过程中失败")
-            return False
+        result = await self.hlq_data_manager.message_update_data_async()
+        is_updated = result["is_updated"]
+        messages = result["messages"]
+        new_pending = result["new_pending"]
+        if len(messages) >= 10:
+            log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
+            log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
+        if not is_updated:
+            log.info("呼啦圈数据刷新成功：无更新数据")
+        else:
+            log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
+        for user_id, user in self.users_manager.users().items():
+            mode = user.get("attention_to_hulaquan")
+            if (manual and user_id not in user_lists):
+                continue
+            if manual or mode=="2" or (mode=="1" and is_updated):
+                for m in messages:
+                    message = f"呼啦圈上新提醒：\n{m}"
+                    await self.api.post_private_msg(user_id, message)
+        for group_id, group in self.groups_manager.groups().items():
+            mode = group.get("attention_to_hulaquan")
+            if (manual and group_id not in group_lists):
+                continue
+            if manual or mode=="2" or (mode=="1" and is_updated):
+                if messages:
+                    messages[0] = f"@所有人：{messages[0]}"  # 确保第一条消息是标题
+                for m in messages:
+                    message = f"呼啦圈上新提醒：\n{m}"
+                    await self.api.post_group_msg(group_id, message)
+        if new_pending:
+            self.register_pending_tickets_announcer()
         elapsed_time = time.time() - start_time
         print(f"任务执行时间: {elapsed_time}秒")
         return True
@@ -428,21 +434,18 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str):
-        try:
-            for user_id, user in self.users_manager.users().items():
-                mode = user.get("attention_to_hulaquan")
-                if mode == "1" or mode == "2":
-                    message = f"【即将开票】呼啦圈开票提醒：\n{message}"
-                    await self.api.post_private_msg(user_id, message)
-            for group_id, group in self.groups_manager.groups().items():
-                mode = group.get("attention_to_hulaquan")
-                if mode == "1" or mode == "2":
-                    message = f"【即将开票】呼啦圈开票提醒：\n{message}"
-                    await self.api.post_group_msg(group_id, message)
-        except Exception as e:
-            await self.on_traceback_message(f"呼啦圈开票提醒失败")
+        for user_id, user in self.users_manager.users().items():
+            mode = user.get("attention_to_hulaquan")
+            if mode == "1" or mode == "2":
+                message = f"【即将开票】呼啦圈开票提醒：\n{message}"
+                await self.api.post_private_msg(user_id, message)
+        for group_id, group in self.groups_manager.groups().items():
+            mode = group.get("attention_to_hulaquan")
+            if mode == "1" or mode == "2":
+                message = f"【即将开票】呼啦圈开票提醒：\n{message}"
+                await self.api.post_group_msg(group_id, message)
         del self.hlq_data_manager.data["pending_events_dict"][eid]
-        
+    
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id
         group_id = None
@@ -472,13 +475,15 @@ class Hulaquan(BasePlugin):
         # 呼啦圈查询处理函数
         all_args = self.extract_args(msg)
         if not all_args["text_args"]:
-            await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C -R")
+            await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C")
             return
         event_name = all_args["text_args"][0]
         args = all_args["mode_args"]
+        if "-r" in args:
+            await msg.reply_text("【因数据自动刷新间隔较短，目前已不支持-R参数】")
         if isinstance(msg, PrivateMessage):
             await msg.reply_text("查询中，请稍后…")
-        result = await self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=("-r" in args))
+        result = await self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=False)
         await msg.reply_text(result if result else "未找到相关信息，请尝试更换搜索名")
         
 
@@ -510,23 +515,30 @@ class Hulaquan(BasePlugin):
         #for conf in self._configs:
         #    text += f"{conf.key}--{conf.description}: 类型 {conf.value_type}, 默认值 {conf.default}\n"
         return text
+    
+    @user_command_wrapper("query_co_casts")
+    async def on_get_co_casts(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        if not args["text_args"]:
+            await msg.reply_text("【缺少参数】以下是/同场演员 的用法"+HLQ_QUERY_CO_CASTS_USAGE)
+            return
+        casts = args["text_args"].split(" ")
+        show_others = "-o" in args["mode_args"]
+        messages = self.saoju_data_manager.match_co_casts(casts, show_others=show_others)
+        await msg.reply("\n".join(messages))
+    
        
     @user_command_wrapper("search_by_date") 
     async def on_list_hulaquan_events_by_date(self, msg: BaseMessage):
         # 最多有12小时数据延迟
         args = self.extract_args(msg)
         if not args["text_args"]:
-            await msg.reply_text("【缺少日期】\n/date 日期 城市)>\n日期格式为年-月-日\n如/date 2025-06-01\n城市可以不写")
+            await msg.reply_text("【缺少日期】以下是/date的用法\n"+HLQ_DATE_USAGE)
             return
-        try:
-            date = args["text_args"][0]
-            city = args["text_args"][1] if len(args["text_args"])>1 else None
-            mode_args = args["mode_args"]
-            await msg.reply_text("查询中，请稍后…")
-            result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city, ignore_sold_out=("-i" in mode_args))
-        except Exception:
-            await self.on_traceback_message("/date查询过程中失败")
-            return
+        date = args["text_args"][0]
+        city = args["text_args"][1] if len(args["text_args"])>1 else None
+        mode_args = args["mode_args"]
+        result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city, ignore_sold_out=("-i" in mode_args))
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
@@ -550,22 +562,20 @@ class Hulaquan(BasePlugin):
             send = "以下是用户功能：\n" + send
         await msg.reply(send)
 
+    @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None):
-        try:
-            while getattr(self.hlq_data_manager, "updating", False):
-                await asyncio.sleep(0.5)
-            self.saoju_data_manager.save()
-            self.hlq_data_manager.save()
-            self.stats_data_manager.save()
-            log.info("🟡呼啦圈数据保存成功")
-            if msg:
-                await msg.reply_text("保存成功")
-            else:
-                pass
-                #for user_id in self.users_manager.ops_list():
-                    #await self.api.post_private_msg(user_id, "自动保存成功")
-        except Exception as e:
-            await self.on_traceback_message(f"呼啦圈自动保存失败")
+        while getattr(self.hlq_data_manager, "updating", False):
+            await asyncio.sleep(0.5)
+        self.saoju_data_manager.save()
+        self.hlq_data_manager.save()
+        self.stats_data_manager.save()
+        log.info("🟡呼啦圈数据保存成功")
+        if msg:
+            await msg.reply_text("保存成功")
+        else:
+            pass
+            #for user_id in self.users_manager.ops_list():
+                #await self.api.post_private_msg(user_id, "自动保存成功")
     
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
@@ -611,6 +621,7 @@ class Hulaquan(BasePlugin):
             return False
         return result[0]
 
+    @user_command_wrapper("on_list_aliases")    
     async def on_list_aliases(self, msg: BaseMessage):
         alias_dict = self.hlq_data_manager.alias_dict
         events = self.hlq_data_manager.data.get("events", {})

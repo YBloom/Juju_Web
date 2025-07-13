@@ -1,5 +1,13 @@
 
 
+HLQ_QUERY_CO_CASTS_NAME = "查询n位演员的同场排期"
+HLQ_QUERY_CO_CASTS_DESCRIPTION = "查询n位演员的同场排期"
+HLQ_QUERY_CO_CASTS_USAGE = """/同场演员 A B C -o
+支持多名演员，用空格隔开
+-o表示显示同场其他演员
+"""
+
+
 
 HLQ_SWITCH_ANNOUNCER_MODE_NAME = "切换呼啦圈上新推送模式"
 HLQ_SWITCH_ANNOUNCER_MODE_DESCRIPTION = "切换呼啦圈上新推送模式"
