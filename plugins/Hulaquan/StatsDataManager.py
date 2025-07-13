@@ -170,17 +170,26 @@ class StatsDataManager(BaseDataManager):
         return messages
     
     def get_repos_list(self):
+        
+        def get_max_length(lst):
+            max_length = ""
+            for i in lst:
+                if len(i)>len(max_length):
+                    max_length = i
+            return get_display_width(i)
+        
         messages = []
-        messages.append("剧名   repo数量")
+        title_list = self.data[HLQ_TICKETS_REPO].keys()
+        title_width = get_display_width(title_list)
+        count_width = 4
+        messages.append(f"{'剧名'.ljust(title_width)}{'repo数量'.ljust(count_width)}")
         cnt = {}
         for eid in list(self.data[HLQ_TICKETS_REPO].keys()):
             title = self.get_event_title(eid)
-            if title not in cnt:
-                cnt[title] = 0
-            cnt[title] += 1
+            cnt[title] = len(self.data[HLQ_TICKETS_REPO][eid])
         counts = sorted(cnt.items(), key=lambda x: x[1], reverse=True)
         for title, i in counts:
-            messages.append(f"{title}   {i}") 
+            messages.append(f"{title.ljust(title_width)}{str(i).ljust(count_width)}")
         return messages
 
     def report_repo_error(self, report_id, report_user_id, error_reason=""):
@@ -249,4 +258,4 @@ class StatsDataManager(BaseDataManager):
                 del self.data[HLQ_TICKETS_REPO][event_id]
             return True
         return False
-    
+
