@@ -39,7 +39,7 @@ def get_display_width(s):
     width = 0
     for char in s:
         # 判断字符是否是全宽字符（通常是中文等）
-        if unicodedata.east_asian_width(char) in ['F', 'W']:  # 'F' = Fullwidth, 'W' = Wide
+        if unicodedata.east_asian_width(char) in ['F', 'W'] or char in ["《", "》"]:  # 'F' = Fullwidth, 'W' = Wide
             width += 3  # 全宽字符占用2个位置
         else:
             width += 1  # 半宽字符占用1个位置
