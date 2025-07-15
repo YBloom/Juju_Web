@@ -188,6 +188,9 @@ class HulaquanDataManager(BaseDataManager):
         return self.data["events"]
 
     async def search_eventID_by_name(self, event_name):
+        if self.updating:
+            # 当数据正在更新时，等到数据全部更新完再继续
+            await self._wait_for_data_update()
         data = await self.return_events_data()
         result = []
         for eid, event in data.items():
@@ -453,6 +456,9 @@ class HulaquanDataManager(BaseDataManager):
         date_obj = standardize_datetime(date, with_second=False, return_str=False)
         result_by_city = {}
         city_events_count = {}
+        if self.updating:
+            # 当数据正在更新时，等到数据全部更新完再继续
+            await self._wait_for_data_update()
         for eid, event in self.data["events"].items():
             try:
                 event_start = standardize_datetime(event["start_time"], with_second=False, return_str=False)
@@ -520,9 +526,6 @@ class HulaquanDataManager(BaseDataManager):
 
     async def generate_tickets_query_message(self, eid, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):  
         if not refresh:
-            if self.updating:
-                # 当数据正在更新时，等到数据全部更新完再继续
-                await self._wait_for_data_update()
             event_data = self.data["events"].get(str(eid), None)
         else:
             await self._update_ticket_details_async(eid)
@@ -589,6 +592,9 @@ class HulaquanDataManager(BaseDataManager):
             
     async def on_message_tickets_query(self, eName, saoju, ignore_sold_out=False, show_cast=True, refresh=False):
         result = []
+        if self.updating:
+            # 当数据正在更新时，等到数据全部更新完再继续
+            await self._wait_for_data_update()
         if eName in self.alias_dict.keys():
             eNames = self.alias_search_names(eName)
             for search_name in eNames:
