@@ -1,5 +1,6 @@
 import json
 import os
+import asyncio
 import traceback
 
 class BaseDataManager:
@@ -10,7 +11,7 @@ class BaseDataManager:
         self.updating = False
         self.on_load()
         
-    def on_close(self):
+    async def on_close(self):
         """卸载插件时的清理操作
 
         执行插件卸载前的清理工作,保存数据并注销事件处理器
@@ -18,7 +19,7 @@ class BaseDataManager:
         Raises:
             RuntimeError: 保存持久化数据失败时抛出
         """
-        self.save()
+        await self.save()
 
     def on_load(self):
         """加载插件时的初始化操作
@@ -47,11 +48,11 @@ class BaseDataManager:
             except json.JSONDecodeError as e:
                 self.data = {}
         self._check_data()
-        
-    def save(self):
+
+    async def save(self):
         try:
             if self.updating:
-                return {"success":False, "updating":True}
+                await self._wait_for_data_update()
             # 备份机制：保存前先备份原文件
             if os.path.exists(self.file_path):
                 backup_path = self.file_path + ".bak"
@@ -77,6 +78,13 @@ class BaseDataManager:
                 except Exception as e2:
                     print(f"恢复备份失败: {e2}")
             raise RuntimeError(f"保存持久化数据时出错: {e}")
+        
+    async def _wait_for_data_update(self):
+        """
+        等待数据更新完成，直到self.updating为False
+        """
+        while self.updating:
+            await asyncio.sleep(0.1)
         
     def _check_data(self):
         pass

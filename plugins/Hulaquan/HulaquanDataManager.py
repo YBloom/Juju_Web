@@ -34,9 +34,9 @@ class HulaquanDataManager(BaseDataManager):
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
         self.alias_dict = self.load_alias()
         
-    def on_close(self):
+    async def on_close(self):
         self.save_alias(self.alias_dict)
-        return super().on_close()
+        return await super().on_close()
         
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
@@ -517,12 +517,7 @@ class HulaquanDataManager(BaseDataManager):
         message += f"\n数据更新时间: {self.data['update_time']}\n"
         return message
     
-    async def _wait_for_data_update(self):
-        """
-        等待数据更新完成，直到self.updating为False
-        """
-        while self.updating:
-            await asyncio.sleep(0.1)
+    
 
     async def generate_tickets_query_message(self, eid, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):  
         if not refresh:
