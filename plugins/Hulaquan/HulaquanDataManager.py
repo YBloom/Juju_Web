@@ -267,8 +267,7 @@ class HulaquanDataManager(BaseDataManager):
                     flag = ticket.get('update_status')
                     tInfo = extract_title_info(ticket.get("title", ""))
                     event_title = tInfo['title'][1:-1]
-                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']} " 
-                    + " " + await self.get_cast_artists_str_async(saoju, event_title, ticket, city=extract_city(event.get("location", "")))
+                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(saoju, event_title, ticket)
                     if ticket["status"] == "pending" and 'update_status' in ticket.keys():
                         valid_from = ticket.get("valid_from")
                         if not valid_from or valid_from == "null":
