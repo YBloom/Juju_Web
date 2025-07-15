@@ -237,12 +237,12 @@ class HulaquanDataManager(BaseDataManager):
             old_data_all = self.data
             new_data_all = await self._update_events_data_async()
         try:
-            return self.__compare_to_database(old_data_all, new_data_all)
+            return await self.__compare_to_database(old_data_all, new_data_all)
         except Exception as e:
             self.save_data_cache(old_data_all, new_data_all, "error_announcement_cache")
             raise  # 重新抛出异常，便于外层捕获和处理
 
-    def __compare_to_database(self, old_data_all, new_data_all):
+    async def __compare_to_database(self, old_data_all, new_data_all, saoju):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
         __dump: bool, 是否将新数据写入文件
@@ -265,7 +265,10 @@ class HulaquanDataManager(BaseDataManager):
                 pending_message = {}
                 for ticket in comp:
                     flag = ticket.get('update_status')
-                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}"
+                    tInfo = extract_title_info(ticket.get("title", ""))
+                    event_title = tInfo['title'][1:-1]
+                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']} " 
+                    + " " + await self.get_cast_artists_str_async(saoju, event_title, ticket, city=extract_city(event.get("location", "")))
                     if ticket["status"] == "pending" and 'update_status' in ticket.keys():
                         valid_from = ticket.get("valid_from")
                         if not valid_from or valid_from == "null":
