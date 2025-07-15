@@ -37,7 +37,11 @@ class HulaquanDataManager(BaseDataManager):
     async def on_close(self):
         self.save_alias(self.alias_dict)
         return await super().on_close()
-        
+    
+    async def save(self):
+        self.save_alias(self.alias_dict)
+        return await super().save()
+           
     def _check_data(self):
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
         self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
@@ -104,6 +108,7 @@ class HulaquanDataManager(BaseDataManager):
 
     def add_alias(self, event_id, search_name, alias):
         event_id = str(event_id)
+        alias = alias.strip().lower()
         if alias not in self.alias_dict:
             self.alias_dict[alias] = {"alias": alias, "search_names":{search_name: {"no_response_times": 0}}, "event_id":event_id}
         else:
@@ -590,6 +595,7 @@ class HulaquanDataManager(BaseDataManager):
         if self.updating:
             # 当数据正在更新时，等到数据全部更新完再继续
             await self._wait_for_data_update()
+        eName = eName.strip().lower()
         if eName in self.alias_dict.keys():
             eNames = self.alias_search_names(eName)
             for search_name in eNames:
