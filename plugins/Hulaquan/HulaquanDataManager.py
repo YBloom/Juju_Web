@@ -292,7 +292,7 @@ class HulaquanDataManager(BaseDataManager):
                         self.data["pending_events_dict"][random_id] = {
                             "valid_from": valid_date,
                             "message": (f"剧名: {event['title']}\n"
-                                        f"活动结束时间: {event['end_time']}\n"
+                                        f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
                                         f"更新时间: {self.data['update_time']}\n"
                                         f"开票时间: {valid_from}\n"
                                         f"场次信息：\n" + '\n'.join(m) + "\n"
@@ -309,9 +309,10 @@ class HulaquanDataManager(BaseDataManager):
                     message.append("🟢回流场次：\n"+'\n'.join(return_message))
             else:
                 continue
+            url = f"https://clubz.cloudsation.com/event/{eid}.html"
             messages.append((
                 f"剧名: {event['title']}\n"
-                f"活动结束时间: {event['end_time']}\n"
+                f"购票链接: {url}\n"
                 f"更新时间: {self.data['update_time']}\n"
             ) + "\n".join(message))
             is_updated = True
