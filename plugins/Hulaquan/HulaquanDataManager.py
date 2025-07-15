@@ -510,9 +510,19 @@ class HulaquanDataManager(BaseDataManager):
                     message += ("✨" if item['left'] > 0 else "❌") + f"{item['event_title']} 余票{item['left']}/{item['total']}" + " " + item["cast"] + "\n"
         message += f"\n数据更新时间: {self.data['update_time']}\n"
         return message
+    
+    async def _wait_for_data_update(self):
+        """
+        等待数据更新完成，直到self.updating为False
+        """
+        while self.updating:
+            await asyncio.sleep(0.1)
 
     async def generate_tickets_query_message(self, eid, eName, saoju:SaojuDataManager, show_cast=True, ignore_sold_out=False, refresh=False):  
         if not refresh:
+            if self.updating:
+                # 当数据正在更新时，等到数据全部更新完再继续
+                await self._wait_for_data_update()
             event_data = self.data["events"].get(str(eid), None)
         else:
             await self._update_ticket_details_async(eid)
