@@ -380,7 +380,7 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
-        result = await self.hlq_data_manager.message_update_data_async()
+        result = await self.hlq_data_manager.message_update_data_async(saoju=self.saoju_data_manager)
         is_updated = result["is_updated"]
         messages = result["messages"]
         new_pending = result["new_pending"]

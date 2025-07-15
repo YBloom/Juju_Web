@@ -229,7 +229,7 @@ class HulaquanDataManager(BaseDataManager):
 
     # -------------------Query------------------------------ #         
     # ---------------------Announcement--------------------- #
-    async def compare_to_database_async(self, __dump=True):
+    async def compare_to_database_async(self, saoju, __dump=True):
         if __dump:
             old_data_all = copy.deepcopy(self.data)
             new_data_all = await self._update_events_data_async()
@@ -237,7 +237,7 @@ class HulaquanDataManager(BaseDataManager):
             old_data_all = self.data
             new_data_all = await self._update_events_data_async()
         try:
-            return await self.__compare_to_database(old_data_all, new_data_all)
+            return await self.__compare_to_database(old_data_all, new_data_all, saoju)
         except Exception as e:
             self.save_data_cache(old_data_all, new_data_all, "error_announcement_cache")
             raise  # 重新抛出异常，便于外层捕获和处理
@@ -619,10 +619,10 @@ class HulaquanDataManager(BaseDataManager):
         else:
             return "未找到该剧目。"
         
-    async def message_update_data_async(self):
+    async def message_update_data_async(self, saoju):
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        result = await self.compare_to_database_async()
+        result = await self.compare_to_database_async(saoju)
         is_updated = result["is_updated"]
         messages = result["messages"]
         new_pending = result["new_pending"]
