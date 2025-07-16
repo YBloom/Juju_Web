@@ -540,28 +540,60 @@ class HulaquanDataManager(BaseDataManager):
                 if ticket["status"] == "active":
                     if ticket["left_ticket_count"] > (0 if ignore_sold_out else -1):
                         remaining_tickets.append(ticket)
-            max_ticket_info_count = self.get_max_ticket_content_length(remaining_tickets)
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
-            message = (
-                f"剧名: {title}\n"
-                f"购票链接：{url}\n"
-                f"最后更新时间：{event_data.get('update_time', '未知')}\n"
-                "剩余票务信息:\n"
-                + ("\n".join([("✨" if ticket['left_ticket_count'] > 0 else "❌") 
-                                + ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
-                                + ((" " + (await self.get_cast_artists_str_async(saoju, eName, ticket, 
-                                                        city=extract_city(event_data.get("location", ""))
-                                                    )
-                                        )
-                                ) if show_cast else "")
-                                for ticket in remaining_tickets
-                                ])
-                if remaining_tickets else "暂无余票。")
-                                )
-            message += f"\n数据更新时间: {self.data['update_time']}\n"
+            message = self.build_ticket_query_info_message(
+                title, url, event_data, remaining_tickets, show_cast=show_cast, saoju=saoju, eName=eName
+            )
             return message
         else:
             return "未找到该剧目的详细信息。"
+    
+    
+    async def build_ticket_query_info_message(self, title, url, event_data, remaining_tickets, show_cast=False, saoju=None, eName=None):
+        # 获取更新时间
+        update_time = event_data.get('update_time', '未知')
+
+        # 获取剩余票务信息
+        ticket_info_message, no_saoju_data = await self._generate_ticket_info_message(remaining_tickets, show_cast, saoju, eName, event_data)
+        
+        # 拼接消息
+        message = f"剧名: {title}\n"
+        message += f"购票链接：{url}\n"
+        message += f"最后更新时间：{update_time}\n"
+        message += "剩余票务信息:\n"
+        message += ticket_info_message
+        if no_saoju_data:
+            message += "\n⚠️未在扫剧网站上找到此剧卡司"
+        message += f"\n数据更新时间: {self.data['update_time']}\n"
+        return message
+
+
+    async def _generate_ticket_info_message(self, remaining_tickets, show_cast, saoju, eName, event_data):
+        if not remaining_tickets:
+            return "暂无余票。"
+        
+        max_ticket_info_count = self.get_max_ticket_content_length(remaining_tickets)
+        ticket_lines = []
+        no_saoju_data = False
+        for ticket in remaining_tickets:
+            # 构建余票信息
+            ticket_status = "✨" if ticket['left_ticket_count'] > 0 else "❌"
+            ticket_details = ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
+            
+            # 如果显示演员信息
+            if show_cast:
+                cast_str = await self.get_cast_artists_str_async(saoju, eName, ticket, city=extract_city(event_data.get("location", "")))
+                ticket_details += " " + cast_str
+                if not cast_str:
+                    no_saoju_data = True
+                else:
+                    no_saoju_data = False
+            
+            # 拼接每个票务信息
+            ticket_lines.append(ticket_status + ticket_details)
+        
+        # 将所有票务信息拼接成字符串
+        return "\n".join(ticket_lines), no_saoju_data
         
     def get_ticket_cast_and_city(self, saoju: SaojuDataManager, eName, ticket, city=None):
         eid = ticket['id']
