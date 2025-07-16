@@ -541,7 +541,7 @@ class HulaquanDataManager(BaseDataManager):
                     if ticket["left_ticket_count"] > (0 if ignore_sold_out else -1):
                         remaining_tickets.append(ticket)
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
-            message = self.build_ticket_query_info_message(
+            message = await self.build_ticket_query_info_message(
                 title, url, event_data, remaining_tickets, show_cast=show_cast, saoju=saoju, eName=eName
             )
             return message
