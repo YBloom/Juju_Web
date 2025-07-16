@@ -460,7 +460,10 @@ class HulaquanDataManager(BaseDataManager):
         return (await self.get_ticket_cast_and_city_async(saoju, eName, ticket))["city"]
 
     async def on_message_search_event_by_date(self, saoju, date, _city=None, ignore_sold_out=False):
-        date_obj = standardize_datetime(date, with_second=False, return_str=False)
+        try:
+            date_obj = standardize_datetime(date, with_second=False, return_str=False)
+        except ValueError:
+            return "日期格式错误，请使用 YYYY-MM-DD 格式。\n例如：/date 2025-07-19"
         result_by_city = {}
         city_events_count = {}
         if self.updating:
