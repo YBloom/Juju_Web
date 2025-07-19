@@ -1,24 +1,51 @@
-from ncatbot.utils import UniversalLoader, PERSISTENT_DIR
 from datetime import datetime
-import inspect
+from . import BaseDataManager
 from pathlib import Path
 from ncatbot.utils.logger import get_log
 log = get_log()
 
-class UsersManager:
+class User:
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.activate = True
+        self.create_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.attention_to_hulaquan = 1
+        self.chats_count = 0
+        self.is_op = False
+        self.subscribe = {
+            "is_subscribe": False,
+            "subscribe_time": None,
+            "subscribe_tickets": [],
+        }
+    
+    def __repr__(self):
+        return f"User(user_id={self.user_id}, activate={self.activate}, create_time={self.create_time}, attention_to_hulaquan={self.attention_to_hulaquan}, chats_count={self.chats_count}, subscribe={self.subscribe})"
+
+    def __getitem__(self, item):
+        return getattr(self, item, None)
+    
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+
+class UsersManager(BaseDataManager):
     
     admin_id = "3022402752"
     
-    def __init__(self, data: UniversalLoader=None):
-        self.is_get_managers = False #插件Hulaquan有没有捕获managers
-        self.data = data
+    def __init__(self, data=None):
+        super().__init__(self.file_path)
+        first_init = False
+        if (not self.data) and data:
+            first_init = True
+        # self.is_get_managers = False #插件Hulaquan有没有捕获managers
+        self.user_objs = {}
         if "users" not in self.data:
-            self.data["users"] = {}
+            self.data["users"] = data["users"] if first_init else {}
         if "users_list" not in self.data:
-            self.data["users_list"] = []
+            self.data["users_list"] = data["users_list"] if first_init else []
         if "ops_list" not in self.data:
-            self.data["ops_list"] = []
-            
+            self.data["ops_list"] = data["ops_list"] if first_init else []
+        
         
     def users(self):
         return self.data.get("users", {})
@@ -28,6 +55,9 @@ class UsersManager:
     
     def ops_list(self):
         return self.data.get("ops_list", [])
+    
+    def transferUserObjs(self, user: User):
+        return user.__dict__
         
         
     def add_user(self, user_id):
@@ -35,20 +65,9 @@ class UsersManager:
             user_id = str(user_id)
         if user_id in self.data["users_list"]:
             return
+        user = User(user_id)
         self.data["users_list"].append(user_id)
-        self.data["users"][user_id] = {
-            "activate": True,
-            "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "attention_to_hulaquan": 1,
-            "chats_count":0,
-
-            # 订阅权限
-            "subscribe": {
-                "is_subscribe": False,
-                "subscribe_time": None,
-                "subscribe_tickets": [],
-            }
-        }
+        self.data["users"][user_id] = user.__dict__
         
     def add_chats_count(self, user_id):
         if not isinstance(user_id, str):
@@ -120,3 +139,4 @@ class UsersManager:
            self.add_user(user_id)
        self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(ticket_id)
        return True
+   

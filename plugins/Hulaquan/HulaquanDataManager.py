@@ -293,7 +293,7 @@ class HulaquanDataManager(BaseDataManager):
                     t = "🟡新上架场次：\n"
                     cnt = 1
                     for valid_from, m in pending_message.items():
-                        s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else None)+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
+                        s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else "")+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
                         cnt += 1
                         random_id = random.randint(1000, 9999)
                         valid_date = standardize_datetime(valid_from, return_str=False)

@@ -86,14 +86,14 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
-        self.groups_manager: GroupsManager = None
-        self.users_manager: UsersManager = None
+        self.groups_manager: GroupsManager = GroupsManager()
+        self.users_manager: UsersManager = UsersManager()
         self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
         self.saoju_data_manager: SaojuDataManager = SaojuDataManager()
         self.stats_data_manager: StatsDataManager = StatsDataManager()
-        self.register_handler("AdminPlugin.pass_managers", self.get_managers)
-        self.load_event = Event("Hulaquan.load_plugin", data={})
-        await self._event_bus.publish_async(self.load_event)
+        # self.register_handler("AdminPlugin.pass_managers", self.get_managers)
+        # self.load_event = Event("Hulaquan.load_plugin", data={})
+        # await self._event_bus.publish_async(self.load_event)
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", self._hulaquan_announcer_interval))

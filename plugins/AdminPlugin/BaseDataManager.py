@@ -4,6 +4,9 @@ import asyncio
 import traceback
 
 class BaseDataManager:
+    
+    _instance = None
+    
     def __init__(self, file_path):
         self.work_path = "data/data_manager/"
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
@@ -88,3 +91,8 @@ class BaseDataManager:
         
     def _check_data(self):
         pass
+    
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, "_instance"):
+            cls._instance = super(cls, cls).__new__(cls)
+        return cls._instance

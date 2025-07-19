@@ -3,6 +3,8 @@ if __name__ == '__main__':
     os.chdir("f:/MusicalBot/")
     import sys
     sys.path.append("f:/MusicalBot")
+    
+
 import aiohttp, asyncio, json
 import pandas as pd
 from datetime import datetime, timedelta
