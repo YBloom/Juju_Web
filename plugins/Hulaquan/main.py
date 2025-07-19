@@ -73,7 +73,7 @@ def user_command_wrapper(command_name):
 
 class Hulaquan(BasePlugin):
     name = "Hulaquan"  # 插件名称
-    version = "0.0.4"  # 插件版本
+    version = "0.0.5"  # 插件版本
     author = "摇摇杯"  # 插件作者
     info = "与呼啦圈学生票相关的功能"  # 插件描述
     dependencies = {
@@ -86,14 +86,10 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
-        self.groups_manager: GroupsManager = GroupsManager()
-        self.users_manager: UsersManager = UsersManager()
         self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
         self.saoju_data_manager: SaojuDataManager = SaojuDataManager()
         self.stats_data_manager: StatsDataManager = StatsDataManager()
-        # self.register_handler("AdminPlugin.pass_managers", self.get_managers)
-        # self.load_event = Event("Hulaquan.load_plugin", data={})
-        # await self._event_bus.publish_async(self.load_event)
+        self.users_manager: UsersManager = UsersManager()
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", self._hulaquan_announcer_interval))
@@ -101,11 +97,8 @@ class Hulaquan(BasePlugin):
         
     async def on_close(self, *arg, **kwd):
         self.remove_scheduled_task("呼啦圈上新提醒")
-        self.users_manager.is_get_managers = False
         self.stop_hulaquan_announcer()
-        await self.hlq_data_manager.on_close()
-        await self.saoju_data_manager.on_close()
-        await self.stats_data_manager.on_close()
+        await self.save_data_managers()
         return await super().on_close(*arg, **kwd)
     
     async def _hulaquan_announcer_loop(self):
@@ -196,8 +189,7 @@ class Hulaquan(BasePlugin):
             interval="1h", 
             #max_runs=10, 
         )
-        
-        
+            
 
     def register_hlq_query(self):
         self.register_user_func(
@@ -355,15 +347,6 @@ class Hulaquan(BasePlugin):
         """
         {name}-{description}:使用方式 {usage}
         """
-        
-    
-        
-    async def get_managers(self, event):
-        if event.data:
-            self.groups_manager = event.data["managers"][1]
-            self.users_manager = event.data["managers"][0]
-            self.users_manager.is_get_managers = True
-            print("已获取到managers")
     
     async def _on_switch_scheduled_check_task_for_users(self, msg: BaseMessage):
         if self._hulaquan_announcer_running:
@@ -403,7 +386,7 @@ class Hulaquan(BasePlugin):
                 for m in messages:
                     message = f"呼啦圈上新提醒：\n{m}"
                     await self.api.post_private_msg(user_id, message)
-        for group_id, group in self.groups_manager.groups().items():
+        for group_id, group in self.users_manager.groups().items():
             mode = group.get("attention_to_hulaquan")
             if (manual and group_id not in group_lists):
                 continue
@@ -443,7 +426,7 @@ class Hulaquan(BasePlugin):
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_private_msg(user_id, message)
-        for group_id, group in self.groups_manager.groups().items():
+        for group_id, group in self.users_manager.groups().items():
             mode = group.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
@@ -462,7 +445,7 @@ class Hulaquan(BasePlugin):
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
             if self.users_manager.is_op(user_id):
-                self.groups_manager.switch_attention_to_hulaquan(group_id, mode)
+                self.users_manager.switch_attention_to_hulaquan(group_id, mode, is_group=True)
             else:
                 return await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
         else:
@@ -573,14 +556,13 @@ class Hulaquan(BasePlugin):
         await self.saoju_data_manager.save()
         await self.hlq_data_manager.save()
         await self.stats_data_manager.save()
+        await self.users_manager.save()
         log.info("🟡呼啦圈数据保存成功")
         if msg:
             await msg.reply_text("保存成功")
         else:
             pass
-            #for user_id in self.users_manager.ops_list():
-                #await self.api.post_private_msg(user_id, "自动保存成功")
-    
+        
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
         #log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())

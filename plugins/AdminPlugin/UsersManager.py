@@ -1,24 +1,33 @@
-from ncatbot.utils import UniversalLoader, PERSISTENT_DIR
 from datetime import datetime
-import inspect
-from pathlib import Path
+from . import BaseDataManager
 from ncatbot.utils.logger import get_log
 log = get_log()
 
-class UsersManager:
+
+class UsersManager(BaseDataManager):
     
     admin_id = "3022402752"
     
-    def __init__(self, data: UniversalLoader=None):
-        self.is_get_managers = False #插件Hulaquan有没有捕获managers
-        self.data = data
+    def __init__(self, data=None):
+        super().__init__(self.file_path)
+        first_init = False
+        if (not self.data) and data:
+            first_init = True
         if "users" not in self.data:
-            self.data["users"] = {}
+            self.data["users"] = data["users"] if first_init else {}
+            print("UsersManager: 初始化用户数据")
         if "users_list" not in self.data:
-            self.data["users_list"] = []
+            self.data["users_list"] = data["users_list"] if first_init else []
+            print("UsersManager: 初始化用户数据")
         if "ops_list" not in self.data:
-            self.data["ops_list"] = []
-            
+            self.data["ops_list"] = data["ops_list"] if first_init else []
+            print("UsersManager: 初始化用户数据")
+        if "groups" not in self.data:
+            self.data["groups"] = data["groups"] if first_init else {}
+            print("UsersManager: 初始化用户数据")
+        if "groups_list" not in self.data:
+            self.data["groups_list"] = data["groups_list"] if first_init else []
+            print("UsersManager: 初始化用户数据")
         
     def users(self):
         return self.data.get("users", {})
@@ -28,7 +37,31 @@ class UsersManager:
     
     def ops_list(self):
         return self.data.get("ops_list", [])
+    
+    def groups(self):
+        return self.data.get("groups", {})
         
+    def groups_list(self):
+        return self.data.get("groups_list", [])
+        
+    def add_group(self, group_id):
+        if not isinstance(group_id, str):
+            group_id = str(group_id)
+        if group_id in self.data["groups_list"]:
+            return
+        self.data["groups_list"].append(group_id)
+        self.data["groups"][group_id] = {
+            "activate": True,
+            "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "attention_to_hulaquan": 0,
+        }
+    
+    def delete_group(self, group_id):
+        if not isinstance(group_id, str):
+            group_id = str(group_id)
+        if group_id in self.data["groups_list"]:
+            self.data["groups_list"].remove(group_id)
+            del self.data["groups"][group_id]
         
     def add_user(self, user_id):
         if not isinstance(user_id, str):
@@ -93,15 +126,16 @@ class UsersManager:
             return True
         return False
     
-    def switch_attention_to_hulaquan(self, user_id, mode=0):
+    def switch_attention_to_hulaquan(self, user_id, mode=0, is_group=False):
         # mode = 0: 取消推送，mode = 1: 关注更新，mode = 2：关注一切推送（更新或无更新）
         if not isinstance(user_id, str):
             user_id = str(user_id)
+        key = "users" if not is_group else "groups"
         try:
-            self.data["users"][user_id]["attention_to_hulaquan"] = mode
+            self.data[key][user_id]["attention_to_hulaquan"] = mode
         except KeyError:
             self.add_user(user_id)
-            self.data["users"][user_id]["attention_to_hulaquan"] = mode
+            self.data[key][user_id]["attention_to_hulaquan"] = mode
         return mode
     
     def new_subscribe(self, user_id):
@@ -120,3 +154,4 @@ class UsersManager:
            self.add_user(user_id)
        self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(ticket_id)
        return True
+   

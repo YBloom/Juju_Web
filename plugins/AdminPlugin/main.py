@@ -23,12 +23,8 @@ class AdminPlugin(BasePlugin):
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
         # 注册功能示例
-        self.users_manager = UsersManager()
-        self.groups_manager = GroupsManager()
-        # self.pass_managers_event = Event("AdminPlugin.pass_managers", {"managers": (self.users_manager, self.groups_manager)})
-        # 异步发布不等待结果
-        # await self.on_send_pass_managers_event()
-        # self.register_handler("Hulaquan.load_plugin", self.add_send_managers_task)
+        self.users_manager = UsersManager(self.data)
+    
         
         self.register_admin_func(
             name="op",
@@ -168,7 +164,6 @@ class AdminPlugin(BasePlugin):
         if msg.request_type == "friend": 
             await msg.reply(True, comment="加好友请求已通过")
         else:
-            #self.groups_manager.add_group(msg.group_id)
             await msg.reply(True, comment="加群请求已通过")
             
 

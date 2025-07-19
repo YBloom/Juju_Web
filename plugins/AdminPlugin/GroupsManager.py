@@ -1,7 +1,5 @@
 from ncatbot.utils import UniversalLoader, PERSISTENT_DIR
 from datetime import datetime
-import inspect
-from pathlib import Path
 
 class GroupsManager:
     def __init__(self, data: UniversalLoader = None):
