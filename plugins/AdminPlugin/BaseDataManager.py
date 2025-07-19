@@ -7,7 +7,7 @@ class BaseDataManager:
     
     _instance = None
     
-    def __init__(self, file_path, *args, **kwargs):
+    def __init__(self, file_path):
         self.work_path = "data/data_manager/"
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
         self.data = {}

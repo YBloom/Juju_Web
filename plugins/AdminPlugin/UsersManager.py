@@ -8,8 +8,8 @@ class UsersManager(BaseDataManager):
     
     admin_id = "3022402752"
     
-    def __init__(self, data=None):
-        super().__init__(self.file_path)
+    def __init__(self, file_path=None, data=None):
+        super().__init__(file_path=file_path)
         first_init = False
         if (not self.data) and data:
             first_init = True
