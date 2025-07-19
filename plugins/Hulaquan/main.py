@@ -6,7 +6,7 @@ from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 from .HulaquanDataManager import HulaquanDataManager
 from .SaojuDataManager import SaojuDataManager
 from .StatsDataManager import StatsDataManager, maxLatestReposCount
-from plugins.AdminPlugin import GroupsManager, UsersManager
+from plugins.AdminPlugin import UsersManager
 from .user_func_help import *
 from .utils import parse_text_to_dict_with_mandatory_check
 from ncatbot.utils.logger import get_log

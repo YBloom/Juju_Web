@@ -3,9 +3,7 @@ import html
 
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
-from ncatbot.core import Request
 from .UsersManager import UsersManager
-from .GroupsManager import GroupsManager
 from ncatbot.utils.logger import get_log
 
 bot = CompatibleEnrollment  # 兼容回调函数注册器

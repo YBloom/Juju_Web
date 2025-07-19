@@ -1,5 +1,5 @@
 from datetime import datetime
-from . import BaseDataManager
+from .BaseDataManager import BaseDataManager
 from ncatbot.utils.logger import get_log
 log = get_log()
 
