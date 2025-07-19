@@ -13,7 +13,7 @@ class BaseDataManager:
         self.data = {}
         self.updating = False
         self.on_load()
-        self._check_data(args, kwargs)
+        self._check_data(*args, **kwargs)
         self._initialized = True
         
     async def on_close(self):
