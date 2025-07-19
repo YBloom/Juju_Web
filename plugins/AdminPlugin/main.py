@@ -22,8 +22,6 @@ class AdminPlugin(BasePlugin):
         print(f"插件版本: {self.version}")
         # 注册功能示例
         self.users_manager = UsersManager()
-        self.users_manager.on_load(self.data)
-    
         
         self.register_admin_func(
             name="op",
