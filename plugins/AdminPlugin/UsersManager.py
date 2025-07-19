@@ -33,6 +33,7 @@ class UsersManager(BaseDataManager):
             self.data["groups"] = data["groups"] if first_init else {}
         if "groups_list" not in self.data:
             self.data["groups_list"] = data["groups_list"] if first_init else []
+        print(len(self.data["users_list"]))
         return super().on_load()
         
     def users(self):

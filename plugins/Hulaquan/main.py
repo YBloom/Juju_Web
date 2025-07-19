@@ -556,6 +556,7 @@ class Hulaquan(BasePlugin):
         await self.saoju_data_manager.save()
         await self.hlq_data_manager.save()
         await self.stats_data_manager.save()
+        print(self.users_manager.users_list)
         await self.users_manager.save()
         log.info("🟡呼啦圈数据保存成功")
         if msg:
