@@ -7,27 +7,26 @@ log = get_log()
 class UsersManager(BaseDataManager):
     
     admin_id = "3022402752"
-    
-    def __init__(self, file_path=None, data=None):
-        super().__init__(file_path=file_path)
+
+    def __init__(self, file_path=None, *args, **kwargs):
+        super().__init__(file_path=file_path, *args, **kwargs)
+
+
+    def _check_data(self, data=None):
         first_init = False
         if (not self.data) and data:
             first_init = True
         if "users" not in self.data:
             self.data["users"] = data["users"] if first_init else {}
-            print("UsersManager: 初始化用户数据")
         if "users_list" not in self.data:
             self.data["users_list"] = data["users_list"] if first_init else []
-            print("UsersManager: 初始化用户数据")
         if "ops_list" not in self.data:
             self.data["ops_list"] = data["ops_list"] if first_init else []
-            print("UsersManager: 初始化用户数据")
         if "groups" not in self.data:
             self.data["groups"] = data["groups"] if first_init else {}
-            print("UsersManager: 初始化用户数据")
         if "groups_list" not in self.data:
             self.data["groups_list"] = data["groups_list"] if first_init else []
-            print("UsersManager: 初始化用户数据")
+        return super()._check_data()
         
     def users(self):
         return self.data.get("users", {})

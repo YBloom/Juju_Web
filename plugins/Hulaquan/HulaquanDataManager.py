@@ -29,10 +29,7 @@ class HulaquanDataManager(BaseDataManager):
     }
     """
     def __init__(self, file_path=None):
-        #file_path = file_path or "data/Hulaquan/hulaquan_events_data.json"
         super().__init__(file_path)
-        self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
-        self.alias_dict = self.load_alias()
         
     async def on_close(self):
         self.save_alias(self.alias_dict)
@@ -43,6 +40,8 @@ class HulaquanDataManager(BaseDataManager):
         return await super().save()
            
     def _check_data(self):
+        self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
+        self.alias_dict = self.load_alias()
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
         self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
         self.data["ticket_id_to_casts"] = self.data.get("ticket_id_to_casts", {})

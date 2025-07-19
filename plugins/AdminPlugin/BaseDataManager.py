@@ -5,12 +5,16 @@ import traceback
 
 class BaseDataManager:
     
-    def __init__(self, file_path):
+    def __init__(self, file_path, *args, **kwargs):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
         self.work_path = "data/data_manager/"
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
         self.data = {}
         self.updating = False
         self.on_load()
+        self._check_data(args, kwargs)
+        self._initialized = True
         
     async def on_close(self):
         await self.save()
@@ -34,7 +38,6 @@ class BaseDataManager:
                 self.data = json.load(f)
             except json.JSONDecodeError as e:
                 self.data = {}
-        self._check_data()
 
     async def save(self):
         try:
@@ -73,7 +76,7 @@ class BaseDataManager:
         while self.updating:
             await asyncio.sleep(0.1)
         
-    def _check_data(self):
+    def _check_data(self, *args, **kwargs):
         pass
     
     def __new__(cls, *args, **kwargs):
