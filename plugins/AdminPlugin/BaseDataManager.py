@@ -78,7 +78,7 @@ class BaseDataManager:
     
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
-            cls._instance = super(cls, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             print(f"Creating new instance of {cls.__name__}")
         else:
             print(f"Using existing instance of {cls.__name__}")
