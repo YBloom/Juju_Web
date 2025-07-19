@@ -5,8 +5,6 @@ import traceback
 
 class BaseDataManager:
     
-    _instance = None
-    
     def __init__(self, file_path):
         self.work_path = "data/data_manager/"
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
@@ -79,7 +77,7 @@ class BaseDataManager:
         pass
     
     def __new__(cls, *args, **kwargs):
-        if not getattr(cls, "_instance"):
+        if not hasattr(cls, "_instance"):
             cls._instance = super(cls, cls).__new__(cls)
             print(f"Creating new instance of {cls.__name__}")
         else:
