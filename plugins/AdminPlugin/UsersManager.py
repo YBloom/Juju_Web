@@ -8,8 +8,8 @@ class UsersManager(BaseDataManager):
     
     admin_id = "3022402752"
 
-    def __init__(self, file_path=None, *args, **kwargs):
-        super().__init__(file_path=file_path, *args, **kwargs)
+    def __init__(self, file_path=None):
+        super().__init__(file_path=file_path)
 
 
     def on_load(self, data=None):
