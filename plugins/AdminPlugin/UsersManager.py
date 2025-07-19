@@ -16,11 +16,12 @@ class UsersManager(BaseDataManager):
         first_init = False
         if data:
             first_init = True
-            self.data["users"] = data["users"] if first_init else {}
-            self.data["users_list"] = data["users_list"] if first_init else []
-            self.data["ops_list"] = data["ops_list"] if first_init else []
-            self.data["groups"] = data["groups"] if first_init else {}
-            self.data["groups_list"] = data["groups_list"] if first_init else []
+            self.data["users"] = data["users"]
+            self.data["users_list"] = data["users_list"]
+            self.data["ops_list"] = data["ops_list"]
+            self.data["groups"] = data["groups"]
+            self.data["groups_list"] = data["groups_list"]
+            print(len(self.data["users_list"]))
             return super().on_load()
         if "users" not in self.data:
             self.data["users"] = data["users"] if first_init else {}
