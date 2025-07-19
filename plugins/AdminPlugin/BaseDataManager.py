@@ -7,7 +7,7 @@ class BaseDataManager:
     
     _instance = None
     
-    def __init__(self, file_path):
+    def __init__(self, file_path, *args, **kwargs):
         self.work_path = "data/data_manager/"
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
         self.data = {}
@@ -15,23 +15,9 @@ class BaseDataManager:
         self.on_load()
         
     async def on_close(self):
-        """卸载插件时的清理操作
-
-        执行插件卸载前的清理工作,保存数据并注销事件处理器
-
-        Raises:
-            RuntimeError: 保存持久化数据失败时抛出
-        """
         await self.save()
 
     def on_load(self):
-        """加载插件时的初始化操作
-
-        执行插件加载时的初始化工作,加载数据
-
-        Raises:
-            RuntimeError: 读取持久化数据失败时抛出
-        """
         try:
             if os.path.exists(self.file_path):
                 self.load()

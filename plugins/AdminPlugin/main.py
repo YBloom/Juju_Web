@@ -23,7 +23,7 @@ class AdminPlugin(BasePlugin):
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
         # 注册功能示例
-        self.users_manager = UsersManager(self.data)
+        self.users_manager = UsersManager(data=self.data)
     
         
         self.register_admin_func(
