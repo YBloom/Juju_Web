@@ -12,10 +12,16 @@ class UsersManager(BaseDataManager):
         super().__init__(file_path=file_path, *args, **kwargs)
 
 
-    def _check_data(self, data=None):
+    def on_load(self, data=None):
         first_init = False
-        if (not self.data) and data:
+        if data:
             first_init = True
+            self.data["users"] = data["users"] if first_init else {}
+            self.data["users_list"] = data["users_list"] if first_init else []
+            self.data["ops_list"] = data["ops_list"] if first_init else []
+            self.data["groups"] = data["groups"] if first_init else {}
+            self.data["groups_list"] = data["groups_list"] if first_init else []
+            return super().on_load()
         if "users" not in self.data:
             self.data["users"] = data["users"] if first_init else {}
         if "users_list" not in self.data:
@@ -26,7 +32,7 @@ class UsersManager(BaseDataManager):
             self.data["groups"] = data["groups"] if first_init else {}
         if "groups_list" not in self.data:
             self.data["groups_list"] = data["groups_list"] if first_init else []
-        return super()._check_data()
+        return super().on_load()
         
     def users(self):
         return self.data.get("users", {})

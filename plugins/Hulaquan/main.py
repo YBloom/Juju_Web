@@ -86,7 +86,7 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
-        #self.users_manager: UsersManager = UsersManager()
+        self.users_manager: UsersManager = UsersManager()
         self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
         self.saoju_data_manager: SaojuDataManager = SaojuDataManager()
         self.stats_data_manager: StatsDataManager = StatsDataManager()

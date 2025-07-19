@@ -25,7 +25,7 @@ class StatsDataManager(BaseDataManager):
     def __init__(self, file_path=None):
         super().__init__(file_path)
 
-    def _check_data(self):
+    def on_load(self):
         self.data.setdefault(ON_COMMAND_TIMES, {})
         self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})

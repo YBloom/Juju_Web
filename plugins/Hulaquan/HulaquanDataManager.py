@@ -39,7 +39,7 @@ class HulaquanDataManager(BaseDataManager):
         self.save_alias(self.alias_dict)
         return await super().save()
            
-    def _check_data(self):
+    def on_load(self):
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
         self.alias_dict = self.load_alias()
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据

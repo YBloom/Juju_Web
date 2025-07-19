@@ -12,14 +12,14 @@ class BaseDataManager:
         self.file_path = file_path or f"{self.work_path}{self.__class__.__name__}.json"
         self.data = {}
         self.updating = False
-        self.on_load()
-        self._check_data(*args, **kwargs)
+        self.__on_load()
+        self.on_load(*args, **kwargs)
         self._initialized = True
         
     async def on_close(self):
         await self.save()
 
-    def on_load(self):
+    def __on_load(self):
         try:
             if os.path.exists(self.file_path):
                 self.load()
@@ -76,7 +76,7 @@ class BaseDataManager:
         while self.updating:
             await asyncio.sleep(0.1)
         
-    def _check_data(self, *args, **kwargs):
+    def on_load(self, *args, **kwargs):
         pass
     
     def __new__(cls, *args, **kwargs):
