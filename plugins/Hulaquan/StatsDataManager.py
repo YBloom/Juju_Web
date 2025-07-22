@@ -28,7 +28,7 @@ class StatsDataManager(BaseDataManager):
     def on_load(self):
         from plugins.Hulaquan import HulaquanDataManager
         global Hlq
-        Hlq: HulaquanDataManager = HulaquanDataManager()
+        Hlq = HulaquanDataManager()
         self.data.setdefault(ON_COMMAND_TIMES, {})
         self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
