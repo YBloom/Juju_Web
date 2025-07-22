@@ -422,7 +422,8 @@ class Hulaquan(BasePlugin):
     def register_pending_tickets_announcer(self):
         for eid, event in Hlq.data["pending_events_dict"].items():
             eid = str(eid)
-            if eid in self._time_task_scheduler.get_job_status(eid):
+            _exist = self._time_task_scheduler.get_job_status(eid)
+            if _exist and eid in _exist:
                 continue
             valid_from = standardize_datetime(event.get("valid_from"))
             if not valid_from:
