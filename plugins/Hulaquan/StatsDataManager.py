@@ -28,11 +28,7 @@ class StatsDataManager(BaseDataManager):
         super().__init__(file_path)
 
     def on_load(self):
-        import importlib
         
-        dataManagers = importlib.import_module('plugins.Hulaquan.data_managers')
-        Hlq = dataManagers.Hlq  # 动态获取
-        self.Hlq = Hlq
         self.data.setdefault(ON_COMMAND_TIMES, {})
         self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
@@ -235,7 +231,10 @@ class StatsDataManager(BaseDataManager):
     
     def register_event(self, title, eid=None):
         title = extract_text_in_brackets(title, True)
-        if alias := self.Hlq.alias_search_names(title[1:-1]):
+        import importlib
+        dataManagers = importlib.import_module('plugins.Hulaquan.data_managers')
+        Hlq = dataManagers.Hlq  # 动态获取
+        if alias := Hlq.alias_search_names(title[1:-1]):
             title = alias[0]
         if eid and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if eid in self.data[HLQ_TICKETS_REPO]:
