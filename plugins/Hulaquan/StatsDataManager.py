@@ -1,4 +1,4 @@
-from plugins.Hulaquan import HulaquanDataManager
+
 from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
 import copy
@@ -26,6 +26,7 @@ class StatsDataManager(BaseDataManager):
     """
 
     def on_load(self):
+        from plugins.Hulaquan import HulaquanDataManager
         global Hlq
         Hlq: HulaquanDataManager = HulaquanDataManager()
         self.data.setdefault(ON_COMMAND_TIMES, {})
