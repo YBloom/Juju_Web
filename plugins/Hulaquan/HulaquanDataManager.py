@@ -547,7 +547,7 @@ class HulaquanDataManager(BaseDataManager):
                 to_delete.append((event_id, ticket_id))
         for tup in to_delete:
             eid, tid = tup
-            del self.ticket(tid, eid)
+            self.delete_ticket(tid, eid)
             del self.data['ticket_id_to_event_id'][tid]
             
     def update_ticket_dict_async(self):
