@@ -531,7 +531,7 @@ class HulaquanDataManager(BaseDataManager):
 
     async def _generate_ticket_info_message(self, remaining_tickets, show_cast, event_data, show_ticket_id):
         if not remaining_tickets:
-            return "暂无余票。"
+            return "暂无余票。", True
         ticket_lines = []
         no_saoju_data = False
         for ticket in remaining_tickets:
@@ -539,7 +539,7 @@ class HulaquanDataManager(BaseDataManager):
             if no_cast:
                 no_saoju_data = True
             ticket_lines.append(text)
-        return "\n".join(ticket_lines), no_saoju_data
+        return ("\n".join(ticket_lines), no_saoju_data)
     
     async def __update_ticket_dict_async(self):
         to_delete = []
