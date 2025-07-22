@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
 from plugins.Hulaquan.utils import *
-from plugins.Hulaquan import SaojuDataManager
-from plugins.Hulaquan import StatsDataManager
-from plugins.Hulaquan import AliasManager
 from plugins.Hulaquan import BaseDataManager
+from plugins.Hulaquan.data_managers import Saoju, Stats, Alias
 import aiohttp
 import os, shutil
 import copy
@@ -16,9 +14,6 @@ import re
     1.按照是否修改self将函数数据分类
     """
 
-Saoju = SaojuDataManager()
-Stats = StatsDataManager()
-Alias = AliasManager()
 
 
 class HulaquanDataManager(BaseDataManager):

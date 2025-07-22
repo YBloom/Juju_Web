@@ -4,11 +4,11 @@ import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 
-from plugins.Hulaquan import SaojuDataManager
-from plugins.Hulaquan import StatsDataManager
-from plugins.Hulaquan import AliasManager
-from plugins.Hulaquan import HulaquanDataManager
+from plugins.Hulaquan.data_managers import Saoju, Stats, Alias, Hlq, User, save
 from plugins.Hulaquan.StatsDataManager import StatsDataManager, maxLatestReposCount
+from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
+from plugins.Hulaquan.AliasManager import AliasManager
+from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
 from plugins.AdminPlugin.UsersManager import UsersManager
 from .user_func_help import *
 from .utils import parse_text_to_dict_with_mandatory_check
@@ -17,11 +17,11 @@ from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 
 log = get_log()
-Saoju = SaojuDataManager()
-Hlq = HulaquanDataManager()
-Stats = StatsDataManager()
-User = UsersManager()
-Alias = AliasManager()
+Saoju: SaojuDataManager
+Hlq: HulaquanDataManager
+Stats: StatsDataManager
+User: UsersManager
+Alias: AliasManager
 
 
 
@@ -574,10 +574,7 @@ class Hulaquan(BasePlugin):
     async def save_data_managers(self, msg=None):
         while getattr(Hlq, "updating", False):
             await asyncio.sleep(0.5)
-        await Saoju.save()
-        await Hlq.save()
-        await Stats.save()
-        await User.save()
+        await save()
         log.info("🟡呼啦圈数据保存成功")
         if msg:
             await msg.reply_text("保存成功")

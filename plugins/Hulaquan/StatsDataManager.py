@@ -1,6 +1,7 @@
 
 from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
+from plugins.Hulaquan.data_managers import Hlq
 import copy
 
 
@@ -14,8 +15,6 @@ EVENT_ID_TO_EVENT_TITLE = 'event_id_to_event_title'
 LATEST_EVENT_ID = 'latest_event_id'
 LATEST_20_REPOS = 'latest_20_repos'
 
-Hlq = None
-
 maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
 
@@ -28,9 +27,6 @@ class StatsDataManager(BaseDataManager):
         super().__init__(file_path)
 
     def on_load(self):
-        from plugins.Hulaquan import HulaquanDataManager
-        global Hlq
-        Hlq = HulaquanDataManager()
         self.data.setdefault(ON_COMMAND_TIMES, {})
         self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
