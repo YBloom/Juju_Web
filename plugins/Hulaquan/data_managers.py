@@ -8,11 +8,11 @@ from ncatbot.utils.logger import get_log
 
 
 log = get_log()
-Saoju = SaojuDataManager()
-Hlq = HulaquanDataManager()
-Stats = StatsDataManager()
 User = UsersManager()
 Alias = AliasManager()
+Stats = StatsDataManager()
+Saoju = SaojuDataManager()
+Hlq = HulaquanDataManager()
 
 async def save():
     await User.save()

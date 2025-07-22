@@ -17,11 +17,11 @@ from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 
 log = get_log()
-Saoju: SaojuDataManager
-Hlq: HulaquanDataManager
 Stats: StatsDataManager
 User: UsersManager
 Alias: AliasManager
+Saoju: SaojuDataManager
+Hlq: HulaquanDataManager
 
 
 
