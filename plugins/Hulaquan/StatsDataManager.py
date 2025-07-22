@@ -1,7 +1,6 @@
 
 from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
-from plugins.Hulaquan.data_managers import Hlq
 import copy
 
 
@@ -18,6 +17,9 @@ LATEST_20_REPOS = 'latest_20_repos'
 maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
 
+from typing import Any
+import importlib
+
 class StatsDataManager(BaseDataManager):
     """
     功能：
@@ -27,6 +29,10 @@ class StatsDataManager(BaseDataManager):
         super().__init__(file_path)
 
     def on_load(self):
+        
+        dataManagers = importlib.import_module('plugins.Hulaquan.data_managers')
+        Hlq = dataManagers.Hlq  # 动态获取
+        self.Hlq = Hlq
         self.data.setdefault(ON_COMMAND_TIMES, {})
         self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
@@ -229,7 +235,7 @@ class StatsDataManager(BaseDataManager):
     
     def register_event(self, title, eid=None):
         title = extract_text_in_brackets(title, True)
-        if alias := Hlq.alias_search_names(title[1:-1]):
+        if alias := self.Hlq.alias_search_names(title[1:-1]):
             title = alias[0]
         if eid and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if eid in self.data[HLQ_TICKETS_REPO]:
