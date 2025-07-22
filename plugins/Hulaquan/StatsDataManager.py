@@ -24,6 +24,8 @@ class StatsDataManager(BaseDataManager):
     功能：
     进行数据统计
     """
+    def __init__(self, file_path=None):
+        super().__init__(file_path)
 
     def on_load(self):
         from plugins.Hulaquan import HulaquanDataManager

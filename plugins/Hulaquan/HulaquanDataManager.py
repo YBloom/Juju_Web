@@ -36,6 +36,8 @@ class HulaquanDataManager(BaseDataManager):
         "update_time":datetime
     }
     """
+    def __init__(self, file_path=None):
+        super().__init__(file_path)
            
     def on_load(self):
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
