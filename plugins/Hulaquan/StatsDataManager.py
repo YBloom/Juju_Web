@@ -18,6 +18,9 @@ maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
 
 from typing import Any
+import importlib
+from plugins.Hulaquan.data_managers import AliasManager
+Alias = AliasManager()
 
 class StatsDataManager(BaseDataManager):
     """
@@ -231,9 +234,7 @@ class StatsDataManager(BaseDataManager):
     
     def register_event(self, title, eid=None):
         title = extract_text_in_brackets(title, True)
-        import importlib
-        from plugins.Hulaquan.data_managers import AliasManager
-        Alias = AliasManager()
+        
         if alias := Alias.search_names(title[1:-1]):
             title = alias[0]
         if eid and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:

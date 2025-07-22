@@ -315,7 +315,7 @@ class HulaquanDataManager(BaseDataManager):
             old_data_dict = old_data_all.get("ticket_details", {})
         if not old_data_dict:
             # 如果旧数据没有票务细节项，所有新数据判定为新上架
-            for i in new_data:
+            for i in new_data.values():
                 i["update_status"] = 'new'
             return new_data
         
