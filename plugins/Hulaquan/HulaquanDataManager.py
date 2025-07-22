@@ -238,7 +238,7 @@ class HulaquanDataManager(BaseDataManager):
                     for valid_from, m in pending_message.items():
                         s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else "")+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
                         cnt += 1
-                        valid_date = standardize_datetime(valid_from, return_str=False)
+                        valid_date = standardize_datetime(valid_from, return_str=True)
                         new_id = random_id(4, pending_message.keys())
                         self.data["pending_events_dict"][new_id] = {
                             "valid_from": valid_date,

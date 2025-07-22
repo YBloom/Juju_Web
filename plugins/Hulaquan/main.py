@@ -11,7 +11,7 @@ from plugins.Hulaquan.AliasManager import AliasManager
 from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
 from plugins.AdminPlugin.UsersManager import UsersManager
 from .user_func_help import *
-from .utils import parse_text_to_dict_with_mandatory_check
+from .utils import parse_text_to_dict_with_mandatory_check, standardize_datetime
 from ncatbot.utils.logger import get_log
 
 bot = CompatibleEnrollment  # 兼容回调函数注册器
@@ -428,7 +428,7 @@ class Hulaquan(BasePlugin):
             eid = str(eid)
             if eid in self._time_task_scheduler.get_job_status(eid):
                 continue
-            valid_from = event.get("valid_from")
+            valid_from = standardize_datetime(event.get("valid_from"))
             if not valid_from:
                 continue
             valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
