@@ -388,6 +388,7 @@ class Hulaquan(BasePlugin):
         if len(messages) >= 10:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
             log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
+            return
         if is_updated:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
         for user_id, user in User.users().items():
@@ -583,7 +584,6 @@ class Hulaquan(BasePlugin):
         #log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
         error_msg = f"{context}：\n" + traceback.format_exc()
         log.error(error_msg)
-        traceback.print_exc()
         if announce_admin:
             await self.api.post_private_msg(User.admin_id, error_msg)
     
