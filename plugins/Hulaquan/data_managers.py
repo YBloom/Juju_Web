@@ -14,7 +14,7 @@ Stats = StatsDataManager()
 Saoju = SaojuDataManager()
 Hlq = HulaquanDataManager()
 
-async def save():
+async def save_all():
     await User.save()
     await Stats.save()
     await Saoju.save()

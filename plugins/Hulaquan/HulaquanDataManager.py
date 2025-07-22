@@ -500,7 +500,7 @@ class HulaquanDataManager(BaseDataManager):
         message += f"购票链接：{url}\n"
         message += f"最后更新时间：{update_time}\n"
         if pending:
-            message += f"即将开票，开票时间：{valid_from}\n一切数据若有官方来源以官方为准，这个时间可能会因为主办方调整而改变。\n"
+            message += f"🕰️即将开票，开票时间：{valid_from}\n一切数据若有官方来源以官方为准，这个时间可能会因为主办方调整而改变。\n"
         message += "剩余票务信息:\n"
         message += ticket_info_message
         if no_saoju_data:
@@ -526,7 +526,7 @@ class HulaquanDataManager(BaseDataManager):
         elif ticket["status"] == 'pending':
             v = ticket["valid_from"]
             v = v if v else "未知时间"
-            ticket_status = f"待开票🟡"
+            ticket_status = f"🕰️"
         else:
             ticket_status = "❌"
         ticket_details = ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
