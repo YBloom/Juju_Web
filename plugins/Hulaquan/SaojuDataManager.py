@@ -23,6 +23,8 @@ class SaojuDataManager(BaseDataManager):
         super().__init__(file_path)
 
     def on_load(self):
+        import importlib
+        
         self.data.setdefault("date_dict", {})  # 确保有一个日期字典来存储数据
         self.data.setdefault("update_time_dict", {})  # 确保有一个更新时间字典来存储数据
         self.data["update_time_dict"].setdefault("date_dict", {})  # 确保有一个更新时间字典来存储数据

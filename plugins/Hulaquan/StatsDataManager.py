@@ -18,7 +18,6 @@ maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
 
 from typing import Any
-import importlib
 
 class StatsDataManager(BaseDataManager):
     """
@@ -29,6 +28,7 @@ class StatsDataManager(BaseDataManager):
         super().__init__(file_path)
 
     def on_load(self):
+        import importlib
         
         dataManagers = importlib.import_module('plugins.Hulaquan.data_managers')
         Hlq = dataManagers.Hlq  # 动态获取

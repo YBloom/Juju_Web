@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from plugins.Hulaquan.utils import *
 from plugins.Hulaquan import BaseDataManager
-from plugins.Hulaquan.data_managers import Saoju, Stats, Alias
 import aiohttp
 import os, shutil
 import copy
@@ -35,6 +34,13 @@ class HulaquanDataManager(BaseDataManager):
         super().__init__(file_path)
            
     def on_load(self):
+        global Saoju, Stats, Alias
+        import importlib
+        
+        dataManagers = importlib.import_module('plugins.Hulaquan.data_managers')
+        Saoju = dataManagers.Saoju  # 动态获取
+        Stats = dataManagers.Stats  # 动态获取
+        Alias = dataManagers.Alias  # 动态获取
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
         self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
