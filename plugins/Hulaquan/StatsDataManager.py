@@ -19,7 +19,7 @@ maxErrorTimes = 3  # 报错次数超过2次则删除report
 
 from typing import Any
 import importlib
-from plugins.Hulaquan.data_managers import AliasManager
+from plugins.Hulaquan.AliasManager import AliasManager
 Alias = AliasManager()
 
 class StatsDataManager(BaseDataManager):
