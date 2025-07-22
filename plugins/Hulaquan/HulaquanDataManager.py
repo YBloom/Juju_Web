@@ -475,6 +475,8 @@ class HulaquanDataManager(BaseDataManager):
                 if ticket["status"] == "active":
                     if ticket["left_ticket_count"] > (0 if ignore_sold_out else -1):
                         remaining_tickets.append(ticket)
+                elif ticket["status"] == "pending":
+                    remaining_tickets.append(ticket)
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
             message = await self.build_ticket_query_info_message(
                 title, url, event_data, remaining_tickets, show_cast=show_cast, show_ticket_id=show_ticket_id
@@ -516,7 +518,14 @@ class HulaquanDataManager(BaseDataManager):
         """
         eName = self.get_ordered_search_names(extract_text_in_brackets(ticket['title'], False), ticket['event_id'])
         max_ticket_info_count = self.get_max_ticket_content_length([ticket])
-        ticket_status = "✨" if ticket['left_ticket_count'] > 0 else "❌"
+        if ticket['status'] == 'active' and ticket['left_ticket_count'] > 0:
+            ticket_status = "✨" 
+        elif ticket["status"] == 'pending':
+            v = ticket["valid_from"]
+            v = v if v else "未知时间"
+            ticket_status = f"{v}开票🟡"
+        else:
+            ticket_status = "❌"
         ticket_details = ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
         if show_ticket_id:
             ticket_details = ' ' + ticket['id'] + ticket_details
@@ -527,15 +536,18 @@ class HulaquanDataManager(BaseDataManager):
             if not cast_str:
                 no_saoju_data = True
         text = ticket_status + ticket_details
-        return text, no_saoju_data
+        return text, no_saoju_data, (ticket["status"] == 'pending', ticket["valid_from"])
 
     async def _generate_ticket_info_message(self, remaining_tickets, show_cast, event_data, show_ticket_id):
         if not remaining_tickets:
             return "暂无余票。", True
         ticket_lines = []
         no_saoju_data = False
+        pending = False
         for ticket in remaining_tickets:
-            text, no_cast = await self.build_single_ticket_info_str(ticket, show_cast, event_data, show_ticket_id)
+            text, no_cast, pending_t = await self.build_single_ticket_info_str(ticket, show_cast, event_data, show_ticket_id)
+            if pending_t[0]:
+                pending = True
             if no_cast:
                 no_saoju_data = True
             ticket_lines.append(text)
