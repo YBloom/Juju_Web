@@ -73,7 +73,7 @@ def user_command_wrapper(command_name):
         def decorator(func):
             @functools.wraps(func)
             async def wrapper(this, *args, **kwargs):
-                this.stats_data_manager.on_command(command_name)
+                Stats.on_command(command_name)
                 try:
                     return await func(this, *args, **kwargs)
                 except Exception as e:
