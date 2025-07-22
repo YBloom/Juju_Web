@@ -491,12 +491,16 @@ class HulaquanDataManager(BaseDataManager):
         update_time = event_data.get('update_time', '未知')
 
         # 获取剩余票务信息
-        ticket_info_message, no_saoju_data = await self._generate_ticket_info_message(remaining_tickets, show_cast, event_data, show_ticket_id)
-        
+        ticket_info_message, no_saoju_data, pending_t = await self._generate_ticket_info_message(remaining_tickets, show_cast, event_data, show_ticket_id)
+        pending = pending_t[0]
+        valid_from = pending_t[1] if pending else ""
         # 拼接消息
-        message = f"剧名: {title}\n"
+        message = ""
+        message += f"剧名: {title}\n"
         message += f"购票链接：{url}\n"
         message += f"最后更新时间：{update_time}\n"
+        if pending:
+            message += f"即将开票，开票时间：{valid_from}\n一切数据若有官方来源以官方为准，这个时间可能会因为主办方调整而改变。\n"
         message += "剩余票务信息:\n"
         message += ticket_info_message
         if no_saoju_data:
@@ -522,7 +526,7 @@ class HulaquanDataManager(BaseDataManager):
         elif ticket["status"] == 'pending':
             v = ticket["valid_from"]
             v = v if v else "未知时间"
-            ticket_status = f"{v}开票🟡"
+            ticket_status = f"待开票🟡"
         else:
             ticket_status = "❌"
         ticket_details = ljust_for_chinese(f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}", max_ticket_info_count)
@@ -542,15 +546,13 @@ class HulaquanDataManager(BaseDataManager):
             return "暂无余票。", True
         ticket_lines = []
         no_saoju_data = False
-        pending = False
+        pending_t = (False, "")
         for ticket in remaining_tickets:
             text, no_cast, pending_t = await self.build_single_ticket_info_str(ticket, show_cast, event_data, show_ticket_id)
-            if pending_t[0]:
-                pending = True
             if no_cast:
                 no_saoju_data = True
             ticket_lines.append(text)
-        return ("\n".join(ticket_lines), no_saoju_data)
+        return ("\n".join(ticket_lines), no_saoju_data, pending_t)
     
     async def __update_ticket_dict_async(self):
         to_delete = []
