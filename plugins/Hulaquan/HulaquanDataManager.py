@@ -179,7 +179,7 @@ class HulaquanDataManager(BaseDataManager):
 
     # -------------------Query------------------------------ #         
     # ---------------------Announcement--------------------- #
-    async def compare_to_database_async(self, subscribe_list=None):
+    async def compare_to_database_async(self, subscribe_list=[]):
         old_data_all = copy.deepcopy(self.data)
         new_data_all = await self._update_events_data_async()
         try:
@@ -188,7 +188,7 @@ class HulaquanDataManager(BaseDataManager):
             self.save_data_cache(old_data_all, new_data_all, "error_announcement_cache")
             raise  # 重新抛出异常，便于外层捕获和处理
 
-    async def __compare_to_database(self, old_data_all, new_data_all, subscribe_list=None):
+    async def __compare_to_database(self, old_data_all, new_data_all, subscribe_list=[]):
         # 将新爬的数据与旧数据进行比较，找出需要更新的数据
         """
         __dump: bool, 是否将新数据写入文件
@@ -197,6 +197,8 @@ class HulaquanDataManager(BaseDataManager):
             None: 如果没有需要更新的数据
         """
         no_subscribe = subscribe_list is None
+        if no_subscribe:
+            subscribe_list = []
         is_updated = False
         new_pending = False
         new_data = new_data_all.get("events", {})
