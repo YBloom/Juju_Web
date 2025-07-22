@@ -8,7 +8,7 @@ if __name__ == '__main__':
 import aiohttp, asyncio, json
 import pandas as pd
 from datetime import datetime, timedelta
-from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
 import requests
 from bs4 import BeautifulSoup

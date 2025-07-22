@@ -3,21 +3,25 @@ import traceback, time, asyncio, re
 import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
-from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
-from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
-from plugins.Hulaquan.AliasManager import AliasManager
+
+from plugins.Hulaquan import SaojuDataManager
+from plugins.Hulaquan import StatsDataManager
+from plugins.Hulaquan import AliasManager
+from plugins.Hulaquan import HulaquanDataManager
 from plugins.Hulaquan.StatsDataManager import StatsDataManager, maxLatestReposCount
 from plugins.AdminPlugin.UsersManager import UsersManager
 from .user_func_help import *
 from .utils import parse_text_to_dict_with_mandatory_check
 from ncatbot.utils.logger import get_log
-bot = CompatibleEnrollment  # 兼容回调函数注册器
-log = get_log()
-Saoju: SaojuDataManager = SaojuDataManager()
-Hlq: HulaquanDataManager = HulaquanDataManager()
-Stats: StatsDataManager = StatsDataManager()
-User: UsersManager = UsersManager()
 
+bot = CompatibleEnrollment  # 兼容回调函数注册器
+
+log = get_log()
+Saoju = SaojuDataManager()
+Hlq = HulaquanDataManager()
+Stats = StatsDataManager()
+User = UsersManager()
+Alias = AliasManager()
 
 
 
@@ -599,7 +603,8 @@ class Hulaquan(BasePlugin):
         result = await self.get_eventID_by_name(search_name, msg)
         if result:
             event_id = result[0]
-            Hlq.add_alias(event_id, search_name, alias)
+            Alias.add_alias(event_id, alias)
+            Alias.add_search_name(event_id, search_name)
             await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
             return
         
@@ -626,20 +631,18 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("on_list_aliases")    
     async def on_list_aliases(self, msg: BaseMessage):
-        alias_dict = Hlq.alias_dict
+        # 直接从 AliasManager 获取别名信息
+        alias_to_event = Alias.data.get("alias_to_event", {})
+        event_to_names = Alias.data.get("event_to_names", {})
         events = Hlq.data.get("events", {})
-        if not alias_dict:
+        if not alias_to_event:
             await msg.reply_text("暂无别名记录。")
             return
         lines = []
-        for alias, content in alias_dict.items():
-            event_id = content.get("event_id")
-            if event_id and event_id in events:
-                event_name = events[event_id].get("title", "未知剧目")
-                search_names = ", ".join(content["search_names"].keys())
-                lines.append(f"{alias}（{event_name}）: {search_names}")
-            else:
-                lines.append(f"{alias}: 无对应剧目")
+        for alias, event_id in alias_to_event.items():
+            event_name = events.get(event_id, {}).get("title", "未知剧目")
+            search_names = ", ".join(event_to_names.get(event_id, []))
+            lines.append(f"{alias}（{event_name}）: {search_names}")
         if not lines:
             await msg.reply_text("暂无别名记录。")
         else:

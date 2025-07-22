@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from plugins.Hulaquan.utils import *
-from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
-from plugins.Hulaquan.StatsDataManager import StatsDataManager
-from plugins.Hulaquan.AliasManager import AliasManager
-from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from plugins.Hulaquan import SaojuDataManager
+from plugins.Hulaquan import StatsDataManager
+from plugins.Hulaquan import AliasManager
+from plugins.Hulaquan import BaseDataManager
 import aiohttp
 import os, shutil
 import copy

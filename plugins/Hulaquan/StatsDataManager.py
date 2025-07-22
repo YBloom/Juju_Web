@@ -1,6 +1,5 @@
-from datetime import datetime, timedelta
-from plugins.AdminPlugin.BaseDataManager import BaseDataManager
-from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
+from plugins.Hulaquan import HulaquanDataManager
+from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
 import copy
 

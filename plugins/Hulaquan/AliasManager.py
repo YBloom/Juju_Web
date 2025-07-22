@@ -1,4 +1,4 @@
-from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from plugins.Hulaquan import BaseDataManager
 
 
 class AliasManager(BaseDataManager):
