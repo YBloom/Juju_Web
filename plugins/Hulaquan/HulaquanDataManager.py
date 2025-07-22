@@ -118,7 +118,7 @@ class HulaquanDataManager(BaseDataManager):
                         if tid not in self.data['ticket_id_to_event_id'].keys():
                             self.data['ticket_id_to_event_id'][tid] = event_id
                     if data_dict is None:
-                        self.ticket_details(event_id) = ticket_dump_list
+                        self.data["events"][event_id]["ticket_details"] = ticket_dump_list
                         return self.data
                     else:
                         data_dict["events"][event_id]["ticket_details"] = ticket_dump_list
