@@ -558,6 +558,11 @@ class HulaquanDataManager(BaseDataManager):
             event_id = self.ticketID_to_eventID(ticket_id)
         return self.ticket_details(event_id)[ticket_id]
     
+    def delete_ticket(self, ticket_id, event_id=None):
+        if not event_id:
+            event_id = self.ticketID_to_eventID(ticket_id)
+        del self.data['events'][event_id]["ticket_details"][ticket_id]
+    
     def ticket_details(self, event_id):
         """根据eventid获取票务数据
         Args:
