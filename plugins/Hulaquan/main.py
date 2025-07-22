@@ -97,10 +97,6 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
-        user: UsersManager = UsersManager()
-        hlq: HulaquanDataManager = HulaquanDataManager()
-        saoju: SaojuDataManager = SaojuDataManager()
-        stats: StatsDataManager = StatsDataManager()
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", self._hulaquan_announcer_interval))
