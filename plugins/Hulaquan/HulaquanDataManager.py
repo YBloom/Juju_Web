@@ -636,7 +636,7 @@ class HulaquanDataManager(BaseDataManager):
     async def message_update_data_async(self):
         query_time = datetime.now()
         query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        result = await self.compare_to_database_async(Saoju)
+        result = await self.compare_to_database_async()
         is_updated = result["is_updated"]
         messages = result["messages"]
         new_pending = result["new_pending"]
