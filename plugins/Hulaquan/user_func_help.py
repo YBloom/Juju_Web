@@ -136,3 +136,9 @@ HLQ_LATEST_REPOS_USAGE = """/最新repo 数字\n数字必须小于等于20"""
 HLQ_DEL_REPO_NAME = "删除我创建的repo"
 HLQ_DEL_REPO_DESCRIPTION = "删除我创建的repo"
 HLQ_DEL_REPO_USAGE = """/删除repo repoID\n不知道repoID的可以通过/我的repo查看，可以删除多个repo，用空格分开id"""
+
+HLQ_FOLLOW_TICKET_NAME = "关注学生票"
+HLQ_FOLLOW_TICKET_DESCRIPTION = "关注学生票"
+HLQ_FOLLOW_TICKET_USAGE = """
+/关注学生票 场次id
+例如/关注学生票 10001 10002 10003 10005"""

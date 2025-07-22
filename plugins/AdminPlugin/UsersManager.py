@@ -1,5 +1,5 @@
 from datetime import datetime
-from .BaseDataManager import BaseDataManager
+from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 from ncatbot.utils.logger import get_log
 log = get_log()
 
@@ -33,7 +33,6 @@ class UsersManager(BaseDataManager):
             self.data["groups"] = data["groups"] if first_init else {}
         if "groups_list" not in self.data:
             self.data["groups_list"] = data["groups_list"] if first_init else []
-        print(len(self.data["users_list"]))
         return super().on_load()
         
     def users(self):
@@ -152,13 +151,18 @@ class UsersManager(BaseDataManager):
             self.add_user(user_id)
         self.data["users"][user_id]["subscribe"]["is_subscribe"] = True
         self.data["users"][user_id]["subscribe"]["subscribe_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if "subscribe_tickets" not in self.data["users"][user_id]["subscribe"]:
+            self.data["users"][user_id]["subscribe"]["subscribe_tickets"] = []
         return True
    
     def add_ticket_subscribe(self, user_id, ticket_id):
-       if not isinstance(user_id, str):
+        if not isinstance(user_id, str):
            user_id = str(user_id)
-       if user_id not in self.data["users_list"]:
-           self.add_user(user_id)
-       self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(ticket_id)
-       return True
+        if user_id not in self.data["users_list"]:
+            self.add_user(user_id)
+        if isinstance(ticket_id, int) or isinstance(ticket_id, str):
+            ticket_id = [ticket_id]
+        for i in ticket_id:
+            self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
+        return True
    

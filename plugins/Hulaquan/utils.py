@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 import unicodedata
+import traceback
+import random
 import re
 
 def dateToStr(date):
@@ -55,52 +57,92 @@ def ljust_for_chinese(s, width, fillchar=' '):
 def get_max_cast_length(casts=None):
     return 8
 
+def standardize_datetime_for_saoju(dateAndTime: str, return_str=False, latest_str: str=None):
+    # 匹配“8月3日 星期日 14:30”
+    match = re.match(r"(\d{1,2})月(\d{1,2})日.*?(\d{1,2}:\d{2})", dateAndTime)
+    if match:
+        month = int(match.group(1))
+        day = int(match.group(2))
+        time_str = match.group(3)
+        current_year = datetime.now().year
+        dt_str = f"{current_year}-{month:02d}-{day:02d} {time_str}"
+        try:
+            dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            if return_str:
+                # 返回原始格式（如“8月3日 星期日 14:30”）
+                return dateAndTime
+            else:
+                return dt
+        except Exception:
+            pass
+
+    # 匹配只有时间（如“14:30”），结合 latest_str 补全日期
+    match_time = re.match(r"^(\d{1,2}:\d{2})$", dateAndTime)
+    if match_time and latest_str:
+        # 捕获星期几
+        match_latest = re.match(r"(\d{1,2})月(\d{1,2})日\s*(星期[一二三四五六日天])?.*?(\d{1,2}:\d{2})", latest_str)
+        if match_latest:
+            month = int(match_latest.group(1))
+            day = int(match_latest.group(2))
+            weekday = match_latest.group(3) or ""
+            time_str = match_time.group(1)
+            current_year = datetime.now().year
+            dt_str = f"{current_year}-{month:02d}-{day:02d} {time_str}"
+            try:
+                dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                if return_str:
+                    # 拼接星期几
+                    return f"{month}月{day}日 {weekday} {time_str}".strip()
+                else:
+                    return dt
+            except Exception:
+                pass
+        else:
+            raise KeyError(f"无法解析类型：{dateAndTime}")
+
+
+
 def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
     current_year = datetime.now().year
-    dateAndTime = dateAndTime.replace("：", ':').strip()
-    # 支持的格式
+    dateAndTime = dateAndTime.replace("：", ':').replace("/", "-").strip()
     formats = [
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
         "%m-%d %H:%M:%S",
         "%m-%d %H:%M",
+        "%m-%d",
         "%y-%m-%d %H:%M:%S",
         "%y-%m-%d %H:%M",
-        "%y/%m/%d %H:%M:%S",
-        "%y/%m/%d %H:%M",
-        "%Y-%m-%d",
-        "%m-%d",
-        "%m/%d",
         "%H:%M:%S",
         "%H:%M",
     ]
+    # 处理“8月3日 星期日 14:30”格式
+    
+    # 其他格式
     for fmt in formats:
         try:
-            fmt_try = fmt.replace("/", "-")
             dt_str = dateAndTime
-            # 年份补全
-            if fmt_try.startswith("%m-") or fmt_try.startswith("%m/"):
-                dt_str = f"{current_year}-{dt_str}"
-                fmt_try = "%Y-" + fmt_try
-            # 只时间，补全年月日
+            fmt_try = fmt
+            # 补全逻辑
+            # 只时间
             if fmt_try.startswith("%H"):
                 dt_str = f"{current_year}-01-01 {dt_str}"
                 fmt_try = "%Y-%m-%d " + fmt_try
-            # 只日期，补全时间
-            if fmt_try.endswith("%m-%d") or fmt_try.endswith("%m/%d"):
+            # 只日期
+            if fmt_try in ["%m-%d", "%y-%m-%d", "%Y-%m-%d"]:
                 dt_str = f"{dt_str} 00:00:00"
                 fmt_try = fmt_try + " %H:%M:%S"
-            elif fmt_try.endswith("%Y-%m-%d"):
-                dt_str = f"{dt_str} 00:00:00"
-                fmt_try = fmt_try + " %H:%M:%S"
-            elif fmt_try.endswith("%y-%m-%d"):
-                dt_str = f"{dt_str} 00:00:00"
-                fmt_try = fmt_try + " %H:%M:%S"
-            # 只时间，补全年月日
-            if fmt_try == "%Y-%m-%d %H:%M":
+            # 月日格式补全年份
+            if fmt_try.startswith("%m-"):
+                dt_str = f"{current_year}-{dateAndTime}"
+                fmt_try = "%Y-" + fmt
+            # 年月日+时分
+            if fmt_try in ["%Y-%m-%d %H:%M", "%y-%m-%d %H:%M", "%m-%d %H:%M"]:
                 if len(dt_str.split()) == 1:
                     dt_str = f"{dt_str} 00:00"
-            if fmt_try == "%Y-%m-%d %H:%M:%S":
+            # 年月日+时分秒
+            if fmt_try in ["%Y-%m-%d %H:%M:%S", "%y-%m-%d %H:%M:%S", "%m-%d %H:%M:%S"]:
                 if len(dt_str.split()) == 1:
                     dt_str = f"{dt_str} 00:00:00"
             dt = datetime.strptime(dt_str, fmt_try)
@@ -132,12 +174,17 @@ def extract_city(address):
         return match.group(1)[:-1]
     return None
 
-def extract_text_in_brackets(text):
-    # 正则表达式匹配《xxx》
+def extract_text_in_brackets(text, keep_brackets=True):
+    """
+    提取《xxx》内容。
+    keep_brackets=True: 返回《xxx》
+    keep_brackets=False: 返回xxx
+    没有书名号则返回原文
+    """
     match = re.search(r'《(.*?)》', text)
     if match:
-        return match.group(0)  # 返回整个《xxx》内容
-    return text  # 如果没有匹配到，返回None
+        return match.group(0) if keep_brackets else match.group(1)
+    return text if not keep_brackets else "《"+text+"》"
 
 def extract_title_info(text):
     # 正则表达式提取《xxx》，价格和原价
@@ -203,3 +250,11 @@ def parse_text_to_dict_with_mandatory_check(text, input_dict, with_prefix=True):
     
     # 返回最终结果
     return result, mandatory_missing
+
+def random_id(lens, id_list):
+    end = 10 ** lens - 1
+    start = 10 ** (lens-1)
+    r_id = random.randint(start, end)
+    while r_id in id_list:
+        r_id = random.randint(start, end)
+    return r_id

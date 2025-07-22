@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
 from plugins.Hulaquan.utils import *
 import copy
 
@@ -14,6 +15,8 @@ EVENT_ID_TO_EVENT_TITLE = 'event_id_to_event_title'
 LATEST_EVENT_ID = 'latest_event_id'
 LATEST_20_REPOS = 'latest_20_repos'
 
+Hlq: HulaquanDataManager = HulaquanDataManager
+
 maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
 
@@ -22,8 +25,6 @@ class StatsDataManager(BaseDataManager):
     功能：
     进行数据统计
     """
-    def __init__(self, file_path=None):
-        super().__init__(file_path)
 
     def on_load(self):
         self.data.setdefault(ON_COMMAND_TIMES, {})
@@ -227,18 +228,22 @@ class StatsDataManager(BaseDataManager):
         return times
     
     def register_event(self, title, eid=None):
-        title = extract_text_in_brackets(title)
+        title = extract_text_in_brackets(title, True)
+        if alias := Hlq.alias_search_names(title[1:-1]):
+            title = alias[0]
         if eid and eid not in self.data[EVENT_ID_TO_EVENT_TITLE]:
             if eid in self.data[HLQ_TICKETS_REPO]:
                 title = list(self.data[HLQ_TICKETS_REPO][eid].values())[0]['event_title']
             self.data[EVENT_ID_TO_EVENT_TITLE][eid] = {'title':title, 'create_time':now_time_str()}  # 修正为调用函数
             return eid
-        else:
+        elif not eid:
             if eid := self.get_event_id(title):
                 return eid
             event_id = self.new_id(LATEST_EVENT_ID)
             self.data[EVENT_ID_TO_EVENT_TITLE][event_id] = {'title':title, 'create_time':now_time_str()}  # 修正为调用函数
             return event_id
+        else:
+            return eid
     
     def get_event_id(self, title):
         for eid, event in self.data[EVENT_ID_TO_EVENT_TITLE].items():

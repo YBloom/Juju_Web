@@ -3,15 +3,22 @@ import traceback, time, asyncio, re
 import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
-from .HulaquanDataManager import HulaquanDataManager
-from .SaojuDataManager import SaojuDataManager
-from .StatsDataManager import StatsDataManager, maxLatestReposCount
+from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
+from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
+from plugins.Hulaquan.AliasManager import AliasManager
+from plugins.Hulaquan.StatsDataManager import StatsDataManager, maxLatestReposCount
 from plugins.AdminPlugin.UsersManager import UsersManager
 from .user_func_help import *
 from .utils import parse_text_to_dict_with_mandatory_check
 from ncatbot.utils.logger import get_log
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 log = get_log()
+Saoju: SaojuDataManager = SaojuDataManager()
+Hlq: HulaquanDataManager = HulaquanDataManager()
+Stats: StatsDataManager = StatsDataManager()
+User: UsersManager = UsersManager()
+
+
 
 
 UPDATE_LOG = [
@@ -86,10 +93,10 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
-        self.users_manager: UsersManager = UsersManager()
-        self.hlq_data_manager: HulaquanDataManager = HulaquanDataManager()
-        self.saoju_data_manager: SaojuDataManager = SaojuDataManager()
-        self.stats_data_manager: StatsDataManager = StatsDataManager()
+        user: UsersManager = UsersManager()
+        hlq: HulaquanDataManager = HulaquanDataManager()
+        saoju: SaojuDataManager = SaojuDataManager()
+        stats: StatsDataManager = StatsDataManager()
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", self._hulaquan_announcer_interval))
@@ -343,6 +350,17 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
+        self.register_admin_func(
+            name=HLQ_FOLLOW_TICKET_NAME,
+            handler=self.on_follow_ticket,
+            prefix="/关注学生票",
+            description=HLQ_FOLLOW_TICKET_DESCRIPTION,
+            usage=HLQ_FOLLOW_TICKET_USAGE,
+            examples=[""],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        
         self.register_pending_tickets_announcer()
         """
         {name}-{description}:使用方式 {usage}
@@ -363,18 +381,16 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
-        result = await self.hlq_data_manager.message_update_data_async(saoju=self.saoju_data_manager)
+        result = await Hlq.message_update_data_async()
         is_updated = result["is_updated"]
         messages = result["messages"]
         new_pending = result["new_pending"]
         if len(messages) >= 10:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
             log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
-        if not is_updated:
-            log.info("呼啦圈数据刷新成功：无更新数据")
-        else:
+        if is_updated:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
-        for user_id, user in self.users_manager.users().items():
+        for user_id, user in user.users().items():
             mode = user.get("attention_to_hulaquan")
             if (manual and user_id not in user_lists):
                 continue
@@ -382,11 +398,11 @@ class Hulaquan(BasePlugin):
                 continue
             if manual or is_updated:
                 if mode == "2":
-                    self.users_manager.switch_attention_to_hulaquan(user_id, 1)
+                    user.switch_attention_to_hulaquan(user_id, 1)
                 for m in messages:
                     message = f"呼啦圈上新提醒：\n{m}"
                     await self.api.post_private_msg(user_id, message)
-        for group_id, group in self.users_manager.groups().items():
+        for group_id, group in user.groups().items():
             mode = group.get("attention_to_hulaquan")
             if (manual and group_id not in group_lists):
                 continue
@@ -399,11 +415,12 @@ class Hulaquan(BasePlugin):
         if new_pending:
             self.register_pending_tickets_announcer()
         elapsed_time = time.time() - start_time
-        print(f"任务执行时间: {elapsed_time}秒")
+        if is_updated:
+            print(f"任务执行时间: {elapsed_time}秒")
         return True
         
     def register_pending_tickets_announcer(self):
-        for eid, event in self.hlq_data_manager.data["pending_events_dict"].items():
+        for eid, event in Hlq.data["pending_events_dict"].items():
             eid = str(eid)
             if eid in self._time_task_scheduler.get_job_status(eid):
                 continue
@@ -421,17 +438,17 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str):
-        for user_id, user in self.users_manager.users().items():
+        for user_id, user in user.users().items():
             mode = user.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_private_msg(user_id, message)
-        for group_id, group in self.users_manager.groups().items():
+        for group_id, group in user.groups().items():
             mode = group.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_group_msg(group_id, message)
-        del self.hlq_data_manager.data["pending_events_dict"][eid]
+        del Hlq.data["pending_events_dict"][eid]
     
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id
@@ -444,12 +461,12 @@ class Hulaquan(BasePlugin):
         mode = mode[1]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
-            if self.users_manager.is_op(user_id):
-                self.users_manager.switch_attention_to_hulaquan(group_id, mode, is_group=True)
+            if User.is_op(user_id):
+                User.switch_attention_to_hulaquan(group_id, mode, is_group=True)
             else:
                 return await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
         else:
-            self.users_manager.switch_attention_to_hulaquan(user_id, mode)
+            User.switch_attention_to_hulaquan(user_id, mode)
         if mode == "2":
             await msg.reply("此功能已删除！目前只有模式0和1！")
         elif mode == "1":
@@ -470,7 +487,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("【因数据自动刷新间隔较短，目前已不支持-R参数】")
         if isinstance(msg, PrivateMessage):
             await msg.reply_text("查询中，请稍后…")
-        result = await self.hlq_data_manager.on_message_tickets_query(event_name, self.saoju_data_manager, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=False)
+        result = await Hlq.on_message_tickets_query(event_name, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=False)
         await msg.reply_text(result if result else "未找到相关信息，请尝试更换搜索名")
         
 
@@ -483,7 +500,7 @@ class Hulaquan(BasePlugin):
         return args
     
     async def on_change_schedule_hulaquan_task_interval(self, value, msg: BaseMessage):
-        if not self.users_manager.is_op(msg.user_id):
+        if not User.is_op(msg.user_id):
             await msg.reply_text(f"修改失败，暂无修改查询时间的权限")
             return
         self.stop_hulaquan_announcer()
@@ -511,7 +528,7 @@ class Hulaquan(BasePlugin):
             return
         casts = args["text_args"]
         show_others = "-o" in args["mode_args"]
-        messages = await self.saoju_data_manager.match_co_casts(casts, show_others=show_others)
+        messages = await Saoju.match_co_casts(casts, show_others=show_others)
         await msg.reply("\n".join(messages))
     
        
@@ -525,7 +542,7 @@ class Hulaquan(BasePlugin):
         date = args["text_args"][0]
         city = args["text_args"][1] if len(args["text_args"])>1 else None
         mode_args = args["mode_args"]
-        result = await self.hlq_data_manager.on_message_search_event_by_date(self.saoju_data_manager, date, city, ignore_sold_out=("-i" in mode_args))
+        result = await Hlq.on_message_search_event_by_date(date, city, ignore_sold_out=("-i" in mode_args))
         await msg.reply(result)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
@@ -544,19 +561,19 @@ class Hulaquan(BasePlugin):
     async def on_help(self, msg: BaseMessage):
         text = self._get_help()
         send = text["user"]
-        if self.users_manager.is_op(msg.user_id):
+        if User.is_op(msg.user_id):
             send += "\n以下是管理员功能："+text["admin"]
             send = "以下是用户功能：\n" + send
         await msg.reply(send)
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None):
-        while getattr(self.hlq_data_manager, "updating", False):
+        while getattr(Hlq, "updating", False):
             await asyncio.sleep(0.5)
-        await self.saoju_data_manager.save()
-        await self.hlq_data_manager.save()
-        await self.stats_data_manager.save()
-        await self.users_manager.save()
+        await Saoju.save()
+        await Hlq.save()
+        await Stats.save()
+        await User.save()
         log.info("🟡呼啦圈数据保存成功")
         if msg:
             await msg.reply_text("保存成功")
@@ -570,7 +587,7 @@ class Hulaquan(BasePlugin):
         log.error(error_msg)
         traceback.print_exc()
         if announce_admin:
-            await self.api.post_private_msg(self.users_manager.admin_id, error_msg)
+            await self.api.post_private_msg(User.admin_id, error_msg)
     
     @user_command_wrapper("add_alias")        
     async def on_set_alias(self, msg: BaseMessage):
@@ -582,21 +599,21 @@ class Hulaquan(BasePlugin):
         result = await self.get_eventID_by_name(search_name, msg)
         if result:
             event_id = result[0]
-            self.hlq_data_manager.add_alias(event_id, search_name, alias)
+            Hlq.add_alias(event_id, search_name, alias)
             await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
             return
         
     async def get_eventID_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False):
         # return :: (event_id, event_name) or False
-        result = await self.hlq_data_manager.search_eventID_by_name(search_name)
+        result = await Hlq.search_eventID_by_name_async(search_name)
         if not result:
             if notFoundAndRegister:
-                event_id = self.stats_data_manager.register_event(search_name)
+                event_id = Stats.register_event(search_name)
                 await msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
                 return (event_id, search_name)
             if foundInState:
-                if eid := self.stats_data_manager.get_event_id(search_name):
-                    return (eid, self.stats_data_manager.get_event_title(eid))
+                if eid := Stats.get_event_id(search_name):
+                    return (eid, Stats.get_event_title(eid))
             if msg:
                 await msg.reply_text(msg_prefix+"未找到该剧目")
             return False
@@ -609,8 +626,8 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("on_list_aliases")    
     async def on_list_aliases(self, msg: BaseMessage):
-        alias_dict = self.hlq_data_manager.alias_dict
-        events = self.hlq_data_manager.data.get("events", {})
+        alias_dict = Hlq.alias_dict
+        events = Hlq.data.get("events", {})
         if not alias_dict:
             await msg.reply_text("暂无别名记录。")
             return
@@ -631,7 +648,7 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("new_repo")    
     async def on_hulaquan_new_repo(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
-            if not self.users_manager.is_op(msg.user_id):
+            if not User.is_op(msg.user_id):
                 return await msg.reply_text("此功能当前仅限私聊使用。")
         
         match, mandatory_check = parse_text_to_dict_with_mandatory_check(msg.raw_message, HLQ_NEW_REPO_INPUT_DICT ,with_prefix=True)
@@ -651,8 +668,8 @@ class Hulaquan(BasePlugin):
         event_id = result[0]
         title = result[1]
         if not event_id:
-            event_id = self.stats_data_manager.register_event(title) 
-        report_id = self.stats_data_manager.new_repo(
+            event_id = Stats.register_event(title) 
+        report_id = Stats.new_repo(
             title=title,
             price=price,
             seat=seat,
@@ -670,7 +687,7 @@ class Hulaquan(BasePlugin):
         args = self.extract_args(msg)
         if not args["text_args"]:
             if "-l" in args["mode_args"]:
-                messages = self.stats_data_manager.get_repos_list()
+                messages = Stats.get_repos_list()
                 await msg.reply_text("\n".join(messages))
                 return
             await msg.reply_text("请提供剧名，用法："+HLQ_GET_REPO_USAGE)
@@ -682,7 +699,7 @@ class Hulaquan(BasePlugin):
             return
         event_id = event[0]
         event_title = event[1]
-        result = self.stats_data_manager.get_event_student_seat_repo(event_id, event_price)
+        result = Stats.get_event_student_seat_repo(event_id, event_price)
         if not result:
             await msg.reply_text(f"未找到剧目 {event_title} 的学生票座位记录，快来上传吧！")
             return
@@ -702,7 +719,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("错误反馈内容过长，请控制在500字以内。")
             return
         # 这里可以添加将错误反馈保存到数据库或发送给管理员的逻辑
-        message = self.stats_data_manager.report_repo_error(report_id, msg.user_id)
+        message = Stats.report_repo_error(report_id, msg.user_id)
         await msg.reply_text(f"{message}\n感谢您的反馈，我们会尽快处理！")
     
     @user_command_wrapper("my_repo")
@@ -710,10 +727,10 @@ class Hulaquan(BasePlugin):
         if isinstance(msg, GroupMessage):
             return
         user_id = msg.user_id
-        if self.users_manager.is_op(user_id):
+        if User.is_op(user_id):
             args = self.extract_args(msg)
             user_id = args["text_args"][0] if args["text_args"] else user_id
-        repos = self.stats_data_manager.get_users_repo(user_id)
+        repos = Stats.get_users_repo(user_id)
         if not repos:
             await msg.reply_text("您还没有提交过任何学生票座位记录。")
             return
@@ -734,7 +751,7 @@ class Hulaquan(BasePlugin):
         content = match["content"]
         category = match["category"]
         payable = match["payable"]
-        repos = self.stats_data_manager.modify_repo(
+        repos = Stats.modify_repo(
             msg.user_id,
             repoID, 
             date=date, 
@@ -743,7 +760,7 @@ class Hulaquan(BasePlugin):
             content=content, 
             category=category,
             payable=payable,
-            isOP=self.users_manager.is_op(msg.user_id)
+            isOP=User.is_op(msg.user_id)
         )
         if not repos:
             await msg.reply_text("未找到原记录或无修改权限，请输入/我的repo查看正确的repoID")
@@ -758,7 +775,7 @@ class Hulaquan(BasePlugin):
             return
         messages = []
         for report_id in args["text_args"]:
-            repo = self.stats_data_manager.del_repo(report_id.strip(), msg.user_id)
+            repo = Stats.del_repo(report_id.strip(), msg.user_id)
             if not repo:
                 messages.append(f"{report_id}删除失败！未找到对应的repo或你不是这篇repo的主人。")
             else:
@@ -774,7 +791,7 @@ class Hulaquan(BasePlugin):
                 return await msg.reply_text(f"数字必须小于{maxLatestReposCount}")
             else:
                 count = int(args["text_args"][0])
-        repos = self.stats_data_manager.show_latest_repos(count)
+        repos = Stats.show_latest_repos(count)
         if not repos:
             await msg.reply_text("暂无数据")
             return
@@ -790,3 +807,17 @@ class Hulaquan(BasePlugin):
             end = start + page_size
             page_messages = messages[start:end]
             await msg.reply_text("\n".join(page_messages))
+            
+            
+    async def on_follow_ticket(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        if not args["text_args"]:
+            return await msg.reply_text(f"请提供场次id，用法：{HLQ_FOLLOW_TICKET_USAGE}")
+        ticket_id_list = args["text_args"].split(" ")
+        ticket_id_list, denial = Hlq.verify_ticket_id(ticket_id_list)
+        txt = ""
+        if denial:
+            txt += f"未找到以下场次id：{' '.join(denial)}\n"
+        User.add_ticket_subscribe(ticket_id_list)
+        await msg.reply_text(txt + f"已成功关注以下场次,有票务变动会提醒您：{' '.join(ticket_id_list)}")
+        

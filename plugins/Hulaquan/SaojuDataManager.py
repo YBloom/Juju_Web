@@ -171,25 +171,38 @@ class SaojuDataManager(BaseDataManager):
         events = self.parse_artist_html(html_data)
         return events
     
-    async def match_co_casts(self, co_casts: list, show_others=True):
-        messages = []
+    async def match_co_casts(self, co_casts: list, show_others=True, return_data=False):
         search_name = co_casts[0]
         _co_casts = co_casts[1:]
         events = await self.get_artist_events_data(search_name)
         result = []
+        latest = ""
         for event in events:
             others = event['others'].split(" ")
-            if all(cast in others for cast in _co_casts):
-                if show_others:
-                    event['others'] = "\n同场其他演员：" + " ".join([item for item in others if item not in _co_casts])
-                else:
-                    event['others'] = ""
+            if all(cast in others for cast in _co_casts): 
+                others = [item for item in others if item not in _co_casts]
+                dt = event['date']
+                event['date'] = standardize_datetime_for_saoju(dt, return_str=True, latest_str=latest)
+                latest = dt
                 result.append(event)
-        messages.append(" ".join(co_casts)+f"同场的音乐剧演出，目前有{len(result)}场。")
-        for event in result:
+        if return_data:
+            return result
+        else:
+            return self.generate_co_casts_message(co_casts, show_others, result)
+
+    def generate_co_casts_message(self, co_casts, show_others, co_casts_data):
+        messages = []
+        messages.append(" ".join(co_casts)+f"同场的音乐剧演出，目前有{len(co_casts_data)}场。")
+        for event in co_casts_data:
+            if show_others:
+                event['others'] = "\n同场其他演员：" + " ".join(event['others'])
+            else:
+                event['others'] = ""
             messages.append(f"{event['date']} {event['city']} {event['title']}{event['others']}")
         return messages
 
+    async def request_co_casts_data(self, co_casts: list, show_others=False):
+        return self.match_co_casts(co_casts, show_others, return_data=True)
         
     
     async def fetch_saoju_artist_list(self):
