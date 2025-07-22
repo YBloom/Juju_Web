@@ -425,7 +425,7 @@ class Hulaquan(BasePlugin):
             _exist = self._time_task_scheduler.get_job_status(eid)
             if _exist and eid in _exist:
                 continue
-            valid_from = standardize_datetime(event.get("valid_from"))
+            valid_from = standardize_datetime(event.get("valid_from"), False)
             if not valid_from:
                 continue
             valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
