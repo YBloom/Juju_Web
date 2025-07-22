@@ -370,7 +370,7 @@ class HulaquanDataManager(BaseDataManager):
         if not ticket['start_time']:
             return {"cast":[], "city":None}
         # 优先用别名系统检索名
-        search_names = self.get_ordered_search_names(title=eName, event_id=ticket.get('event_id'))
+        search_names = self.get_ordered_search_names(extract_text_in_brackets(eName, False), ticket['event_id'])
         for name in search_names:
             response = await Saoju.search_for_musical_by_date_async(name, ticket['start_time'], city=city)
             if response:
@@ -516,7 +516,6 @@ class HulaquanDataManager(BaseDataManager):
         Returns:
             (str, bool): 票务信息字符串, 是否无卡司数据
         """
-        eName = self.get_ordered_search_names(extract_text_in_brackets(ticket['title'], False), ticket['event_id'])
         max_ticket_info_count = self.get_max_ticket_content_length([ticket])
         if ticket['status'] == 'active' and ticket['left_ticket_count'] > 0:
             ticket_status = "✨" 
@@ -531,7 +530,7 @@ class HulaquanDataManager(BaseDataManager):
             ticket_details = ' ' + ticket['id'] + ticket_details
         no_saoju_data = False
         if show_cast:
-            cast_str = await self.get_cast_artists_str_async(eName, ticket, city=extract_city(event_data.get("location", "")))
+            cast_str = await self.get_cast_artists_str_async(ticket['title'], ticket, city=extract_city(event_data.get("location", "")))
             ticket_details += " " + cast_str
             if not cast_str:
                 no_saoju_data = True

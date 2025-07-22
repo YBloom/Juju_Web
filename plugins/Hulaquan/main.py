@@ -390,7 +390,7 @@ class Hulaquan(BasePlugin):
             log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
         if is_updated:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
-        for user_id, user in user.users().items():
+        for user_id, user in User.users().items():
             mode = user.get("attention_to_hulaquan")
             if (manual and user_id not in user_lists):
                 continue
@@ -402,7 +402,7 @@ class Hulaquan(BasePlugin):
                 for m in messages:
                     message = f"呼啦圈上新提醒：\n{m}"
                     await self.api.post_private_msg(user_id, message)
-        for group_id, group in user.groups().items():
+        for group_id, group in User.groups().items():
             mode = group.get("attention_to_hulaquan")
             if (manual and group_id not in group_lists):
                 continue
@@ -439,12 +439,12 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str):
-        for user_id, user in user.users().items():
+        for user_id, user in User.users().items():
             mode = user.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_private_msg(user_id, message)
-        for group_id, group in user.groups().items():
+        for group_id, group in User.groups().items():
             mode = group.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
