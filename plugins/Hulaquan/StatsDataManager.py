@@ -14,7 +14,7 @@ EVENT_ID_TO_EVENT_TITLE = 'event_id_to_event_title'
 LATEST_EVENT_ID = 'latest_event_id'
 LATEST_20_REPOS = 'latest_20_repos'
 
-Hlq: HulaquanDataManager = HulaquanDataManager
+Hlq = None
 
 maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
@@ -26,6 +26,8 @@ class StatsDataManager(BaseDataManager):
     """
 
     def on_load(self):
+        global Hlq
+        Hlq: HulaquanDataManager = HulaquanDataManager()
         self.data.setdefault(ON_COMMAND_TIMES, {})
         self.data.setdefault(HLQ_TICKETS_REPO, {})
         self.data.setdefault(EVENT_ID_TO_EVENT_TITLE, {})
