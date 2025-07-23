@@ -219,6 +219,7 @@ class HulaquanDataManager(BaseDataManager):
             message = []
             if comp := self.compare_tickets(old_data.get(eid, {}), new_data[eid].get("ticket_details", None), subscribe_list):
                 # 仅返回更新了的ticket detail
+                print(comp)
                 assemble = {}
                 new_message = []
                 return_message = []
