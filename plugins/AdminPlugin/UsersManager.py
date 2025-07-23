@@ -184,9 +184,9 @@ class UsersManager(BaseDataManager):
     async def check_friend_status(self, bot: BasePlugin):
         result = await bot.api.get_friend_list(False)
         
-        friends = [i["user_id"] for i in result["data"]]
+        friends = [str(i["user_id"]) for i in result["data"]]
         for user_id in self.users_list():
-            if str(user_id) not in friends:
+            if user_id not in friends:
                 r = await bot.api.post_private_msg(user_id, text="老师请添加bot为好友，防止消息被误吞~")
                 if r['retcode'] == 1200:
                         self.delete_user(user_id)
