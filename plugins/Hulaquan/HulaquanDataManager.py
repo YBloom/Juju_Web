@@ -97,7 +97,6 @@ class HulaquanDataManager(BaseDataManager):
             return f"Error fetching recommendation: {e}", False
 
     async def _update_events_data_async(self):
-        print(self.updating)
         if self.updating:
             return self.data
         self.updating = True
@@ -108,10 +107,10 @@ class HulaquanDataManager(BaseDataManager):
             await asyncio.gather(*(self._update_ticket_details_async(eid) for eid in event_ids))
         except RequestTimeoutException:
             self.updating = False
-            raise RequestTimeoutException
+            raise
         except Exception as e:
             self.updating = False
-            raise e
+            raise
         self.updating = False
         return self.data
 

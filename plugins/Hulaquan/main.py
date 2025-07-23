@@ -399,8 +399,7 @@ class Hulaquan(BasePlugin):
             if manual:
                 log.info(f"updating:{Hlq.updating}, result:{len(result)}")
         except RequestTimeoutException as e:
-            log.error(e)
-            raise e
+            raise
         is_updated = result["is_updated"]
         messages = result["messages"]
         new_pending = result["new_pending"]
@@ -850,11 +849,11 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("当前无呼啦圈事件数据。")
             return
         lines = []
+        index = 1
         for eid, event in events.items():
             title = event.get("title", "未知剧名")
-            start_time = event.get("start_time", "未知时间")
-            location = event.get("location", "未知地点")
-            lines.append(f"剧名:{title} 时间:{start_time} 地点:{location}")
+            lines.append(f"{index}. {title}")
+            index += 1
         await self.output_messages_by_pages(lines, msg, page_size=40)
             
             
