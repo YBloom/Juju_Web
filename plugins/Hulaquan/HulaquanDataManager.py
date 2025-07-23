@@ -591,7 +591,8 @@ class HulaquanDataManager(BaseDataManager):
         for tup in to_delete:
             eid, tid = tup
             self.delete_ticket(tid, eid)
-            del self.data['ticket_id_to_event_id'][tid]
+            self.data['ticket_id_to_event_id'].pop(tid)
+            self.data["ticket_id_to_casts"].pop(tid)
             
     def update_ticket_dict_async(self):
         asyncio.create_task(self.__update_ticket_dict_async())
