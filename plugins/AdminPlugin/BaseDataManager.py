@@ -89,3 +89,9 @@ class BaseDataManager:
         else:
             print(f"Using existing instance of {cls.__name__}, instance_id: {id(cls._instance)}")
         return cls._instance
+    
+    def switch_updating(self, flag=None):
+        if flag:
+            self.updating = flag
+        else:
+            self.updating = not self.updating
