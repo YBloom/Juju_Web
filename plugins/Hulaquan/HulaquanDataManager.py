@@ -330,8 +330,8 @@ class HulaquanDataManager(BaseDataManager):
     def compare_tickets(self, old_data_all, new_data, subscribe_list):
         if (not old_data_all) and new_data:
             # 如果旧数据不存在，那么所有新数据都判定为新上架
+            print("旧数据不存在，所有新数据都判定为新上架")
             for i in new_data:
-                print("旧数据不存在，所有新数据都判定为新上架")
                 i["update_status"] = 'new'
             return new_data
         elif not (old_data_all and new_data):
@@ -356,7 +356,7 @@ class HulaquanDataManager(BaseDataManager):
             new_total_ticket = new_item['total_ticket']     
             if not new_item['title'] and not new_total_ticket:
                 continue
-            if new_id not in old_data_dict:
+            if new_id not in list(old_data_dict.keys()):
                 print(new_id, end=" ")
                 # 如果 new_data 中存在新的 ticket id，则标记为 新上架
                 new_item['update_status'] = 'new'
