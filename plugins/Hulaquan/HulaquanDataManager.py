@@ -235,31 +235,31 @@ class HulaquanDataManager(BaseDataManager):
             return_message = []
             add_message = []
             pending_message = {}
+            t = ""  # 修复：确保 t 总是有初值
             if comp:
                 for ticket in comp:
                     flag = ticket.get('update_status')
                     tInfo = extract_title_info(ticket.get("title", ""))
                     event_title = tInfo['title'][1:-1]
-                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
+                    ticket_str = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
                     if ticket["status"] == "pending":
                         valid_from = ticket.get("valid_from")
                         if not valid_from or valid_from == "null":
                             valid_from = "NG"
-                        pending_message.setdefault(valid_from, []).append(t)
+                        pending_message.setdefault(valid_from, []).append(ticket_str)
                     elif ticket["status"] == "active" and flag:
                         if flag == 'new':
                             if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
                                 valid_from = ticket.get("valid_from")
                                 if not valid_from or valid_from == "null":
                                     valid_from = "NG"
-                                pending_message.setdefault(valid_from, []).append(t)
+                                pending_message.setdefault(valid_from, []).append(ticket_str)
                             else:
-                                new_message.append(t)
+                                new_message.append(ticket_str)
                         elif flag == 'return':
-                            return_message.append(t)
+                            return_message.append(ticket_str)
                         elif flag == 'add':
-                            add_message.append(t)
-                t = ""
+                            add_message.append(ticket_str)
                 if pending_message:
                     nonlocal new_pending
                     new_pending = True
