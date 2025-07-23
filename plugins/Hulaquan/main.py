@@ -591,10 +591,12 @@ class Hulaquan(BasePlugin):
     async def save_data_managers(self, msg=None):
         while Hlq.updating:
             await asyncio.sleep(0.1)
-        await save_all()
-        log.info("🟡呼啦圈数据保存成功")
+        success = await save_all()
+        status = "成功" if success else "失败"
+            
+        log.info("🟡呼啦圈数据保存"+status)
         if msg:
-            await msg.reply_text("保存成功")
+            await msg.reply_text("保存"+status)
         else:
             pass
         

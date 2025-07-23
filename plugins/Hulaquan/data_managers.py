@@ -3,6 +3,7 @@ from plugins.Hulaquan.StatsDataManager import StatsDataManager
 from plugins.Hulaquan.AliasManager import AliasManager
 from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
 from plugins.AdminPlugin.UsersManager import UsersManager
+from plugins.Hulaquan import BaseDataManager
 from ncatbot.utils.logger import get_log
 
 
@@ -14,9 +15,10 @@ Stats = StatsDataManager()
 Saoju = SaojuDataManager()
 Hlq = HulaquanDataManager()
 
+managers: list[BaseDataManager] = [User, Stats, Saoju, Hlq, Alias]
 async def save_all():
-    await User.save()
-    await Stats.save()
-    await Saoju.save()
-    await Hlq.save()
-    await Alias.save()
+    success = 1
+    for manager in managers:
+        result = await manager.save()
+        success *= int(result['success'])
+    return bool(success)
