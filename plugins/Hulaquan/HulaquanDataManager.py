@@ -688,9 +688,6 @@ class HulaquanDataManager(BaseDataManager):
                 if standardize_datetime_for_saoju(event["date"]) == ticket['start_time']:
                     tickets.append(ticket)
                     break
-        
-    def generate_tickets_details_information(self, tickets):
-        return
     
     
     def get_ordered_search_names(self, title=None, event_id=None):

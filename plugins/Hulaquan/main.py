@@ -421,6 +421,7 @@ class Hulaquan(BasePlugin):
         return True
         
     def register_pending_tickets_announcer(self):
+        return
         for eid, event in Hlq.data["pending_events_dict"].items():
             eid = str(eid)
             _exist = self._time_task_scheduler.get_job_status(eid)
@@ -440,6 +441,7 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str):
+        return
         for user_id, user in User.users().items():
             mode = user.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
