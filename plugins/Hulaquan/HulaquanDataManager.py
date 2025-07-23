@@ -98,7 +98,7 @@ class HulaquanDataManager(BaseDataManager):
 
     async def _update_events_data_async(self):
         if self.updating:
-            return
+            return self.data
         self.updating = True
         try:
             await self._update_events_dict_async()

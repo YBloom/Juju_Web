@@ -95,16 +95,6 @@ class AdminPlugin(BasePlugin):
             await self.api.post_private_msg(i, message)
         await msg.reply("群发成功")
         
-    def is_all_plugins_get_managers(self):
-        """检查所有插件是否都获取了managers"""
-        if self.users_manager.is_get_managers:
-            self.remove_scheduled_task("send_pass_managers_event")
-            print("所有插件已获取到managers，移除定时任务")
-            return True
-        else:
-            print("未获取到managers")
-            return False
-        
     async def _on_execute(self, msg: BaseMessage):
         cmd = msg.raw_message.replace("/exec ", "")
         cmd = html.unescape(cmd)  # 解码HTML实体
@@ -134,6 +124,7 @@ class AdminPlugin(BasePlugin):
             await msg.reply(f"已成功赋予用户{user_id}管理员权限。")
         else:
             await msg.reply(f"赋权失败！用户{user_id}已经拥有管理员权限。")
+    
         
         
         
@@ -148,6 +139,9 @@ class AdminPlugin(BasePlugin):
             await msg.reply(f"已成功撤销用户{user_id}的管理员权限。")
         else:
             await msg.reply(f"撤销失败！用户{user_id}无管理员权限。")
+            
+
+        
             
             
     @bot.private_event()

@@ -377,7 +377,8 @@ class Hulaquan(BasePlugin):
     async def on_get_update_log(self, msg: BaseMessage):
         m = f"当前版本：{self.version}\n\n版本更新日志：\n{get_update_log()}"
         await msg.reply(m)
-        
+    
+    # 呼啦圈刷新    
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
@@ -395,6 +396,8 @@ class Hulaquan(BasePlugin):
             return
         if is_updated:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
+            if len(messages) == 2:
+                messages = [messages[0]+"\n\n"+messages[1]]
         for user_id, user in User.users().items():
             mode = user.get("attention_to_hulaquan")
             if (manual and user_id not in user_lists):
@@ -406,7 +409,9 @@ class Hulaquan(BasePlugin):
                     user.switch_attention_to_hulaquan(user_id, 1)
                 for m in messages:
                     message = f"呼啦圈上新提醒：\n{m}"
-                    await self.api.post_private_msg(user_id, message)
+                    r = await self.api.post_private_msg(user_id, message)
+                    if r['retcode'] == 1200:
+                        User.delete_user(user_id)
         for group_id, group in User.groups().items():
             mode = group.get("attention_to_hulaquan")
             if (manual and group_id not in group_lists):
@@ -578,6 +583,9 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None):
+        result = await User.send_likes()
+        if result:
+            log.info("🟡点赞成功")
         while getattr(Hlq, "updating", False):
             await asyncio.sleep(0.5)
         await save_all()

@@ -33,6 +33,7 @@ class UsersManager(BaseDataManager):
             self.data["groups"] = data["groups"] if first_init else {}
         if "groups_list" not in self.data:
             self.data["groups_list"] = data["groups_list"] if first_init else []
+        self.daa.setdefault("todays_likes", [])
         return super().on_load()
         
     def users(self):
@@ -166,3 +167,11 @@ class UsersManager(BaseDataManager):
             self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
         return True
    
+    async def send_likes(self):
+        date = datetime.now().strftime("%Y-%m-%d")
+        if date in self.data["todays_likes"]:
+            return False
+        for i in self.users_list():
+            await self.api.send_like(i, 10)
+        self.data["todays_likes"].append(date)
+        return True
