@@ -1,5 +1,6 @@
 from datetime import datetime
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from ncatbot.plugin import BasePlugin
 from ncatbot.utils.logger import get_log
 from copy import deepcopy
 log = get_log()
@@ -163,7 +164,7 @@ class UsersManager(BaseDataManager):
     def add_ticket_subscribe(self, user_id, ticket_id):
         if not isinstance(user_id, str):
            user_id = str(user_id)
-        if user_id not in self.data["users_list"]:
+        if user_id not in self.users_list():
             self.add_user(user_id)
         if isinstance(ticket_id, int) or isinstance(ticket_id, str):
             ticket_id = [ticket_id]
@@ -171,7 +172,7 @@ class UsersManager(BaseDataManager):
             self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
         return True
    
-    async def send_likes(self, bot):
+    async def send_likes(self, bot: BasePlugin):
         date = datetime.now().strftime("%Y-%m-%d")
         if date in self.data["todays_likes"]:
             return False
@@ -179,3 +180,15 @@ class UsersManager(BaseDataManager):
             await bot.api.send_like(i, 10)
         self.data["todays_likes"].append(date)
         return True
+    
+    async def check_friend_status(self, bot: BasePlugin):
+        friends = [i["uid"] for i in bot.api.get_friend_list(False)["data"]]
+        for user_id in self.users_list():
+            if str(user_id) not in friends:
+                r = await bot.api.post_private_msg(user_id, text="老师请添加bot为好友，防止消息被误吞~")
+                if r['retcode'] == 1200:
+                        self.delete_user(user_id)
+    
+    async def update_friends_list(self, bot: BasePlugin):
+        await self.check_friend_status(bot)
+        return await self.send_likes(bot)

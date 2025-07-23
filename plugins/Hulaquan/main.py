@@ -101,6 +101,7 @@ class Hulaquan(BasePlugin):
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time"))
+        User.update_friends_list(self)
         
         
     async def on_close(self, *arg, **kwd):
@@ -197,7 +198,15 @@ class Hulaquan(BasePlugin):
             interval="1h", 
             #max_runs=10, 
         )
-            
+        
+        self.add_scheduled_task(
+            job_func=self.on_schedule_friends_list_check, 
+            name=f"好友列表更新", 
+            interval="1h", 
+            #max_runs=10, 
+        )
+    
+    
 
     def register_hlq_query(self):
         self.register_user_func(
@@ -583,9 +592,10 @@ class Hulaquan(BasePlugin):
             await msg.reply_text()
 
     async def on_schedule_save_data(self):
-        await self.send_likes()
         await self.save_data_managers()
-        
+    
+    async def on_schedule_friends_list_check(self):
+        await User.check_friend_status(self)
         
     @user_command_wrapper("help")
     async def on_help(self, msg: BaseMessage):
@@ -608,11 +618,6 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("保存"+status)
         else:
             pass
-        
-    async def send_likes(self):
-        result = await User.send_likes(self)
-        if result:
-            log.info("🟡点赞成功")
             
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
