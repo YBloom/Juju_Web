@@ -21,6 +21,7 @@ class BaseDataManager:
 
     def __on_load(self):
         try:
+            self.updating = True
             if os.path.exists(self.file_path):
                 self.load()
             elif not os.path.exists(self.work_path):
@@ -28,7 +29,9 @@ class BaseDataManager:
                 open(self.file_path, "w", encoding="utf-8").write(json.dumps({}))
             else:
                 open(self.file_path, "w", encoding="utf-8").write(json.dumps({}))
+            self.updating = False
         except Exception as e:
+            self.updating = False
             traceback.print_exc()
             raise RuntimeError(self.__class__.__name__, f"加载持久化数据时出错: {e}")
         

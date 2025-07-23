@@ -140,13 +140,13 @@ class HulaquanDataManager(BaseDataManager):
                     retry += 1
                     if retry >= 3:
                         print(f"event_id {event_id} 请求超时，已重试2次，跳过")
-                        return
+                        return {}
                     else:
                         print(f"event_id {event_id} 请求超时，重试第{retry}次……")
                         await asyncio.sleep(1)
                 except Exception as e:
                     print(f"event_id {event_id} 请求异常：{e}")
-                    return
+                    return {}
 
     
     def events(self):

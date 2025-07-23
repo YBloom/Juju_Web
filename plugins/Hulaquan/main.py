@@ -99,7 +99,7 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_running = False
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
-        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time", self._hulaquan_announcer_interval))
+        self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time"))
         
         
     async def on_close(self, *arg, **kwd):
@@ -583,7 +583,7 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None):
-        while getattr(Hlq, "updating", False):
+        while getattr(Hlq, "updating", True):
             await asyncio.sleep(0.5)
         await save_all()
         log.info("🟡呼啦圈数据保存成功")
