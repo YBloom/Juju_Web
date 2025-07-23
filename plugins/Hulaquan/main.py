@@ -106,7 +106,7 @@ class Hulaquan(BasePlugin):
     async def on_close(self, *arg, **kwd):
         self.remove_scheduled_task("呼啦圈上新提醒")
         self.stop_hulaquan_announcer()
-        await self.save_data_managers()
+        await self.save_data_managers(on_close=True)
         return await super().on_close(*arg, **kwd)
     
     async def _hulaquan_announcer_loop(self):
@@ -599,10 +599,10 @@ class Hulaquan(BasePlugin):
         await msg.reply(send)
 
     @user_command_wrapper("auto_save")
-    async def save_data_managers(self, msg=None):
+    async def save_data_managers(self, msg=None, on_close=False):
         while Hlq.updating:
             await asyncio.sleep(0.1)
-        success = await save_all()
+        success = await save_all(on_close)
         status = "成功" if success else "失败"
             
         log.info("🟡呼啦圈数据保存"+status)

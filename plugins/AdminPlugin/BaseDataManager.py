@@ -46,7 +46,7 @@ class BaseDataManager:
                 self.data = {}
                 raise
 
-    async def save(self):
+    async def save(self, on_close=False):
         """_summary_
 
         Raises:
@@ -57,7 +57,10 @@ class BaseDataManager:
         """
         try:
             if self.updating:
-                await self._wait_for_data_update()
+                if not on_close:
+                    await self._wait_for_data_update()
+                else:
+                    return {"success":False, "updating":True}
             # 备份机制：保存前先备份原文件
             if os.path.exists(self.file_path):
                 backup_path = self.file_path + ".bak"

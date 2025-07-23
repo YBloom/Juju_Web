@@ -16,9 +16,9 @@ Saoju = SaojuDataManager()
 Hlq = HulaquanDataManager()
 
 managers: list[BaseDataManager] = [User, Stats, Saoju, Hlq, Alias]
-async def save_all():
+async def save_all(on_close=False):
     success = 1
     for manager in managers:
-        result = await manager.save()
+        result = await manager.save(on_close)
         success *= int(result['success'])
     return bool(success)
