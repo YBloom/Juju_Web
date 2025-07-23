@@ -358,7 +358,6 @@ class HulaquanDataManager(BaseDataManager):
             if not new_item['title'] and not new_total_ticket:
                 continue
             if new_id not in list(old_data_dict.keys()):
-                print(old_data_dict.get(new_id, 0))
                 # 如果 new_data 中存在新的 ticket id，则标记为 新上架
                 new_item['update_status'] = 'new'
                 update_data.append(new_item)
