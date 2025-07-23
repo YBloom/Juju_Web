@@ -589,8 +589,8 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None):
-        while getattr(Hlq, "updating", True):
-            await asyncio.sleep(0.5)
+        while Hlq.updating:
+            await asyncio.sleep(0.1)
         await save_all()
         log.info("🟡呼啦圈数据保存成功")
         if msg:
