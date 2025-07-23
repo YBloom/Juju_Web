@@ -425,7 +425,6 @@ class Hulaquan(BasePlugin):
         return True
         
     def register_pending_tickets_announcer(self):
-        return
         for valid_from, events in Hlq.data["pending_events"].items():
             if not valid_from or valid_from == "NG":
                 continue
@@ -435,19 +434,18 @@ class Hulaquan(BasePlugin):
                 _exist = self._time_task_scheduler.get_job_status(job_id)
                 if _exist:
                     continue
-                valid_from = standardize_datetime(valid_from, False)
-                valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
+                valid_date = standardize_datetime(valid_from, False)
+                valid_date = (valid_date - timedelta(minutes=30))
                 self.add_scheduled_task(
                     job_func=self.on_pending_tickets_announcer,
-                    name=eid,
+                    name=job_id,
                     interval=valid_from,
-                    kwargs={"eid":eid, "message":event.get("message")},
+                    kwargs={"eid":eid, "message":text, "valid_from":valid_from},
                     max_runs=1,
                 )
     
     @user_command_wrapper("pending_announcer")
-    async def on_pending_tickets_announcer(self, eid:str, message: str):
-        return
+    async def on_pending_tickets_announcer(self, eid:str, message: str, valid_from:str):
         for user_id, user in User.users().items():
             mode = user.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
@@ -458,7 +456,9 @@ class Hulaquan(BasePlugin):
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_group_msg(group_id, message)
-        del Hlq.data["pending_events"][eid]
+        del Hlq.data["pending_events"][valid_from][eid]
+        if len(Hlq.data["pending_events"][valid_from]) == 0:
+            del Hlq.data["pending_events"][valid_from]
     
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id
