@@ -351,13 +351,14 @@ class HulaquanDataManager(BaseDataManager):
         update_data = []
         # 遍历 new_data 并根据条件进行更新
         for new_id in list(new_data.keys()):
+            new_id = str(new_id)
             new_item = new_data[new_id]
             new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']     
             if not new_item['title'] and not new_total_ticket:
                 continue
             if new_id not in list(old_data_dict.keys()):
-                print(new_id, end=" ")
+                print(old_data_dict.get(new_id, 0))
                 # 如果 new_data 中存在新的 ticket id，则标记为 新上架
                 new_item['update_status'] = 'new'
                 update_data.append(new_item)
