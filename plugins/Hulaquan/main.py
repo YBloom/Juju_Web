@@ -433,8 +433,6 @@ class Hulaquan(BasePlugin):
             if (manual and group_id not in group_lists):
                 continue
             if manual or mode=="2" or (mode=="1" and is_updated):
-                if messages:
-                    messages[0] = f"@所有人：{messages[0]}"  # 确保第一条消息是标题
                 for m in messages:
                     message = f"呼啦圈上新提醒：\n{m}"
                     await self.api.post_group_msg(group_id, message)
