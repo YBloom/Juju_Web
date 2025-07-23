@@ -167,11 +167,11 @@ class UsersManager(BaseDataManager):
             self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
         return True
    
-    async def send_likes(self):
+    async def send_likes(self, bot):
         date = datetime.now().strftime("%Y-%m-%d")
         if date in self.data["todays_likes"]:
             return False
         for i in self.users_list():
-            await self.api.send_like(i, 10)
+            await bot.api.send_like(i, 10)
         self.data["todays_likes"].append(date)
         return True

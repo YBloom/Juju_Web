@@ -568,6 +568,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text()
 
     async def on_schedule_save_data(self):
+        await self.send_likes()
         await self.save_data_managers()
         
         
@@ -582,9 +583,6 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None):
-        result = await User.send_likes()
-        if result:
-            log.info("🟡点赞成功")
         while getattr(Hlq, "updating", False):
             await asyncio.sleep(0.5)
         await save_all()
@@ -594,6 +592,11 @@ class Hulaquan(BasePlugin):
         else:
             pass
         
+    async def send_likes(self):
+        result = await User.send_likes(self)
+        if result:
+            log.info("🟡点赞成功")
+            
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
         #log.error(f"呼啦圈上新提醒失败：\n" + traceback.format_exc())
