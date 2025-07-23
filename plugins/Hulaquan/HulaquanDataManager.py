@@ -582,6 +582,7 @@ class HulaquanDataManager(BaseDataManager):
             ticket = self.ticket(ticket_id, event_id)
             if not ticket:
                 to_delete.append((event_id, ticket_id))
+                continue
             if "end_time" not in ticket:
                 continue
             end_time = standardize_datetime(ticket["end_time"], return_str=False)
