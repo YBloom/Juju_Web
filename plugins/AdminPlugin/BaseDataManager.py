@@ -55,10 +55,8 @@ class BaseDataManager:
             dict[str: bool]:  {"success":True, "updating":False}
         """
         try:
-            log.info(f"{self.__class__.__name__}正在开始保存")
             if self.updating:
                 await self._wait_for_data_update()
-            log.info(f"{self.__class__.__name__}正在进行保存")
             # 备份机制：保存前先备份原文件
             if os.path.exists(self.file_path):
                 backup_path = self.file_path + ".bak"
@@ -70,7 +68,6 @@ class BaseDataManager:
                 except Exception as e:
                     print(f"备份原数据文件失败: {e}")
             # 正式写入新数据
-            log.info(f"{self.__class__.__name__}正在写入数据保存")
             with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=4)
                 return {"success":True, "updating":False}
