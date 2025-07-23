@@ -3,7 +3,7 @@ import traceback, time, asyncio, re
 import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
-
+from .Exceptions import RequestTimeoutException
 from plugins.Hulaquan.data_managers import Saoju, Stats, Alias, Hlq, User, save_all
 from plugins.Hulaquan.StatsDataManager import StatsDataManager, maxLatestReposCount
 from plugins.Hulaquan.SaojuDataManager import SaojuDataManager
@@ -381,7 +381,11 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
         start_time = time.time()
-        result = await Hlq.message_update_data_async()
+        try:
+            result = await Hlq.message_update_data_async()
+        except RequestTimeoutException as e:
+            log.error(e)
+            raise e
         is_updated = result["is_updated"]
         messages = result["messages"]
         new_pending = result["new_pending"]

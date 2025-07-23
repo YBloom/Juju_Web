@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from plugins.Hulaquan.utils import *
 from plugins.Hulaquan import BaseDataManager
+from .Exceptions import *
 import aiohttp
 import os, shutil
 import copy
@@ -71,8 +72,8 @@ class HulaquanDataManager(BaseDataManager):
             cnt -= 5
             if cnt != 90 and not data:
                 print(f"获取呼啦圈数据失败，第{(19-cnt/5)}尝试。")
-            if cnt == 0:
-                raise Exception
+            if cnt == 75:
+                raise RequestTimeoutException
         return data
 
     async def search_events_data_by_recommendation_link_async(self, limit=12, page=0, timeMark=True, tags=None):
@@ -96,15 +97,20 @@ class HulaquanDataManager(BaseDataManager):
             return f"Error fetching recommendation: {e}", False
 
     async def _update_events_data_async(self):
+        if self.updating:
+            return
         self.updating = True
         try:
             await self._update_events_dict_async()
             event_ids = list(self.events().keys())
             # 并发批量更新
             await asyncio.gather(*(self._update_ticket_details_async(eid) for eid in event_ids))
-        except Exception:
+        except RequestTimeoutException:
             self.updating = False
-            raise RuntimeError
+            raise RequestTimeoutException
+        except Exception as e:
+            self.updating = False
+            raise e
         self.updating = False
         return self.data
 
