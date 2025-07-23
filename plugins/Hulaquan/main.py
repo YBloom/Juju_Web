@@ -83,6 +83,7 @@ def user_command_wrapper(command_name):
 
 
 class Hulaquan(BasePlugin):
+    
     name = "Hulaquan"  # 插件名称
     version = "0.0.5"  # 插件版本
     author = "摇摇杯"  # 插件作者
@@ -208,6 +209,17 @@ class Hulaquan(BasePlugin):
             # 这里的 -I 是一个可选参数，表示忽略已售罄场次
             examples=["/hlq 连璧 -I -C"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
+            metadata={"category": "utility"}
+        )
+
+        self.register_user_func(
+            name="所有呼啦圈",
+            handler=self.on_list_all_hulaquan_events,
+            prefix="/所有呼啦圈",
+            description="列出所有呼啦圈事件",
+            usage="/所有呼啦圈",
+            examples=["/所有呼啦圈"],
+            tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
         )
         
@@ -830,6 +842,20 @@ class Hulaquan(BasePlugin):
             end = start + page_size
             page_messages = messages[start:end]
             await msg.reply_text("\n".join(page_messages))
+            
+    @user_command_wrapper("list_all_events")
+    async def on_list_all_hulaquan_events(self, msg: BaseMessage):
+        events = Hlq.data.get("events", {})
+        if not events:
+            await msg.reply_text("当前无呼啦圈事件数据。")
+            return
+        lines = []
+        for eid, event in events.items():
+            title = event.get("title", "未知剧名")
+            start_time = event.get("start_time", "未知时间")
+            location = event.get("location", "未知地点")
+            lines.append(f"剧名:{title} 时间:{start_time} 地点:{location}")
+        await self.output_messages_by_pages(lines, msg, page_size=40)
             
             
     async def on_follow_ticket(self, msg: BaseMessage):
