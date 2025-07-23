@@ -1,6 +1,7 @@
 from datetime import datetime
 from plugins.AdminPlugin.BaseDataManager import BaseDataManager
 from ncatbot.utils.logger import get_log
+from copy import deepcopy
 log = get_log()
 
 
@@ -37,19 +38,19 @@ class UsersManager(BaseDataManager):
         return super().on_load()
         
     def users(self):
-        return self.data.get("users", {})
+        return deepcopy(self.data.get("users", {}))
         
     def users_list(self):
-        return self.data.get("users_list", [])
+        return deepcopy(self.data.get("users_list", []))
     
     def ops_list(self):
         return self.data.get("ops_list", [])
     
     def groups(self):
-        return self.data.get("groups", {})
+        return deepcopy(self.data.get("groups", {}))
         
     def groups_list(self):
-        return self.data.get("groups_list", [])
+        return deepcopy(self.data.get("groups_list", []))
         
     def add_group(self, group_id):
         if not isinstance(group_id, str):
