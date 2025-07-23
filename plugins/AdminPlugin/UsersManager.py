@@ -182,7 +182,9 @@ class UsersManager(BaseDataManager):
         return True
     
     async def check_friend_status(self, bot: BasePlugin):
-        friends = [i["uid"] for i in (await bot.api.get_friend_list(False))["data"]]
+        result = await bot.api.get_friend_list(False)
+        print(result)
+        friends = [i["uid"] for i in result["data"]]
         for user_id in self.users_list():
             if str(user_id) not in friends:
                 r = await bot.api.post_private_msg(user_id, text="老师请添加bot为好友，防止消息被误吞~")
