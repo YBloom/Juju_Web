@@ -220,9 +220,6 @@ class HulaquanDataManager(BaseDataManager):
         old_data = old_data_all.get("events", {})
         messages = []
         # 新增：收集上次未成功通知的事件
-        unnotified_events = self.data.get("unnotified_events", set())
-        if isinstance(unnotified_events, list):
-            unnotified_events = set(unnotified_events)
 
         # 通知内容生成函数
         async def build_event_notify_msg(eid, event, old_event=None):
@@ -312,26 +309,12 @@ class HulaquanDataManager(BaseDataManager):
             msg = await build_event_notify_msg(eid, event, old_event)
             # 判断是否有内容（即有更新）
             if msg.strip() != f"剧名: {event['title']}\n购票链接: https://clubz.cloudsation.com/event/{eid}.html\n更新时间: {self.data['update_time']}\n":
-                unnotified_events.add(eid)
                 messages.append(msg)
                 is_updated = True
                 if is_updated:
                     self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
-
-        # 补发未通知
-        for eid in list(unnotified_events):
-            if eid not in new_data:
-                unnotified_events.remove(eid)
-                continue
-            # 如果本轮已通知则跳过
-            if any(str(eid) in m for m in messages):
-                continue
-            event = new_data[eid]
-            old_event = old_data.get(eid, {})
-            msg = await build_event_notify_msg(eid, event, old_event)
-            messages.append(msg)
-        # 存回 data
-        self.data["unnotified_events"] = list(unnotified_events)
+        # 增加异常过滤：如果消息条数大于10，全部丢弃
+        
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
 
     def save_data_cache(self, old_data_all, new_data_all, cache_folder_name):
