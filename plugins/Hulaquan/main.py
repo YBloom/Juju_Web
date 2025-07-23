@@ -384,6 +384,8 @@ class Hulaquan(BasePlugin):
         start_time = time.time()
         try:
             result = await Hlq.message_update_data_async()
+            if manual:
+                log.info(f"updating:{Hlq.updating}, result:{len(result)}")
         except RequestTimeoutException as e:
             log.error(e)
             raise e
@@ -392,6 +394,10 @@ class Hulaquan(BasePlugin):
         new_pending = result["new_pending"]
         if len(messages) >= 10:
             log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
+            
+            elapsed_time = time.time() - start_time
+            if is_updated:
+                print(f"任务执行时间: {elapsed_time}秒")
             return
         if is_updated:
             log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))

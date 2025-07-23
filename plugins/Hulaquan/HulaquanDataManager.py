@@ -97,7 +97,7 @@ class HulaquanDataManager(BaseDataManager):
             return f"Error fetching recommendation: {e}", False
 
     async def _update_events_data_async(self):
-        print(self.updating, end=" ")
+        print(self.updating)
         if self.updating:
             return self.data
         self.updating = True
