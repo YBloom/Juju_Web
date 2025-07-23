@@ -422,22 +422,24 @@ class Hulaquan(BasePlugin):
         
     def register_pending_tickets_announcer(self):
         return
-        for eid, event in Hlq.data["pending_events_dict"].items():
-            eid = str(eid)
-            _exist = self._time_task_scheduler.get_job_status(eid)
-            if _exist and eid in _exist:
+        for valid_from, events in Hlq.data["pending_events"].items():
+            if not valid_from or valid_from == "NG":
                 continue
-            valid_from = standardize_datetime(event.get("valid_from"), False)
-            if not valid_from:
-                continue
-            valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
-            self.add_scheduled_task(
-                job_func=self.on_pending_tickets_announcer,
-                name=eid,
-                interval=valid_from,
-                kwargs={"eid":eid, "message":event.get("message")},
-                max_runs=1,
-            )
+            for eid, text in events.items():
+                eid = str(eid)
+                job_id = f"{valid_from}_{eid}"
+                _exist = self._time_task_scheduler.get_job_status(job_id)
+                if _exist:
+                    continue
+                valid_from = standardize_datetime(valid_from, False)
+                valid_from = (valid_from - timedelta(minutes=30)) if valid_from else valid_from
+                self.add_scheduled_task(
+                    job_func=self.on_pending_tickets_announcer,
+                    name=eid,
+                    interval=valid_from,
+                    kwargs={"eid":eid, "message":event.get("message")},
+                    max_runs=1,
+                )
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str):
@@ -452,7 +454,7 @@ class Hulaquan(BasePlugin):
             if mode == "1" or mode == "2":
                 message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_group_msg(group_id, message)
-        del Hlq.data["pending_events_dict"][eid]
+        del Hlq.data["pending_events"][eid]
     
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id

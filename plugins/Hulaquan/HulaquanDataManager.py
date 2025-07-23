@@ -43,7 +43,7 @@ class HulaquanDataManager(BaseDataManager):
         Alias = dataManagers.Alias  # 动态获取
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
-        self.data["pending_events_dict"] = self.data.get("pending_events_dict", {}) # 确保有一个pending_events_dict来存储待办事件
+        self.data["pending_events"] = self.data.get("pending_events", {}) # 确保有一个pending_events来存储待办事件
         self.data["ticket_id_to_event_id"] = self.data.get("ticket_id_to_event_id", {})
         self.update_ticket_dict_async()
 
@@ -97,10 +97,14 @@ class HulaquanDataManager(BaseDataManager):
 
     async def _update_events_data_async(self):
         self.updating = True
-        await self._update_events_dict_async()
-        event_ids = list(self.events().keys())
-        # 并发批量更新
-        await asyncio.gather(*(self._update_ticket_details_async(eid) for eid in event_ids))
+        try:
+            await self._update_events_dict_async()
+            event_ids = list(self.events().keys())
+            # 并发批量更新
+            await asyncio.gather(*(self._update_ticket_details_async(eid) for eid in event_ids))
+        except Exception:
+            self.updating = False
+            raise RuntimeError
         self.updating = False
         return self.data
 
@@ -219,10 +223,10 @@ class HulaquanDataManager(BaseDataManager):
                     tInfo = extract_title_info(ticket.get("title", ""))
                     event_title = tInfo['title'][1:-1]
                     t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
-                    if ticket["status"] == "pending" and ticket.get('update_status', None) is not None:
+                    if ticket["status"] == "pending":
                         valid_from = ticket.get("valid_from")
                         if not valid_from or valid_from == "null":
-                            valid_from = "未公开"
+                            valid_from = "NG"
                         pending_message[valid_from] = []
                         pending_message[valid_from].append(t)
                     elif ticket["status"] == "active" and flag:
@@ -230,7 +234,7 @@ class HulaquanDataManager(BaseDataManager):
                             if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
                                 valid_from = ticket.get("valid_from")
                                 if not valid_from or valid_from == "null":
-                                    valid_from = "未公开（可能很快就开）"
+                                    valid_from = "NG"
                                 pending_message[valid_from] = []
                                 pending_message[valid_from].append(t)
                             else:
@@ -246,18 +250,30 @@ class HulaquanDataManager(BaseDataManager):
                     for valid_from, m in pending_message.items():
                         s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else "")+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
                         cnt += 1
-                        valid_date = standardize_datetime(valid_from, return_str=True)
-                        new_id = random_id(4, pending_message.keys())
-                        self.data["pending_events_dict"][new_id] = {
-                            "valid_from": valid_date,
-                            "message": (f"剧名: {event['title']}\n"
-                                        f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
-                                        f"更新时间: {self.data['update_time']}\n"
-                                        f"开票时间: {valid_from}\n"
-                                        f"场次信息：\n" + '\n'.join(m) + "\n"
-                                        )
-                                        
-                        }
+                        
+                        valid_date = standardize_datetime(valid_from, return_str=True) if valid_from != "NG" else "NG"
+                        if valid_date in self.data["pending_events"]:
+                            if eid in self.data["pending_events"][valid_date]:
+                                self.data["pending_events"][valid_date][eid] += '\n'.join(m)
+                            else:
+                                self.data["pending_events"][valid_date][eid] = (
+                                    f"剧名: {event['title']}\n"
+                                            f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
+                                            f"更新时间: {self.data['update_time']}\n"
+                                            f"开票时间: {valid_from}\n"
+                                            f"场次信息：\n" + '\n'.join(m) + "\n"
+                                            )
+                        else:
+                            self.data["pending_events"][valid_date] = {
+                                "valid_from": valid_date,
+                                eid: (f"剧名: {event['title']}\n"
+                                            f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
+                                            f"更新时间: {self.data['update_time']}\n"
+                                            f"开票时间: {valid_from}\n"
+                                            f"场次信息：\n" + '\n'.join(m) + "\n"
+                                            )
+                                            
+                            }
                         t += s
                     message.append(t)
                 if new_message:
