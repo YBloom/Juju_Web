@@ -572,7 +572,7 @@ class HulaquanDataManager(BaseDataManager):
 
     async def _generate_ticket_info_message(self, remaining_tickets, show_cast, event_data, show_ticket_id):
         if not remaining_tickets:
-            return "暂无余票。", True
+            return "暂无余票。", True, (False, "")
         ticket_lines = []
         no_saoju_data = False
         pending_t = (False, "")
