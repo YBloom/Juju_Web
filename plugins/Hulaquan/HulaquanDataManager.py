@@ -125,6 +125,7 @@ class HulaquanDataManager(BaseDataManager):
                     ticket_dump_list = {}
                     for i in range(len(ticket_list)):
                         ticket = ticket_list[i]
+                        ticket['id'] = str(ticket['id'])
                         tid = ticket.get("id", None)
                         if not tid or ticket["total_ticket"] is None or not ticket['start_time'] or ticket['status'] not in ['active', 'pending']:
                             continue
@@ -351,7 +352,6 @@ class HulaquanDataManager(BaseDataManager):
         update_data = []
         # 遍历 new_data 并根据条件进行更新
         for new_id in list(new_data.keys()):
-            new_id = str(new_id)
             new_item = new_data[new_id]
             new_left_ticket_count = new_item['left_ticket_count']
             new_total_ticket = new_item['total_ticket']     
