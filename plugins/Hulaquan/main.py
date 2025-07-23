@@ -101,7 +101,7 @@ class Hulaquan(BasePlugin):
         self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time"))
-        User.update_friends_list(self)
+        asyncio.create_task(User.update_friends_list(self))
         
         
     async def on_close(self, *arg, **kwd):
@@ -595,7 +595,7 @@ class Hulaquan(BasePlugin):
         await self.save_data_managers()
     
     async def on_schedule_friends_list_check(self):
-        await User.check_friend_status(self)
+        await User.update_friends_list(self)
         
     @user_command_wrapper("help")
     async def on_help(self, msg: BaseMessage):
