@@ -44,6 +44,7 @@ class BaseDataManager:
                 self.data = json.load(f)
             except json.JSONDecodeError as e:
                 self.data = {}
+                raise
 
     async def save(self):
         """_summary_

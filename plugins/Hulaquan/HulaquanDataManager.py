@@ -330,6 +330,7 @@ class HulaquanDataManager(BaseDataManager):
         if (not old_data_all) and new_data:
             # 如果旧数据不存在，那么所有新数据都判定为新上架
             for i in new_data:
+                print("旧数据不存在，所有新数据都判定为新上架")
                 i["update_status"] = 'new'
             return new_data
         elif not (old_data_all and new_data):
@@ -339,6 +340,7 @@ class HulaquanDataManager(BaseDataManager):
             old_data_dict = old_data_all.get("ticket_details", {})
         if not old_data_dict:
             # 如果旧数据没有票务细节项，所有新数据判定为新上架
+            print("旧数据无票务细节，所有新数据都判定为新上架")
             for i in new_data.values():
                 i["update_status"] = 'new'
             return new_data
