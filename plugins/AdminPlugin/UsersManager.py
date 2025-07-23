@@ -142,7 +142,10 @@ class UsersManager(BaseDataManager):
         try:
             self.data[key][user_id]["attention_to_hulaquan"] = mode
         except KeyError:
-            self.add_user(user_id)
+            if key == "users":
+                self.add_user(user_id)
+            else:
+                self.add_group(user_id)
             self.data[key][user_id]["attention_to_hulaquan"] = mode
         return mode
     
