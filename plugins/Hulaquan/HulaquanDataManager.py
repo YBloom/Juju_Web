@@ -219,52 +219,49 @@ class HulaquanDataManager(BaseDataManager):
         new_data = new_data_all.get("events", {})
         old_data = old_data_all.get("events", {})
         messages = []
-        # 新增：收集上次未成功通知的事件
-
-        # 通知内容生成函数
-        async def build_event_notify_msg(eid, event, old_event=None):
+        for eid, event in new_data.items(): # 一个id对应一部剧
             message = []
-            if old_event is not None:
-                comp = self.compare_tickets(old_event, event.get("ticket_details", None), subscribe_list)
-            else:
-                comp = self.compare_tickets({}, event.get("ticket_details", None), subscribe_list)
-            new_message = []
-            return_message = []
-            add_message = []
-            pending_message = {}
-            t = ""  # 修复：确保 t 总是有初值
-            if comp:
+            if comp := self.compare_tickets(old_data.get(eid, {}), new_data[eid].get("ticket_details", None), subscribe_list):
+                # 仅返回更新了的ticket detail
+                assemble = {}
+                new_message = []
+                return_message = []
+                add_message = []
+                subscribe_message = {i: [] for i in subscribe_list}
+                pending_message = {}
                 for ticket in comp:
                     flag = ticket.get('update_status')
                     tInfo = extract_title_info(ticket.get("title", ""))
                     event_title = tInfo['title'][1:-1]
-                    ticket_str = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
+                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
                     if ticket["status"] == "pending":
                         valid_from = ticket.get("valid_from")
                         if not valid_from or valid_from == "null":
                             valid_from = "NG"
-                        pending_message.setdefault(valid_from, []).append(ticket_str)
+                        pending_message[valid_from] = []
+                        pending_message[valid_from].append(t)
                     elif ticket["status"] == "active" and flag:
                         if flag == 'new':
                             if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
                                 valid_from = ticket.get("valid_from")
                                 if not valid_from or valid_from == "null":
                                     valid_from = "NG"
-                                pending_message.setdefault(valid_from, []).append(ticket_str)
+                                pending_message[valid_from] = []
+                                pending_message[valid_from].append(t)
                             else:
-                                new_message.append(ticket_str)
+                                new_message.append(t)
                         elif flag == 'return':
-                            return_message.append(ticket_str)
+                            return_message.append(t)
                         elif flag == 'add':
-                            add_message.append(ticket_str)
+                            add_message.append(t)
                 if pending_message:
-                    nonlocal new_pending
                     new_pending = True
-                    t += "🟡新上架场次：\n"
+                    t = "🟡新上架场次：\n"
                     cnt = 1
                     for valid_from, m in pending_message.items():
                         s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else "")+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
                         cnt += 1
+                        
                         valid_date = standardize_datetime(valid_from, return_str=True) if valid_from != "NG" else "NG"
                         if valid_date in self.data["pending_events"]:
                             if eid in self.data["pending_events"][valid_date]:
@@ -289,33 +286,26 @@ class HulaquanDataManager(BaseDataManager):
                                             
                             }
                         t += s
+                    message.append(t)
                 if new_message:
-                    t += "🟢新开票场次：\n"+'\n'.join(new_message)
+                    message.append("🟢新开票场次：\n"+'\n'.join(new_message))
                 if add_message:
-                    t += "🟢补票场次：\n"+'\n'.join(add_message)
+                    message.append("🟢补票场次：\n"+'\n'.join(add_message))
                 if return_message:
-                    t += "🟢回流场次：\n"+'\n'.join(return_message)
+                    message.append("🟢回流场次：\n"+'\n'.join(return_message))
+            else:
+                continue
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
-            msg = (
+            messages.append((
                 f"剧名: {event['title']}\n"
                 f"购票链接: {url}\n"
                 f"更新时间: {self.data['update_time']}\n"
-            ) + t
-            return msg
-
-        # 正常通知
-        for eid, event in new_data.items():
-            old_event = old_data.get(eid, {})
-            msg = await build_event_notify_msg(eid, event, old_event)
-            # 判断是否有内容（即有更新）
-            if msg.strip() != f"剧名: {event['title']}\n购票链接: https://clubz.cloudsation.com/event/{eid}.html\n更新时间: {self.data['update_time']}\n":
-                messages.append(msg)
-                is_updated = True
-                if is_updated:
-                    self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
-        # 增加异常过滤：如果消息条数大于10，全部丢弃
-        
+            ) + "\n".join(message))
+            is_updated = True
+            if is_updated:
+                self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
         return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
+
 
     def save_data_cache(self, old_data_all, new_data_all, cache_folder_name):
         cache_root = os.path.join(os.getcwd(), cache_folder_name)
