@@ -580,6 +580,8 @@ class HulaquanDataManager(BaseDataManager):
         to_delete = []
         for ticket_id, event_id in self.data['ticket_id_to_event_id'].items():
             ticket = self.ticket(ticket_id, event_id)
+            if not ticket:
+                to_delete.append((event_id, ticket_id))
             if "end_time" not in ticket:
                 continue
             end_time = standardize_datetime(ticket["end_time"], return_str=False)
@@ -596,6 +598,8 @@ class HulaquanDataManager(BaseDataManager):
     def ticket(self, ticket_id, event_id=None):
         if not event_id:
             event_id = self.ticketID_to_eventID(ticket_id)
+        if ticket_id not in self.ticket_details(event_id):
+            return None
         return self.ticket_details(event_id)[ticket_id]
     
     def delete_ticket(self, ticket_id, event_id=None):
