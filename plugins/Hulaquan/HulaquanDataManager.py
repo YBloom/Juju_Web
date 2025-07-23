@@ -127,7 +127,7 @@ class HulaquanDataManager(BaseDataManager):
                         ticket = ticket_list[i]
                         ticket['id'] = str(ticket['id'])
                         tid = ticket.get("id", None)
-                        if not tid or ticket["total_ticket"] is None or not ticket['start_time'] or ticket['status'] not in ['active', 'pending']:
+                        if not tid or ticket.get("total_ticket", None) is None or not ticket.get('start_time') or ticket.get("status") not in ['active', 'pending']:
                             continue
                         ticket_dump_list[tid] = {key: ticket.get(key, None) for key in keys_to_extract}
                         if tid not in self.data['ticket_id_to_event_id'].keys():
@@ -148,6 +148,7 @@ class HulaquanDataManager(BaseDataManager):
                         await asyncio.sleep(1)
                 except Exception as e:
                     print(f"event_id {event_id} 请求异常：{e}")
+                    raise
                     return {}
 
     
