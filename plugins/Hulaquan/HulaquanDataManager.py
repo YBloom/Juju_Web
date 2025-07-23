@@ -124,10 +124,11 @@ class HulaquanDataManager(BaseDataManager):
                     ticket_list = json_data["ticket_details"]
                     ticket_dump_list = {}
                     for i in range(len(ticket_list)):
-                        tid = ticket_list[i].get("id", None)
-                        if not tid or ticket_list[i]["total_ticket"] is None or not ticket_list[i]['start_time']:
+                        ticket = ticket_list[i]
+                        tid = ticket.get("id", None)
+                        if not tid or ticket["total_ticket"] is None or not ticket['start_time'] or ticket['status'] not in ['active', 'pending']:
                             continue
-                        ticket_dump_list[tid] = {key: ticket_list[i].get(key, None) for key in keys_to_extract}
+                        ticket_dump_list[tid] = {key: ticket.get(key, None) for key in keys_to_extract}
                         if tid not in self.data['ticket_id_to_event_id'].keys():
                             self.data['ticket_id_to_event_id'][tid] = event_id
                     if data_dict is None:
@@ -364,8 +365,8 @@ class HulaquanDataManager(BaseDataManager):
                 old_item = old_data_dict[new_id]
                 old_left_ticket_count = old_item['left_ticket_count']
                 old_total_ticket = old_item['total_ticket']
-                
-                new_item['is_subscribe'] = is_subscribe = new_id in subscribe_list # 如果ticketid在订阅列表中，则标记为被订阅
+                is_subscribe = new_id in subscribe_list
+                new_item['is_subscribe'] = is_subscribe # 如果ticketid在订阅列表中，则标记为被订阅
                 
                 if (new_total_ticket>0 and not old_total_ticket):
                     # 如果旧ticket的总票数为0或不存在，新的大于0，则为新开票
