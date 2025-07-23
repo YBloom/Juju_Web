@@ -128,7 +128,8 @@ class HulaquanDataManager(BaseDataManager):
                         ticket['id'] = str(ticket['id'])
                         tid = ticket.get("id", None)
                         if not tid or ticket.get("total_ticket", None) is None or not ticket.get('start_time') or ticket.get("status") not in ['active', 'pending']:
-                            print(ticket)
+                            if ticket.get("status") != "expired":
+                                print(ticket)
                             continue
                         ticket_dump_list[tid] = {key: ticket.get(key, None) for key in keys_to_extract}
                         if tid not in self.data['ticket_id_to_event_id'].keys():
