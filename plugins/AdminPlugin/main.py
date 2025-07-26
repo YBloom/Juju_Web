@@ -152,10 +152,10 @@ class AdminPlugin(BasePlugin):
     @bot.request_event()
     async def handle_request(self, msg):
         comment = msg.comment
-        if msg.request_type == "friend": 
-            await msg.reply(True, comment="加好友请求已通过")
+        if msg.is_friend_add(): 
+            await msg.reply(True)
         else:
-            await msg.reply(True, comment="加群请求已通过")
+            await msg.reply(True)
             
 
         
