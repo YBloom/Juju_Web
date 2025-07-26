@@ -171,6 +171,12 @@ class UsersManager(BaseDataManager):
         for i in ticket_id:
             self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
         return True
+    
+    async def post_private_msg(self, bot: BasePlugin, user_id, text, condition=True):
+        if not condition:
+            return False
+        else:
+            return await bot.api.post_private_msg(user_id, text)
    
     async def send_likes(self, bot: BasePlugin):
         date = datetime.now().strftime("%Y-%m-%d")
@@ -188,8 +194,10 @@ class UsersManager(BaseDataManager):
         for user_id in self.users_list():
             if user_id not in friends:
                 r = await bot.api.post_private_msg(user_id, text="老师请添加bot为好友，防止消息被误吞~")
-                if r['retcode'] == 1200:
+                if r['retcode'] == 1200 and not r['data']:
                         self.delete_user(user_id)
+            else:
+                self.add_user(user_id)
     
     async def update_friends_list(self, bot: BasePlugin):
         await self.check_friend_status(bot)
