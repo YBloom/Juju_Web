@@ -46,7 +46,7 @@ class SaojuDataManager(BaseDataManager):
             return None
         return json_response
 
-    async def get_data_by_date_async(self, date, update_delta_max_hours=4):
+    async def get_data_by_date_async(self, date, update_delta_max_hours=1):
         if date in list(self.data["date_dict"].keys()):
             update_time = parse_datetime(self.data["update_time_dict"]["date_dict"].get(date, None))
             if update_time:
