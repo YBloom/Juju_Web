@@ -156,6 +156,14 @@ class HulaquanDataManager(BaseDataManager):
     
     def events(self):
         return self.data["events"]
+    
+    def event(self, event_id=None, ticket_id=None, default=None):
+        if ticket_id:
+            event_id = self.ticketID_to_eventID(ticket_id)
+        if event_id:
+            return self.events.get(str(event_id), default)
+        return default
+                
 
     async def search_eventID_by_name_async(self, event_name):
         if self.updating:
@@ -604,7 +612,7 @@ class HulaquanDataManager(BaseDataManager):
     def update_ticket_dict_async(self):
         asyncio.create_task(self.__update_ticket_dict_async())
     
-    def ticket(self, ticket_id, event_id=None):
+    def ticket(self, ticket_id, event_id=None, default=None):
         if not event_id:
             event_id = self.ticketID_to_eventID(ticket_id)
         if ticket_id not in self.ticket_details(event_id):
@@ -639,7 +647,7 @@ class HulaquanDataManager(BaseDataManager):
         """        
         return self.data['events'][event_id]["ticket_details"]
     
-    def ticketID_to_eventID(self, ticket_id, none_value=0, raise_error=True):
+    def ticketID_to_eventID(self, ticket_id, default=0, raise_error=True):
         if ticket_id not in self.data["ticket_id_to_event_id"]:
             for e in self.events():
                 for t in self.ticket_details(e).keys():
@@ -649,7 +657,26 @@ class HulaquanDataManager(BaseDataManager):
             return self.data["ticket_id_to_event_id"][ticket_id]
         if raise_error:
             raise KeyError
-        return none_value
+        return default
+    
+    def title(self, ticket_id=None, event_id=None, event_name_only=True, keep_brackets=False):
+        if event_id:
+            event = self.event(event_id, default={})
+            title = event.get('title', None)
+            if title:
+                if event_name_only:
+                    return extract_text_in_brackets(title, keep_brackets)
+                else:
+                    return title
+        if ticket_id:
+            if event_name_only:
+                ticket_title = self.ticket(ticket_id=ticket_id, default={}).get('title', None)
+                return extract_text_in_brackets(ticket_title, keep_brackets)
+            else:
+                event = self.event(ticket_id=ticket_id, default={})
+                title = event.get('title', None)
+                return title
+                
     
     def verify_ticket_id(self, ticket_id):
         if isinstance(ticket_id, str):

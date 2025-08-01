@@ -103,6 +103,9 @@ class Hulaquan(BasePlugin):
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time"))
         asyncio.create_task(User.update_friends_list(self))
         
+    async def on_unload(self):
+        print(f"{self.name} 插件已卸载")
+        
         
     async def on_close(self, *arg, **kwd):
         self.remove_scheduled_task("呼啦圈上新提醒")
@@ -463,7 +466,7 @@ class Hulaquan(BasePlugin):
                 if _exist:
                     continue
                 valid_date = standardize_datetime(valid_from, False)
-                valid_date = (valid_date - timedelta(minutes=30))
+                valid_date = standardize_datetime(valid_date - timedelta(minutes=30))
                 self.add_scheduled_task(
                     job_func=self.on_pending_tickets_announcer,
                     name=job_id,
@@ -482,7 +485,6 @@ class Hulaquan(BasePlugin):
         for group_id, group in User.groups().items():
             mode = group.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
-                message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_group_msg(group_id, message)
         del Hlq.data["pending_events"][valid_from][eid]
         if len(Hlq.data["pending_events"][valid_from]) == 0:
@@ -491,11 +493,10 @@ class Hulaquan(BasePlugin):
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id
         group_id = None
-        mode = msg.raw_message.split(" ")
-        if (not len(mode)<2) and (mode[1] in ["0", "1"]):
-            pass
-        else:
-            return await msg.reply("请输入存在的模式\n用法：/上新 模式编号\n1（推荐）：仅关注上新通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格")
+        all_args = self.extract_args(msg)
+        
+        if not all_args["text_args"] or all_args.get("text_args")[0] not in ["0", "1", "2"]:
+            return await msg.reply("请输入存在的模式\n用法：/上新 模式编号\n2：在模式1的基础上额外关注补票通知\n1（推荐）：仅关注上新/开票/补票通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格")
         mode = mode[1]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
@@ -506,7 +507,7 @@ class Hulaquan(BasePlugin):
         else:
             User.switch_attention_to_hulaquan(user_id, mode)
         if mode == "2":
-            await msg.reply("此功能已删除！目前只有模式0和1！")
+            await msg.reply("已关注呼啦圈的上新/补票/回流通知")
         elif mode == "1":
             await msg.reply("已关注呼啦圈的上新推送（仅上新时推送）")
         elif mode == "0":

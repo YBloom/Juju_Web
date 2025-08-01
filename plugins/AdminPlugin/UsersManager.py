@@ -5,6 +5,21 @@ from ncatbot.utils.logger import get_log
 from copy import deepcopy
 log = get_log()
 
+def USER_MODEL():
+        model = {
+        "activate": True,
+        "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "attention_to_hulaquan": 1,
+        "chats_count":0,
+        # 订阅权限
+        "subscribe": {
+            "is_subscribe": False,
+            "subscribe_time": None,
+            "subscribe_tickets": [],
+            }
+        }
+        return model
+
 
 class UsersManager(BaseDataManager):
     
@@ -37,6 +52,8 @@ class UsersManager(BaseDataManager):
             self.data["groups_list"] = data["groups_list"] if first_init else []
         self.data.setdefault("todays_likes", [])
         return super().on_load()
+    
+    
         
     def users(self):
         return deepcopy(self.data.get("users", {}))
@@ -78,19 +95,24 @@ class UsersManager(BaseDataManager):
         if user_id in self.data["users_list"]:
             return
         self.data["users_list"].append(user_id)
-        self.data["users"][user_id] = {
-            "activate": True,
-            "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "attention_to_hulaquan": 1,
-            "chats_count":0,
-
-            # 订阅权限
-            "subscribe": {
-                "is_subscribe": False,
-                "subscribe_time": None,
-                "subscribe_tickets": [],
-            }
-        }
+        self.data["users"][user_id] = USER_MODEL()
+        return self.data["users"][user_id]
+        
+    def update_user_keys(self, user_id):
+        user_id = str(user_id)
+        user = self.data["users"].get(user_id, None)
+        if user is None:
+            return self.add_user()
+        
+        def goto(origin, model):
+            for k, v in model.items():
+                if k not in origin:
+                    origin[k] = v
+                elif isinstance(v, dict):
+                    goto(origin[k], v)
+            
+        goto(user, USER_MODEL())
+               
         
     def add_chats_count(self, user_id):
         if not isinstance(user_id, str):
@@ -161,16 +183,21 @@ class UsersManager(BaseDataManager):
             self.data["users"][user_id]["subscribe"]["subscribe_tickets"] = []
         return True
    
-    def add_ticket_subscribe(self, user_id, ticket_id):
-        if not isinstance(user_id, str):
-           user_id = str(user_id)
+    def add_ticket_subscribe(self, user_id, ticket_ids):
+        user_id = str(user_id)
         if user_id not in self.users_list():
             self.add_user(user_id)
-        if isinstance(ticket_id, int) or isinstance(ticket_id, str):
-            ticket_id = [ticket_id]
-        for i in ticket_id:
+        if isinstance(ticket_ids, int) or isinstance(ticket_ids, str):
+            ticket_ids = [ticket_ids]
+        for i in ticket_ids:
             self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
         return True
+    
+    def subscribe_tickets(self, user_id):
+        return self.data["users"][user_id]["subscribe"]["subscribe_tickets"]
+    
+    def is_ticket_subscribed(self, user_id, ticket_id):
+        return str(ticket_id) in self.subscribe_tickets(user_id)
     
     async def post_private_msg(self, bot: BasePlugin, user_id, text, condition=True):
         if not condition:
