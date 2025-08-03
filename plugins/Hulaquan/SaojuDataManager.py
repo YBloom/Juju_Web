@@ -217,6 +217,8 @@ class SaojuDataManager(BaseDataManager):
         soup = BeautifulSoup(html, 'html.parser')
         table = soup.find('table', class_='ui striped celled pink unstackable compact table')
         
+        if not table:
+            return []
         musicals = []
         for row in table.find_all('tr')[1:]:  # 跳过表头
             cols = row.find_all('td')
