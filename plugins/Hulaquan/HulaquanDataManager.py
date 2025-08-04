@@ -785,13 +785,13 @@ class HulaquanDataManager(BaseDataManager):
         return yes, denial
             
             
-    async def on_message_tickets_query(self, eName, ignore_sold_out=False, show_cast=True, refresh=False):
+    async def on_message_tickets_query(self, eName, ignore_sold_out=False, show_cast=True, refresh=False, show_ticket_id=show_ticket_id):
         if self.updating:
             await self._wait_for_data_update()
         eid, msg = await self.get_event_id_by_name(eName)
         if eid is None:
             return msg or "未找到该剧目。"
-        return await self.generate_tickets_query_message(eid, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
+        return await self.generate_tickets_query_message(eid, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh, show_ticket_id=show_ticket_id)
 
     async def get_event_id_by_name(self, eName, default="未找到该剧目"):
         """
