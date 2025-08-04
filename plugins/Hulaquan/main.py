@@ -1063,7 +1063,7 @@ class Hulaquan(BasePlugin):
                 for t in tickets[mode]:
                     tid = str(t['id'])
                     ticket = Hlq.ticket(tid, default={})
-                    text = await Hlq.build_single_ticket_info_str(ticket, show_cast=True, show_ticket_id=True)[0]
+                    text = (await Hlq.build_single_ticket_info_str(ticket, show_cast=True, show_ticket_id=True))[0]
                     lines.append(text)
         if not events and not tickets:
             await msg.reply_text("你还没有关注任何剧目或场次。")
