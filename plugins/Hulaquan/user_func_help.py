@@ -9,14 +9,15 @@ HLQ_QUERY_CO_CASTS_USAGE = """/同场演员 A B C -o
 
 
 
-HLQ_SWITCH_ANNOUNCER_MODE_NAME = "切换呼啦圈上新推送模式"
-HLQ_SWITCH_ANNOUNCER_MODE_DESCRIPTION = "切换呼啦圈上新推送模式"
+HLQ_SWITCH_ANNOUNCER_MODE_NAME = "切换呼啦圈上新推送模式（全部）"
+HLQ_SWITCH_ANNOUNCER_MODE_DESCRIPTION = "切换呼啦圈上新推送模式(全部)"
 HLQ_SWITCH_ANNOUNCER_MODE_USAGE = """
-/上新 模式编号
-2：关注呼啦圈检测的推送（定时检测一次并通知）
-1（推荐）：仅关注上新通知
+/呼啦圈通知 模式编号
+3：额外关注余票增减通知
+2：额外关注回流通知
+1：仅关注上新/补票通知
 0：关闭呼啦圈上新推送
-如“/上新 1”，数字和“上新”间有空格
+如 “/呼啦圈通知 1”，数字和“/呼啦圈通知”间有空格
 """
 
 
@@ -140,5 +141,28 @@ HLQ_DEL_REPO_USAGE = """/删除repo repoID\n不知道repoID的可以通过/我�
 HLQ_FOLLOW_TICKET_NAME = "关注学生票"
 HLQ_FOLLOW_TICKET_DESCRIPTION = "关注学生票"
 HLQ_FOLLOW_TICKET_USAGE = """
-/关注学生票 场次id
-例如/关注学生票 10001 10002 10003 10005"""
+/关注学生票 场次id -T -1/-2/-3
+/关注学生票 剧目名 -E -1/-2/-3
+/关注学生票 剧目名 -1/-2/-3
+
+-1/-2/-3表示以下的推送模式，必填
+-T表示关注场次id，需要输入对应的场次
+-E表示关注某些剧目，需要输入对应的剧目名
+
+3：额外关注余票增减通知
+2：额外关注回流通知
+1：仅关注上新/补票通知
+
+注意：此处选择的模式数字应该大于对于呼啦圈全部通知的关注（对呼啦圈全部剧目通知的设置通过/呼啦圈通知 模式编号 调整）
+
+例如：/关注学生票 10001 10002 10003 10005 -T -2
+/关注学生票 连璧 海雾 她对此 -E -3
+"""
+
+
+HLQ_SWITCH_FOLLOW_MODE_PREFIX = "/上新模式"
+HLQ_SWITCH_FOLLOW_MODE_NAME = "切换上新模式（所有）"
+HLQ_SWITCH_FOLLOW_MODE_DESCRIPTION = "切换上新模式（所有）"
+HLQ_SWITCH_FOLLOW_MODE_USAGE = """
+/上新模式
+"""

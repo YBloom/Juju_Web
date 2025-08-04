@@ -161,7 +161,7 @@ class Hulaquan(BasePlugin):
             prefix="/上新",
             description=HLQ_SWITCH_ANNOUNCER_MODE_DESCRIPTION,
             usage=HLQ_SWITCH_ANNOUNCER_MODE_USAGE,
-            examples=["/上新"],
+            examples=["/呼啦圈通知"],
             tags=["呼啦圈", "学生票", "查询", "hlq"],
             metadata={"category": "utility"}
         )
@@ -495,9 +495,9 @@ class Hulaquan(BasePlugin):
         group_id = None
         all_args = self.extract_args(msg)
         
-        if not all_args["text_args"] or all_args.get("text_args")[0] not in ["0", "1", "2"]:
-            return await msg.reply("请输入存在的模式\n用法：/上新 模式编号\n2：在模式1的基础上额外关注补票通知\n1（推荐）：仅关注上新/开票/补票通知\n0：关闭呼啦圈上新推送\n如“/上新 1”，数字和“上新”间有空格")
-        mode = mode[1]
+        if not all_args["text_args"] or all_args.get("text_args")[0] not in ["0", "1", "2", "3"]:
+            return await msg.reply("请输入存在的模式\n用法：{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}")
+        mode = all_args.get("text_args")[0]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
             if User.is_op(user_id):
@@ -531,8 +531,7 @@ class Hulaquan(BasePlugin):
         
 
     def extract_args(self, msg):
-        # 之后修改，不方便
-        command = msg.raw_message.split(" ")
+        command = [arg for arg in msg.raw_message.split(" ") if arg] 
         args = {"command":command[0], "mode_args":[arg for arg in command[1:] if arg[0] == '-'], "text_args":[arg for arg in command[1:] if arg[0] != '-']}
         for i in range(len(args["mode_args"])):
             args["mode_args"][i] = args["mode_args"][i].lower() # 小写处理-I -i
