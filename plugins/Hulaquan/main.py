@@ -404,56 +404,111 @@ class Hulaquan(BasePlugin):
     
     # 呼啦圈刷新    
     @user_command_wrapper("hulaquan_announcer")
-    async def on_hulaquan_announcer(self, user_lists: list=[], group_lists: list=[], manual=False):
+    async def on_hulaquan_announcer(self, test=False, manual=False, announce_admin_only=False):
+        """
+        用户可以选择关注ticketID、eventID
+        针对全部events/某eventID/某ticketID，有几种关注模式：
+            0 不关注
+            1 只推送上新/补票
+            2 额外关注回流票
+            3 额外关注票增/票减
+            
+        功能逻辑：
+            1.先从hlq获取所有更新数据
+        """
+        MODE = {
+            "add": 1,
+            "new": 1,
+            "pending": 1,
+            "return": 2,
+            "back": 3,
+            "sold": 3,
+        }
         start_time = time.time()
         try:
-            result = await Hlq.message_update_data_async()
-            if manual:
-                log.info(f"updating:{Hlq.updating}, result:{len(result)}")
+            result = await Hlq.compare_to_database_async()
+            event_id_to_ticket_ids = result["events"]
+            event_msgs = result["events_prefixes"]
+            PREFIXES = result["prefix"]
+            categorized = result["categorized"]
+            tickets = result['tickets']
         except RequestTimeoutException as e:
             raise
-        is_updated = result["is_updated"]
-        messages = result["messages"]
-        new_pending = result["new_pending"]
-        if len(messages) >= 10:
-            log.error(f"呼啦圈数据刷新出现异常，存在{len(messages)}条数据刷新")
-            
-            elapsed_time = time.time() - start_time
-            if is_updated:
-                print(f"任务执行时间: {elapsed_time}秒")
-            return
-        if is_updated:
-            log.info("呼啦圈数据刷新成功：\n"+"\n".join(messages))
-            if len(messages) == 2:
-                messages = [messages[0]+"\n\n"+messages[1]]
-        for user_id, user in User.users().items():
-            mode = user.get("attention_to_hulaquan")
-            if (manual and user_id not in user_lists):
-                continue
-            if (not mode):
-                continue
-            if manual or is_updated:
-                if mode == "2":
-                    user.switch_attention_to_hulaquan(user_id, 1)
-                for m in messages:
-                    message = f"呼啦圈上新提醒：\n{m}"
-                    r = await self.api.post_private_msg(user_id, message)
-                    if r['retcode'] == 1200:
-                        User.delete_user(user_id)
-        for group_id, group in User.groups().items():
-            mode = group.get("attention_to_hulaquan")
-            if (manual and group_id not in group_lists):
-                continue
-            if manual or mode=="2" or (mode=="1" and is_updated):
-                for m in messages:
-                    message = f"呼啦圈上新提醒：\n{m}"
-                    await self.api.post_group_msg(group_id, message)
-        if new_pending:
+        if len(categorized["new"]) >= 10:
+            log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
+        elapsed_time = round(time.time() - start_time, 2)
+        if not announce_admin_only:
+            _users = User.users()
+        else:
+            _users = {User.admin_id: User.users[User.admin_id]}
+        for user_id, user in _users.items():
+            messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user)
+            for i in messages:
+                m = "\n\n".join(i)
+                r = await self.api.post_private_msg(user_id, m)
+                if r['retcode'] == 1200:
+                    User.delete_user(user_id)
+                    break
+        if not announce_admin_only:
+            for group_id, group in User.groups().items():
+                messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, group_id, group, is_group=True)
+            for i in messages:
+                m = "\n\n".join(i)
+                await self.api.post_group_msg(group_id, m)
+        if len(categorized["pending"]) > 0:
             self.register_pending_tickets_announcer()
-        elapsed_time = time.time() - start_time
-        if is_updated:
-            print(f"任务执行时间: {elapsed_time}秒")
         return True
+
+    def __generate_announce_text(self, MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user, is_group=False):
+        announce = {} # event_id: {ticket_id: msg}, ...
+        all_mode = user.get("attention_to_hulaquan")
+        if not is_group:
+            subscribe = user.get("subscribe", {})
+            if not subscribe:
+                subscribe = User.new_subscribe(user_id)
+            fo_events = subscribe.get("subscribe_events", {})
+            fo_tickets = subscribe.get("subscribe_tickets", {})
+            for event in fo_events:
+                eid = event['id']
+                e_mode = event['mode']
+                if eid in event_id_to_ticket_ids:
+                    announce[eid] = {}
+                    for tid in event_id_to_ticket_ids:
+                        ticket = tickets[tid]
+                        stat = ticket['categorized']
+                        if e_mode >= MODE.get(stat, 99):
+                            announce[eid].setdefault(stat, set())
+                            announce[eid][stat].add(tid)
+            for t in fo_tickets:
+                tid = t['id']
+                e_mode = t['mode']
+                if tid in tickets.keys():
+                    eid = ticket['event_id']
+                    stat = ticket['categorized']
+                    if e_mode >= MODE.get(stat, 99):
+                        announce[eid].setdefault(stat, set())
+                        announce[eid][stat].add(tid)
+        for stat, tid in categorized.items():
+            if all_mode >= MODE.get(stat, 99):
+                eid = ticket['event_id']
+                stat = ticket['categorized']
+                if e_mode >= MODE.get(stat, 99):
+                    announce[eid].setdefault(stat, set())
+                    announce[eid][stat].add(tid)
+        messages = []
+        for eid, stats in announce.items():
+            messages.append([])
+            event_prefix = event_msgs[eid]
+            messages[-1].append(event_prefix)
+            stats_ps = []
+            for stat, t_ids in stats.items():
+                stat_pfx = PREFIXES[stat]
+                stats_ps.append(stat_pfx)
+                t_m = [tickets[t]['message'] for t in t_ids]
+                m = f"{stat_pfx}提醒：\n{'\n'.join(t_m)}"
+                messages[-1].append(m)
+            messages[-1][0] = f"{"|".join(stats_ps)}提醒：\n" + messages[-1][0]
+        return messages
         
     def register_pending_tickets_announcer(self):
         for valid_from, events in Hlq.data["pending_events"].items():
@@ -477,10 +532,10 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str, valid_from:str):
+        message = f"【即将开票】呼啦圈开票提醒：\n{message}"
         for user_id, user in User.users().items():
             mode = user.get("attention_to_hulaquan")
             if mode == "1" or mode == "2":
-                message = f"【即将开票】呼啦圈开票提醒：\n{message}"
                 await self.api.post_private_msg(user_id, message)
         for group_id, group in User.groups().items():
             mode = group.get("attention_to_hulaquan")
@@ -515,6 +570,7 @@ class Hulaquan(BasePlugin):
             await msg.reply("已关注呼啦圈的上新/补票/回流/增减票通知")
         elif mode == "0":
             await msg.reply("已关闭呼啦圈上新推送。")
+            
 
     @user_command_wrapper("hulaquan_search")
     async def on_hlq_search(self, msg: BaseMessage):
@@ -563,7 +619,7 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("query_co_casts")
     async def on_get_co_casts(self, msg: BaseMessage):
-        args = self.extract_args(msg)
+        args = self.extract_args(msg)  
         if not args["text_args"]:
             await msg.reply_text("【缺少参数】以下是/同场演员 的用法"+HLQ_QUERY_CO_CASTS_USAGE)
             return
@@ -588,7 +644,7 @@ class Hulaquan(BasePlugin):
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
         try:
-            await self.on_hulaquan_announcer(user_lists=[msg.user_id] if isinstance(msg, PrivateMessage) else [], group_lists=[msg.group_id] if isinstance(msg, GroupMessage) else [], manual=True)
+            await self.on_hulaquan_announcer(manual=True)
             await msg.reply_text("刷新成功")
         except Exception as e:
             print(e)
@@ -637,7 +693,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("用法：/alias <搜索名> <别名>")
             return
         search_name, alias = args["text_args"][0], args["text_args"][1]
-        result = await self.get_eventID_by_name(search_name, msg)
+        result = await self.get_event_id_by_name(search_name, msg)
         if result:
             event_id = result[0]
             Alias.add_alias(event_id, alias)
@@ -645,10 +701,10 @@ class Hulaquan(BasePlugin):
             await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
             return
         
-    async def get_eventID_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False):
+    async def get_event_id_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False):
         # return :: (event_id, event_name) or False
-        result = await Hlq.search_eventID_by_name_async(search_name)
-        if not result:
+        result = await Hlq.get_event_id_by_name(search_name, None)
+        if not result[0]:
             if notFoundAndRegister:
                 event_id = Stats.register_event(search_name)
                 await msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
@@ -659,12 +715,13 @@ class Hulaquan(BasePlugin):
             if msg:
                 await msg.reply_text(msg_prefix+"未找到该剧目")
             return False
-        if len(result) > 1:
-            if msg:
-                queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
-                await msg.reply_text(msg_prefix+f"根据搜索名，找到多个匹配的剧名，请更换为唯一的搜索关键词：\n" + "\n".join(queue))
-            return False
-        return result[0]
+        else:
+            if result[1]:
+                if msg:
+                    queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
+                    await msg.reply_text(msg_prefix+f"根据搜索名，找到多个匹配的剧名，请更换为唯一的搜索关键词：\n" + "\n".join(queue))
+                return False
+        return (result[0], search_name)
 
     @user_command_wrapper("on_list_aliases")    
     async def on_list_aliases(self, msg: BaseMessage):
@@ -704,7 +761,7 @@ class Hulaquan(BasePlugin):
         payable = match["payable"]
         
         print(f"{user_id}上传了一份repo：剧名: {title}\n日期: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
-        result = await self.get_eventID_by_name(title, msg, notFoundAndRegister=True)
+        result = await self.get_event_id_by_name(title, msg, notFoundAndRegister=True)
         event_id = result[0]
         title = result[1]
         if not event_id:
@@ -734,7 +791,7 @@ class Hulaquan(BasePlugin):
             return
         event_name = args["text_args"][0]
         event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
-        event = await self.get_eventID_by_name(event_name, msg, foundInState=True)
+        event = await self.get_event_id_by_name(event_name, msg, foundInState=True)
         if not event:
             return
         event_id = event[0]
@@ -866,12 +923,39 @@ class Hulaquan(BasePlugin):
     async def on_follow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
-            return await msg.reply_text(f"请提供场次id，用法：{HLQ_FOLLOW_TICKET_USAGE}")
-        ticket_id_list = args["text_args"].split(" ")
-        ticket_id_list, denial = Hlq.verify_ticket_id(ticket_id_list)
-        txt = ""
-        if denial:
-            txt += f"未找到以下场次id：{' '.join(denial)}\n"
-        User.add_ticket_subscribe(ticket_id_list)
-        await msg.reply_text(txt + f"已成功关注以下场次,有票务变动会提醒您：{' '.join(ticket_id_list)}")
+            return await msg.reply_text(f"请提供场次id或剧目名，用法：\n{HLQ_FOLLOW_TICKET_USAGE}")
+        mode_args = args["mode_args"]
+        user_id = msg.user_id
+        target_values = {"-1", "-2", "-3"}
+
+        # 遍历列表查找第一个匹配的项
+        setting_mode = next((item for item in mode_args if item in target_values), None)
+        if not setting_mode:
+            return await msg.reply_text("缺少指定的模式（命令需带有-1，-2，-3其中之一）：\n" + HLQ_FOLLOW_TICKET_USAGE)
+        # 1. 按场次ID关注
+        if "-t" in mode_args:
+            ticket_id_list = args["text_args"]
+            ticket_id_list, denial = Hlq.verify_ticket_id(ticket_id_list)
+            txt = ""
+            if denial:
+                txt += f"未找到以下场次id：{' '.join(denial)}\n"
+            User.add_ticket_subscribe(user_id, ticket_id_list, setting_mode)
+            await msg.reply_text(txt + f"已成功关注以下场次,有票务变动会提醒您：{' '.join(ticket_id_list)}")
+            return
+
+        # 2. 按剧目名关注（-E 或默认）
+        event_names = args["text_args"]
+        no_response = []
+        event_ids = []
+        for e in event_names:
+            result = await self.get_event_id_by_name(e)
+            if not result:
+                no_response.append(e)
+                continue
+            event_ids.append(result[0])
+        txt = "" if not no_response else f"未找到以下剧目：\n{'\n'.join(no_response)}]\n\n"
+
         
+        User.add_event_subscribe(user_id, event_ids, setting_mode)
+        responses = [e for e in event_names if e not in no_response]
+        await msg.reply_text(txt + f"已成功关注以下剧目,有票务变动会提醒您：\n{'\n'.join(responses)}")

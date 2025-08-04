@@ -53,7 +53,7 @@ class HulaquanDataManager(BaseDataManager):
         data_dic = {"events": {}, "update_time": ""}
         keys_to_extract = ["id", "title", "location", "start_time", "end_time", "update_time", "deadline", "create_time"]
         for event in data:
-            event_id = str(event["id"])
+            event_id = event['id'] = str(event['id'])
             Stats.register_event(event['title'], event_id)
             if event_id not in data_dic["events"]:
                 data_dic["events"][event_id] = {key: event.get(key, None) for key in keys_to_extract}
@@ -125,12 +125,12 @@ class HulaquanDataManager(BaseDataManager):
                     ticket_dump_list = {}
                     for i in range(len(ticket_list)):
                         ticket = ticket_list[i]
-                        ticket['id'] = str(ticket['id'])
                         tid = ticket.get("id", None)
                         if not tid or ticket.get("total_ticket", None) is None or not ticket.get('start_time') or ticket.get("status") not in ['active', 'pending']:
                             if ticket.get("status") != "expired":
                                 print(ticket)
                             continue
+                        ticket['id'] = str(ticket['id'])
                         ticket_dump_list[tid] = {key: ticket.get(key, None) for key in keys_to_extract}
                         if tid not in self.data['ticket_id_to_event_id'].keys():
                             self.data['ticket_id_to_event_id'][tid] = event_id
@@ -202,118 +202,186 @@ class HulaquanDataManager(BaseDataManager):
 
     # -------------------Query------------------------------ #         
     # ---------------------Announcement--------------------- #
-    async def compare_to_database_async(self, subscribe_list=[]):
+    async def compare_to_database_async(self):
         old_data_all = copy.deepcopy(self.data)
         new_data_all = await self._update_events_data_async()
         try:
-            return await self.__compare_to_database(old_data_all, new_data_all, subscribe_list)
+            return await self.__compare_to_database(old_data_all, new_data_all)
         except Exception as e:
             self.save_data_cache(old_data_all, new_data_all, "error_announcement_cache")
             raise  # 重新抛出异常，便于外层捕获和处理
 
-    async def __compare_to_database(self, old_data_all, new_data_all, subscribe_list=[]):
-        # 将新爬的数据与旧数据进行比较，找出需要更新的数据
+    async def __compare_to_database(self, old_data_all, new_data_all):
         """
-        __dump: bool, 是否将新数据写入文件
-        Returns:
-            update_data: list, 包含需要更新的事件数据
-            None: 如果没有需要更新的数据
+        比较新旧数据，返回分类后的票务变动信息，便于后续按需推送。
+        返回结构：
+        {
+            "events": {
+                event_id: [ticket_id,...]
+                ...
+            }
+            "categorized": {
+                "new": {
+                    [{"event_id": "...", "ticket_id": [ticket_id], "message": }]
+                    ...
+                }
+                "add": ..., 
+                "pending": ..., 
+                "return": ..., 
+                "sold": ..., 
+                "back": ...,
+            }
+            "prefix": {}
+        }
         """
-        no_subscribe = subscribe_list is None
-        if no_subscribe:
-            subscribe_list = []
-        is_updated = False
-        new_pending = False
+        save_cache = False
         new_data = new_data_all.get("events", {})
         old_data = old_data_all.get("events", {})
-        messages = []
-        for eid, event in new_data.items(): # 一个id对应一部剧
-            message = []
-            if comp := self.compare_tickets(old_data.get(eid, {}), new_data[eid].get("ticket_details", None), subscribe_list):
-                # 仅返回更新了的ticket detail
-                assemble = {}
-                new_message = []
-                return_message = []
-                add_message = []
-                subscribe_message = {i: [] for i in subscribe_list}
-                pending_message = {}
-                for ticket in comp:
-                    flag = ticket.get('update_status')
-                    tInfo = extract_title_info(ticket.get("title", ""))
-                    event_title = tInfo['title'][1:-1]
-                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
-                    if ticket["status"] == "pending":
-                        valid_from = ticket.get("valid_from")
-                        if not valid_from or valid_from == "null":
-                            valid_from = "NG"
-                        pending_message[valid_from] = []
-                        pending_message[valid_from].append(t)
-                    elif ticket["status"] == "active" and flag:
-                        if flag == 'new':
-                            if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
-                                valid_from = ticket.get("valid_from")
-                                if not valid_from or valid_from == "null":
-                                    valid_from = "NG"
-                                pending_message[valid_from] = []
-                                pending_message[valid_from].append(t)
-                            else:
-                                new_message.append(t)
-                        elif flag == 'return':
-                            return_message.append(t)
-                        elif flag == 'add':
-                            add_message.append(t)
-                if pending_message:
-                    new_pending = True
-                    t = "🟡新上架场次：\n"
-                    cnt = 1
-                    for valid_from, m in pending_message.items():
-                        s = (f"第{cnt}波" if len(pending_message.keys()) > 1 else "")+f"开票时间：{valid_from}\n"+'\n'.join(m)+"\n"
-                        cnt += 1
-                        
-                        valid_date = standardize_datetime(valid_from, return_str=True) if valid_from != "NG" else "NG"
-                        if valid_date in self.data["pending_events"]:
-                            if eid in self.data["pending_events"][valid_date]:
-                                self.data["pending_events"][valid_date][eid] += '\n'.join(m)
-                            else:
-                                self.data["pending_events"][valid_date][eid] = (
-                                    f"剧名: {event['title']}\n"
-                                            f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
-                                            f"更新时间: {self.data['update_time']}\n"
-                                            f"开票时间: {valid_from}\n"
-                                            f"场次信息：\n" + '\n'.join(m) + "\n"
-                                            )
-                        else:
-                            self.data["pending_events"][valid_date] = {
-                                "valid_from": valid_date,
-                                eid: (f"剧名: {event['title']}\n"
-                                            f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
-                                            f"更新时间: {self.data['update_time']}\n"
-                                            f"开票时间: {valid_from}\n"
-                                            f"场次信息：\n" + '\n'.join(m) + "\n"
-                                            )
-                                            
-                            }
-                        t += s
-                    message.append(t)
-                if new_message:
-                    message.append("🟢新开票场次：\n"+'\n'.join(new_message))
-                if add_message:
-                    message.append("🟢补票场次：\n"+'\n'.join(add_message))
-                if return_message:
-                    message.append("🟢回流场次：\n"+'\n'.join(return_message))
-            else:
+        comp_data = {}
+        for eid in new_data.keys():
+            comp = self.compare_tickets(old_data.get(eid, {}), new_data[eid].get("ticket_details", None))
+            if not comp:
                 continue
-            url = f"https://clubz.cloudsation.com/event/{eid}.html"
-            messages.append((
-                f"剧名: {event['title']}\n"
+            comp_data[eid] = comp
+            is_updated = True
+            if any(k in ["new", "add", "pending"] for k in comp.keys()):
+                save_cache = True
+            # fix
+        
+        result = await self.__generate_compare_message_text(comp_data)
+        if save_cache:
+            self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
+        return result
+    
+    
+    async def __generate_compare_message_text(self, compare_data):
+        """
+        生成比较数据后的文字消息，包含提醒信息。
+        
+        返回结构::
+        {
+            "events_prefixes": {
+                event_id: "(
+                f"剧名: {event_title}\n"
                 f"购票链接: {url}\n"
                 f"更新时间: {self.data['update_time']}\n"
-            ) + "\n".join(message))
-            is_updated = True
-            if is_updated:
-                self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
-        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
+                (f"⏲️开票时间：{valid_from}" if valid_from else "")
+            ))"
+            }
+            "events": {
+                event_id: [ticket_id,...]
+                ...
+            }
+            "categorized": {
+                "new": [ticket_id]
+                "add": ..., 
+                "pending": ..., 
+                "return": ..., 
+                "sold": ..., 
+                "back": ...,    
+            }
+            "tickets": {
+                ticket_id: 
+                [{"categorized": "...", "event_id": event_id, "message": "..."}]
+                }
+            "prefix": {
+                "new": "🆕上新",
+                "add": "🟢补票",
+                "return": "♻️回流",
+                "sold": "➖票减",
+                "back": "➕票增",
+                "pending": "⏲️开票"
+                }
+        }
+        """
+        result = {
+            "events_prefixes": {},
+            "events": {},
+            "categorized": {
+                "new": [],
+                "add": [],
+                "return": [],
+                "sold": [],
+                "back": [],
+                "pending": [],
+                },
+            "tickets": {},
+            "prefix": {
+                "new": "🆕上新",
+                "add": "🟢补票",
+                "return": "♻️回流",
+                "sold": "➖票减",
+                "back": "➕票增",
+                "pending": "⏲️开票"
+                }
+        }
+        for eid, comp in compare_data.items():
+            if not comp:
+                continue
+            pending_message = {}
+            valid_from = None
+            event_title = self.title(event_id=eid, event_name_only=True, keep_brackets=False)
+            result["events"][eid] = []
+            for stat, ticket in comp.items(): # 一个id对应一部剧
+                # 仅返回更新了的ticket detail
+                ticket_id = str(ticket.get("id", ""))
+                t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
+                if stat == "pending":
+                    valid_from = ticket.get("valid_from")
+                    if not valid_from or valid_from == "null":
+                        valid_from = "未知"
+                    pending_message.setdefault(valid_from, [])
+                    pending_message[valid_from].append(t)
+                elif stat["status"] == "active":
+                    if stat == 'new':
+                        if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
+                            valid_from = ticket.get("valid_from")
+                            if not valid_from or valid_from == "null":
+                                valid_from = "未知"
+                            pending_message.setdefault(valid_from, [])
+                            pending_message[valid_from].append(t)
+                result["tickets"][ticket_id] = {"message": t, "categorized": stat, "event_id": eid}
+                result["categorized"][stat].append(ticket_id)
+                result["events"][eid].append(ticket_id)
+            self.pending_events_check_in(eid, pending_message, event_title) # 将即将开票的场次录入pending_dict
+            url = f"https://clubz.cloudsation.com/event/{eid}.html"
+            result["events_prefixes"][eid].append((
+                f"剧名: {event_title}\n"
+                f"购票链接: {url}\n"
+                f"更新时间: {self.data['update_time']}\n"
+                (f"⏲️开票时间：{valid_from}" if valid_from else "")
+            ))
+        return result
 
+    def pending_events_check_in(self, eid, pending_message, title):
+        if pending_message:
+            cnt = 1
+            for valid_from, m in pending_message.items():
+                cnt += 1
+                
+                valid_date = standardize_datetime(valid_from, return_str=True) if valid_from != "NG" else "NG"
+                if valid_date in self.data["pending_events"]:
+                    if eid in self.data["pending_events"][valid_date]:
+                        self.data["pending_events"][valid_date][eid] += '\n'.join(m)
+                    else:
+                        self.data["pending_events"][valid_date][eid] = (
+                            f"剧名: {title}\n"
+                                    f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
+                                    f"更新时间: {self.data['update_time']}\n"
+                                    f"开票时间: {valid_from}\n"
+                                    f"场次信息：\n" + '\n'.join(m) + "\n"
+                                    )
+                else:
+                    self.data["pending_events"][valid_date] = {
+                        "valid_from": valid_date,
+                        eid: (f"剧名: {title}\n"
+                                    f"购票链接: https://clubz.cloudsation.com/event/{eid}.html\n"
+                                    f"更新时间: {self.data['update_time']}\n"
+                                    f"开票时间: {valid_from}\n"
+                                    f"场次信息：\n" + '-'*10 + '\n'.join(m) + "\n"
+                                    )
+                                    
+                    }
 
     def save_data_cache(self, old_data_all, new_data_all, cache_folder_name):
         cache_root = os.path.join(os.getcwd(), cache_folder_name)
@@ -340,16 +408,37 @@ class HulaquanDataManager(BaseDataManager):
             json.dump(new_data_all, f, ensure_ascii=False, indent=2)
 
 
-    def compare_tickets(self, old_data_all, new_data, subscribe_list):
+    def compare_tickets(self, old_data_all, new_data):
+        """
+        简介::
+        比较旧票务数据和新票务数据，判断每个票务的更新状态。
+        参数::
+            old_data_all (dict 或 None): 之前的票务数据，预期包含 "ticket_details" 字典，映射票务ID到其详细信息。如果为 None 或为空，则所有新票务都视为新上架。
+            new_data (dict 或 None): 当前的票务数据，映射票务ID到其详细信息。
+        返回结构::
+            dict: {'new': [ticket...], 'add', 'return', 'sold', 'back'}
+        更新状态逻辑::
+            - 'new': 票务为新上架，或之前不存在，或总票数从0变为正数。
+            - 'add': 总票数增加。
+            - 'return': 之前余票为0（售罄），现在有余票。
+            - 'sold': 余票数量减少。
+            - 'back': 余票数量增加（但不是从0变为正数）。
+        注意事项::
+            - 如果 old_data_all 缺失或为空，所有 new_data 条目都标记为 'new'。
+            - 如果新旧数据都为空，返回 None。
+            - 只处理标题和总票数非空的票务。
+        """
+        
         if (not old_data_all) and new_data:
             # 如果旧数据不存在，那么所有新数据都判定为新上架
             print("旧数据不存在，所有新数据都判定为新上架")
             for i in new_data:
-                i["update_status"] = 'new'
-            return list(new_data.values())
+                new_data[i]["update_status"] = 'new'
+                
+            return {k['update_status']: k for k in new_data}
         elif not (old_data_all and new_data):
             # 如果旧数据新数据都为空 返回NONE
-            return None
+            return {}
         else:
             old_data_dict = old_data_all.get("ticket_details", {})
         if not old_data_dict:
@@ -357,7 +446,7 @@ class HulaquanDataManager(BaseDataManager):
             print("旧数据无票务细节，所有新数据都判定为新上架")
             for i in new_data.values():
                 i["update_status"] = 'new'
-            return list(new_data.values())
+            return {k['update_status']: k for k in new_data}
         
         # 以上情况都不存在，新旧数据都正常，则开始遍历
         
@@ -366,7 +455,7 @@ class HulaquanDataManager(BaseDataManager):
         for new_id in list(new_data.keys()):
             new_item = new_data[new_id]
             new_left_ticket_count = new_item['left_ticket_count']
-            new_total_ticket = new_item['total_ticket']     
+            new_total_ticket = new_item['total_ticket']
             if not new_item['title'] and not new_total_ticket:
                 continue
             if new_id not in list(old_data_dict.keys()):
@@ -378,11 +467,9 @@ class HulaquanDataManager(BaseDataManager):
                 old_item = old_data_dict[new_id]
                 old_left_ticket_count = old_item['left_ticket_count']
                 old_total_ticket = old_item['total_ticket']
-                is_subscribe = new_id in subscribe_list
-                new_item['is_subscribe'] = is_subscribe # 如果ticketid在订阅列表中，则标记为被订阅
+                # 新增change逻辑：余票变化且总票数不变
                 
-                if (new_total_ticket>0 and not old_total_ticket):
-                    # 如果旧ticket的总票数为0或不存在，新的大于0，则为新开票
+                if (new_total_ticket > 0 and not old_total_ticket):
                     new_item['update_status'] = 'new'
                     update_data.append(new_item)
                 elif (new_total_ticket > (old_total_ticket or 0)):
@@ -393,15 +480,16 @@ class HulaquanDataManager(BaseDataManager):
                     # 如果 left_ticket_count 增加了，则标记为 "return"
                     new_item['update_status'] = 'return'
                     update_data.append(new_item)
-                elif is_subscribe and old_left_ticket_count > new_left_ticket_count:
+                elif old_left_ticket_count > new_left_ticket_count:
                     new_item['update_status'] = 'sold'
                     update_data.append(new_item)
-                elif is_subscribe and old_left_ticket_count < new_left_ticket_count:
-                    new_item['update_status'] = 'return'
+                elif old_left_ticket_count < new_left_ticket_count:
+                    new_item['update_status'] = 'back'
                     update_data.append(new_item)
                 else:
                     new_item['update_status'] = None
-        return update_data
+        update = {k['update_status']: k for k in update_data}
+        return update
     
     
     async def get_ticket_cast_and_city_async(self, eName, ticket, city=None):
@@ -691,36 +779,31 @@ class HulaquanDataManager(BaseDataManager):
             
             
     async def on_message_tickets_query(self, eName, ignore_sold_out=False, show_cast=True, refresh=False):
-        result = []
         if self.updating:
             await self._wait_for_data_update()
+        eid, msg = await self.get_event_id_by_name(eName)
+        if eid is None:
+            return msg or "未找到该剧目。"
+        return await self.generate_tickets_query_message(eid, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
+
+    async def get_event_id_by_name(self, eName, default="未找到该剧目"):
+        """
+        统一处理event_name转event_id逻辑。
+        返回 (event_id, None) 或 (None, 错误消息)
+        """
+        queue = ""
         eName = eName.strip().lower()
-        # 优先用别名系统生成检索名列表
         search_names = self.get_ordered_search_names(title=eName)
         for search_name in search_names:
             result = await self.search_eventID_by_name_async(search_name)
             if len(result) == 1:
                 eid = result[0][0]
                 Alias.set_no_response(eName, search_name, reset=True)
-                return await self.generate_tickets_query_message(eid, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh)
+                return eid, None
             elif len(result) > 1:
                 queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
-                return f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue)
-            else:
-                Alias.set_no_response(eName, search_name, reset=False)
-        return "未找到该剧目。"
-        
-    async def message_update_data_async(self):
-        query_time = datetime.now()
-        query_time_str = query_time.strftime("%Y-%m-%d %H:%M:%S")
-        result = await self.compare_to_database_async()
-        is_updated = result["is_updated"]
-        messages = result["messages"]
-        new_pending = result["new_pending"]
-        if not is_updated:
-            return {"is_updated": False, "messages": [f"无更新数据。\n查询时间：{query_time_str}\n上次数据更新时间：{self.data['last_update_time']}",], "new_pending": False}
-        messages = [f"检测到呼啦圈有{len(messages)}条数据更新\n查询时间：{query_time_str}"] + messages
-        return {"is_updated": is_updated, "messages": messages, "new_pending": new_pending}
+            Alias.set_no_response(eName, search_name, reset=False)
+        return None, f"找到多个匹配的剧名，请重新以唯一的关键词查询：\n" + "\n".join(queue) if queue else default
 
 
     async def get_hlq_co_cast_event(self, co_casts, show_others=True):
@@ -729,13 +812,7 @@ class HulaquanDataManager(BaseDataManager):
         for event in casts_data:
             title = extract_text_in_brackets(event['title'], False)
             # 优先用别名系统查event_id
-            event_id = None
-            search_names = self.get_ordered_search_names(title=title)
-            for name in search_names:
-                result = await self.search_eventID_by_name_async(name)
-                if len(result) == 1:
-                    event_id = result[0][0]
-                    break
+            event_id = await self.get_event_id_by_name(title)[0]
             if event_id:
                 event['event_id'] = event_id
                 message_id_list.append(event)

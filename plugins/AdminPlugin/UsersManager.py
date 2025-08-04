@@ -16,6 +16,7 @@ def USER_MODEL():
             "is_subscribe": False,
             "subscribe_time": None,
             "subscribe_tickets": [],
+            "subscribe_events": [],
             }
         }
         return model
@@ -172,32 +173,58 @@ class UsersManager(BaseDataManager):
             self.data[key][user_id]["attention_to_hulaquan"] = mode
         return mode
     
-    def new_subscribe(self, user_id):
+    def new_subscribe(self, user_id, is_subscribe=False):
         if not isinstance(user_id, str):
             user_id = str(user_id)
         if user_id not in self.data["users_list"]:
             self.add_user(user_id)
-        self.data["users"][user_id]["subscribe"]["is_subscribe"] = True
+        self.data["users"][user_id]["subscribe"]["is_subscribe"] = is_subscribe
         self.data["users"][user_id]["subscribe"]["subscribe_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if "subscribe_tickets" not in self.data["users"][user_id]["subscribe"]:
-            self.data["users"][user_id]["subscribe"]["subscribe_tickets"] = []
-        return True
+        self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
+        self.data["users"][user_id]["subscribe"].setdefault("subscribe_events", [])
+        return self.data["users"][user_id]["subscribe"]
    
-    def add_ticket_subscribe(self, user_id, ticket_ids):
+    def add_ticket_subscribe(self, user_id, ticket_ids, mode):
         user_id = str(user_id)
+        self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
         if user_id not in self.users_list():
             self.add_user(user_id)
         if isinstance(ticket_ids, int) or isinstance(ticket_ids, str):
             ticket_ids = [ticket_ids]
         for i in ticket_ids:
-            self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(str(i))
+            self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(
+                {
+                    'id': str(i),
+                    'mode': mode
+                })
+        return True
+    
+    def add_event_subscribe(self, user_id, event_ids, mode):
+        user_id = str(user_id)
+        self.data["users"][user_id]["subscribe"].setdefault("subscribe_events", [])
+        if user_id not in self.users_list():
+            self.add_user(user_id)
+        if isinstance(event_ids, int) or isinstance(event_ids, str):
+            event_ids = [event_ids]
+        for i in event_ids:
+            self.data["users"][user_id]["subscribe"]["subscribe_events"].append(
+                {
+                'id': str(i),
+                'mode': mode,
+                })
         return True
     
     def subscribe_tickets(self, user_id):
         return self.data["users"][user_id]["subscribe"]["subscribe_tickets"]
     
+    def subscribe_events(self, user_id):
+        return self.data["users"][user_id]["subscribe"]["subscribe_events"]
+    
     def is_ticket_subscribed(self, user_id, ticket_id):
         return str(ticket_id) in self.subscribe_tickets(user_id)
+    
+    def is_event_subscribed(self, user_id, event_id):
+        return str(event_id) in self.subscribe_events(user_id)
     
     async def post_private_msg(self, bot: BasePlugin, user_id, text, condition=True):
         if not condition:
