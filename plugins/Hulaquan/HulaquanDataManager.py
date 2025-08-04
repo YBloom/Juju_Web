@@ -615,8 +615,8 @@ class HulaquanDataManager(BaseDataManager):
     def ticket(self, ticket_id, event_id=None, default=None):
         if not event_id:
             event_id = self.ticketID_to_eventID(ticket_id)
-        if ticket_id not in self.ticket_details(event_id):
-            return None
+        if event_id not in self.events() or ticket_id not in self.ticket_details(event_id):
+            return default
         return self.ticket_details(event_id)[ticket_id]
     
     def delete_ticket(self, ticket_id, event_id=None):
