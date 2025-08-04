@@ -508,7 +508,7 @@ class Hulaquan(BasePlugin):
             messages[-1].append(event_prefix)
             stats_ps = []
             for stat, t_ids in stats.items():
-                
+                t_ids = list(t_ids)
                 t_ids.sort(key=int)
                 stat_pfx = PREFIXES[stat]
                 stats_ps.append(stat_pfx)
