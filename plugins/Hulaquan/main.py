@@ -483,6 +483,7 @@ class Hulaquan(BasePlugin):
                 tid = t['id']
                 e_mode = t['mode']
                 if tid in tickets.keys():
+                    ticket = tickets[tid]
                     eid = ticket['event_id']
                     stat = ticket['categorized']
                     if e_mode >= MODE.get(stat, 99):
@@ -490,6 +491,7 @@ class Hulaquan(BasePlugin):
                         announce[eid][stat].add(tid)
         for stat, tid in categorized.items():
             if all_mode >= MODE.get(stat, 99):
+                ticket = tickets[tid]
                 eid = ticket['event_id']
                 stat = ticket['categorized']
                 if e_mode >= MODE.get(stat, 99):
