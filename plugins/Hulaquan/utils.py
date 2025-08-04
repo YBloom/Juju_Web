@@ -116,6 +116,9 @@ def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
         "%y-%m-%d %H:%M",
         "%H:%M:%S",
         "%H:%M",
+        # 新增支持“2025 04-01 19:30”/“2025 04-01 19:30:00”格式
+        "%Y %m-%d %H:%M:%S",
+        "%Y %m-%d %H:%M",
     ]
     # 处理“8月3日 星期日 14:30”格式
     

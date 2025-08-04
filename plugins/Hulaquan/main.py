@@ -936,10 +936,11 @@ class Hulaquan(BasePlugin):
         user_id = msg.user_id
         target_values = {"-1", "-2", "-3"}
 
-        # 遍历列表查找第一个匹配的项
+        # 检查模式
         setting_mode = next((item for item in mode_args if item in target_values), None)
         if not setting_mode:
             return await msg.reply_text("缺少指定的模式（命令需带有-1，-2，-3其中之一）：\n" + HLQ_FOLLOW_TICKET_USAGE)
+
         # 1. 按场次ID关注
         if "-t" in mode_args:
             ticket_id_list = args["text_args"]
@@ -947,23 +948,51 @@ class Hulaquan(BasePlugin):
             txt = ""
             if denial:
                 txt += f"未找到以下场次id：{' '.join(denial)}\n"
-            User.add_ticket_subscribe(user_id, ticket_id_list, setting_mode)
-            await msg.reply_text(txt + f"已成功关注以下场次,有票务变动会提醒您：{' '.join(ticket_id_list)}")
+            # 检查已关注
+            already = []
+            to_subscribe = []
+            subscribed = User.subscribe_tickets(user_id)
+            subscribed_ids = {str(t['id']) for t in subscribed} if subscribed else set()
+            for tid in ticket_id_list:
+                if str(tid) in subscribed_ids:
+                    already.append(str(tid))
+                else:
+                    to_subscribe.append(str(tid))
+            if to_subscribe:
+                User.add_ticket_subscribe(user_id, to_subscribe, setting_mode)
+                txt += f"已成功关注以下场次,有票务变动会提醒您：{' '.join(to_subscribe)}\n"
+            if already:
+                txt += f"以下场次已关注：{' '.join(already)}\n"
+            if not to_subscribe and not already:
+                txt += "没有可关注的场次ID。\n"
+            await msg.reply_text(txt.strip())
             return
 
         # 2. 按剧目名关注（-E 或默认）
         event_names = args["text_args"]
         no_response = []
         event_ids = []
+        already_events = []
+        to_subscribe_events = []
+        subscribed_events = User.subscribe_events(user_id)
+        subscribed_eids = {str(e['id']) for e in subscribed_events} if subscribed_events else set()
         for e in event_names:
             result = await self.get_event_id_by_name(e)
             if not result:
                 no_response.append(e)
                 continue
-            event_ids.append(result[0])
-        txt = "" if not no_response else f"未找到以下剧目：\n{'\n'.join(no_response)}]\n\n"
-
-        
-        User.add_event_subscribe(user_id, event_ids, setting_mode)
-        responses = [e for e in event_names if e not in no_response]
-        await msg.reply_text(txt + f"已成功关注以下剧目,有票务变动会提醒您：\n{'\n'.join(responses)}")
+            eid = str(result[0])
+            event_ids.append(eid)
+            if eid in subscribed_eids:
+                already_events.append(e)
+            else:
+                to_subscribe_events.append((eid, e))
+        txt = "" if not no_response else f"未找到以下剧目：\n{chr(10).join(no_response)}\n\n"
+        if to_subscribe_events:
+            User.add_event_subscribe(user_id, [eid for eid, _ in to_subscribe_events], setting_mode)
+            txt += f"已成功关注以下剧目,有票务变动会提醒您：\n{chr(10).join([e for _, e in to_subscribe_events])}\n"
+        if already_events:
+            txt += f"以下剧目已关注：\n{chr(10).join(already_events)}\n"
+        if not to_subscribe_events and not already_events:
+            txt += "没有可关注的剧目。\n"
+        await msg.reply_text(txt.strip())
