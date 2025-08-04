@@ -345,12 +345,11 @@ class HulaquanDataManager(BaseDataManager):
                 result["events"][eid].append(ticket_id)
             self.pending_events_check_in(eid, pending_message, event_title) # 将即将开票的场次录入pending_dict
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
-            result["events_prefixes"][eid].append((
+            result["events_prefixes"][eid] = (
                 f"剧名: {event_title}\n"
                 f"购票链接: {url}\n"
                 f"更新时间: {self.data['update_time']}\n"
-                (f"⏲️开票时间：{valid_from}" if valid_from else "")
-            ))
+                (f"⏲️开票时间：{valid_from}" if valid_from else ""))
         return result
 
     def pending_events_check_in(self, eid, pending_message, title):
