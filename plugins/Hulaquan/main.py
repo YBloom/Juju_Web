@@ -434,7 +434,7 @@ class Hulaquan(BasePlugin):
             tickets = result['tickets']
         except RequestTimeoutException as e:
             raise
-        if len(categorized["new"]) >= 10:
+        if len(categorized["new"]) >= 400:
             log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
             if not announce_admin_only:
                 return
@@ -508,6 +508,8 @@ class Hulaquan(BasePlugin):
             messages[-1].append(event_prefix)
             stats_ps = []
             for stat, t_ids in stats.items():
+                
+                t_ids.sort(key=int)
                 stat_pfx = PREFIXES[stat]
                 stats_ps.append(stat_pfx)
                 t_m = [tickets[t]['message'] for t in t_ids]
