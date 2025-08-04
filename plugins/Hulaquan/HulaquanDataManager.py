@@ -779,7 +779,7 @@ class HulaquanDataManager(BaseDataManager):
         denial = []
         yes: list = ticket_id
         for tid in ticket_id:
-            if not self.ticketID_to_eventID(ticket_id, raise_error=False):
+            if not self.ticketID_to_eventID(tid, raise_error=False):
                 denial.append(tid)
                 yes.pop(tid, None)
         return yes, denial
