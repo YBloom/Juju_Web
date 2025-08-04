@@ -11,7 +11,7 @@ from plugins.Hulaquan.AliasManager import AliasManager
 from plugins.Hulaquan.HulaquanDataManager import HulaquanDataManager
 from plugins.AdminPlugin.UsersManager import UsersManager
 from .user_func_help import *
-from .utils import parse_text_to_dict_with_mandatory_check, standardize_datetime
+from .utils import parse_text_to_dict_with_mandatory_check, standardize_datetime, dateTimeToStr
 from ncatbot.utils.logger import get_log
 
 bot = CompatibleEnrollment  # 兼容回调函数注册器
@@ -521,7 +521,7 @@ class Hulaquan(BasePlugin):
                 if _exist:
                     continue
                 valid_date = standardize_datetime(valid_from, False)
-                valid_date = standardize_datetime(valid_date - timedelta(minutes=30))
+                valid_date = dateTimeToStr(valid_date - timedelta(minutes=30))
                 self.add_scheduled_task(
                     job_func=self.on_pending_tickets_announcer,
                     name=job_id,

@@ -16,9 +16,9 @@ def timeToStr(_time):
     else:
         return _time
 
-def dateTimeToStr(_time):
+def dateTimeToStr(_time, with_second=False):
     if isinstance(_time, datetime):
-        return _time.strftime("%Y-%m-%d %H:%M")
+        return _time.strftime("%Y-%m-%d %H:%M") if not with_second else _time.strftime("%Y-%m-%d %H:%M:%S")
     else:
         return _time
 
