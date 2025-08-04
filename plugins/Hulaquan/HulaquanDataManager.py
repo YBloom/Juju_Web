@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from plugins.Hulaquan.utils import *
 from plugins.Hulaquan import BaseDataManager
+from collections import defaultdict
 from .Exceptions import *
 import aiohttp
 import os, shutil
@@ -487,8 +488,11 @@ class HulaquanDataManager(BaseDataManager):
                     update_data.append(new_item)
                 else:
                     new_item['update_status'] = None
-        update = {k['update_status']: k for k in update_data}
-        print(update)
+        update = {}
+        for k in update_data:
+            stat = k['update_status']
+            update.setdefault(stat, [])
+            update[stat].append(k)
         return update
     
     
