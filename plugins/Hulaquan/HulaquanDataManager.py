@@ -323,27 +323,28 @@ class HulaquanDataManager(BaseDataManager):
             valid_from = None
             event_title = self.title(event_id=eid, event_name_only=True, keep_brackets=False)
             result["events"][eid] = []
-            for stat, ticket in comp.items(): # 一个id对应一部剧
-                # 仅返回更新了的ticket detail
-                ticket_id = str(ticket.get("id", ""))
-                t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
-                if stat == "pending":
-                    valid_from = ticket.get("valid_from")
-                    if not valid_from or valid_from == "null":
-                        valid_from = "未知"
-                    pending_message.setdefault(valid_from, [])
-                    pending_message[valid_from].append(t)
-                elif stat == "active":
-                    if stat == 'new':
-                        if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
-                            valid_from = ticket.get("valid_from")
-                            if not valid_from or valid_from == "null":
-                                valid_from = "未知"
-                            pending_message.setdefault(valid_from, [])
-                            pending_message[valid_from].append(t)
-                result["tickets"][ticket_id] = {"message": t, "categorized": stat, "event_id": eid}
-                result["categorized"][stat].append(ticket_id)
-                result["events"][eid].append(ticket_id)
+            for stat, tickets in comp.items(): # 一个id对应一部剧
+                for ticket in tickets:
+                    # 仅返回更新了的ticket detail
+                    ticket_id = str(ticket.get("id", ""))
+                    t = ("✨" if ticket['left_ticket_count'] > 0 else "❌") + f"{ticket['title']} 余票{ticket['left_ticket_count']}/{ticket['total_ticket']}" + " " + await self.get_cast_artists_str_async(event_title, ticket)
+                    if stat == "pending":
+                        valid_from = ticket.get("valid_from")
+                        if not valid_from or valid_from == "null":
+                            valid_from = "未知"
+                        pending_message.setdefault(valid_from, [])
+                        pending_message[valid_from].append(t)
+                    elif stat == "active":
+                        if stat == 'new':
+                            if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
+                                valid_from = ticket.get("valid_from")
+                                if not valid_from or valid_from == "null":
+                                    valid_from = "未知"
+                                pending_message.setdefault(valid_from, [])
+                                pending_message[valid_from].append(t)
+                    result["tickets"][ticket_id] = {"message": t, "categorized": stat, "event_id": eid}
+                    result["categorized"][stat].append(ticket_id)
+                    result["events"][eid].append(ticket_id)
             self.pending_events_check_in(eid, pending_message, event_title) # 将即将开票的场次录入pending_dict
             url = f"https://clubz.cloudsation.com/event/{eid}.html"
             result["events_prefixes"][eid] = (
