@@ -488,6 +488,7 @@ class HulaquanDataManager(BaseDataManager):
                 else:
                     new_item['update_status'] = None
         update = {k['update_status']: k for k in update_data}
+        print(update)
         return update
     
     
