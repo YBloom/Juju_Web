@@ -436,7 +436,7 @@ class HulaquanDataManager(BaseDataManager):
             for i in new_data:
                 new_data[i]["update_status"] = 'new'
                 
-            return {k['update_status']: k for k in new_data}
+            return {'new': new_data.values()}
         elif not (old_data_all and new_data):
             # 如果旧数据新数据都为空 返回NONE
             return {}
@@ -447,7 +447,7 @@ class HulaquanDataManager(BaseDataManager):
             print("旧数据无票务细节，所有新数据都判定为新上架")
             for i in new_data.values():
                 i["update_status"] = 'new'
-            return {k['update_status']: k for k in new_data}
+            return {'new': list(new_data.values())}
         
         # 以上情况都不存在，新旧数据都正常，则开始遍历
         
@@ -461,6 +461,7 @@ class HulaquanDataManager(BaseDataManager):
                 continue
             if new_id not in list(old_data_dict.keys()):
                 # 如果 new_data 中存在新的 ticket id，则标记为 新上架
+                print(1)
                 new_item['update_status'] = 'new'
                 update_data.append(new_item)
             else:
@@ -472,6 +473,7 @@ class HulaquanDataManager(BaseDataManager):
                 
                 if (new_total_ticket > 0 and not old_total_ticket):
                     new_item['update_status'] = 'new'
+                    print(2, new_total_ticket, old_total_ticket)
                     update_data.append(new_item)
                 elif (new_total_ticket > (old_total_ticket or 0)):
                     # 如果 total_ticket 增加了，则标记为 "add"
