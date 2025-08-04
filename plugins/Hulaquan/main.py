@@ -436,12 +436,13 @@ class Hulaquan(BasePlugin):
             raise
         if len(categorized["new"]) >= 10:
             log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
-            return
+            if not announce_admin_only:
+                return
         elapsed_time = round(time.time() - start_time, 2)
         if not announce_admin_only:
             _users = User.users()
         else:
-            _users = {User.admin_id: User.users[User.admin_id]}
+            _users = {User.admin_id: User.users()[User.admin_id]}
         for user_id, user in _users.items():
             messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user)
             for i in messages:
