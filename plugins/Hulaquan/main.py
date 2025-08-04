@@ -461,7 +461,7 @@ class Hulaquan(BasePlugin):
 
     def __generate_announce_text(self, MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user, is_group=False):
         announce = {} # event_id: {ticket_id: msg}, ...
-        all_mode = user.get("attention_to_hulaquan")
+        all_mode = int(user.get("attention_to_hulaquan", 0))
         if not is_group:
             subscribe = user.get("subscribe", {})
             if not subscribe:
@@ -470,7 +470,7 @@ class Hulaquan(BasePlugin):
             fo_tickets = subscribe.get("subscribe_tickets", {})
             for event in fo_events:
                 eid = event['id']
-                e_mode = event['mode']
+                e_mode = int(event['mode'])
                 if eid in event_id_to_ticket_ids:
                     announce[eid] = {}
                     for tid in event_id_to_ticket_ids[eid]:
@@ -481,7 +481,7 @@ class Hulaquan(BasePlugin):
                             announce[eid][stat].add(tid)
             for t in fo_tickets:
                 tid = t['id']
-                e_mode = t['mode']
+                e_mode = int(t['mode'])
                 if tid in tickets.keys():
                     ticket = tickets[tid]
                     eid = ticket['event_id']
