@@ -332,7 +332,7 @@ class HulaquanDataManager(BaseDataManager):
                         valid_from = "未知"
                     pending_message.setdefault(valid_from, [])
                     pending_message[valid_from].append(t)
-                elif stat["status"] == "active":
+                elif stat == "active":
                     if stat == 'new':
                         if ticket["left_ticket_count"] == 0 and ticket['total_ticket'] == 0:
                             valid_from = ticket.get("valid_from")
