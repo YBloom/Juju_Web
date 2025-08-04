@@ -585,7 +585,7 @@ class Hulaquan(BasePlugin):
         # 呼啦圈查询处理函数
         all_args = self.extract_args(msg)
         if not all_args["text_args"]:
-            await msg.reply_text("请提供剧名，例如: /hlq 连璧 -I -C")
+            await msg.reply_text(f"请提供剧名，用法：{HLQ_QUERY_USAGE}")
             return
         event_name = all_args["text_args"][0]
         args = all_args["mode_args"]
