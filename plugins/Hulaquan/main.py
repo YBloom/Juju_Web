@@ -158,7 +158,7 @@ class Hulaquan(BasePlugin):
         self.register_user_func(
             name=HLQ_SWITCH_ANNOUNCER_MODE_NAME,
             handler=self.on_switch_scheduled_check_task,
-            prefix="/上新",
+            prefix="/呼啦圈通知",
             description=HLQ_SWITCH_ANNOUNCER_MODE_DESCRIPTION,
             usage=HLQ_SWITCH_ANNOUNCER_MODE_USAGE,
             examples=["/呼啦圈通知"],
@@ -489,14 +489,15 @@ class Hulaquan(BasePlugin):
         del Hlq.data["pending_events"][valid_from][eid]
         if len(Hlq.data["pending_events"][valid_from]) == 0:
             del Hlq.data["pending_events"][valid_from]
-    
+            
+    @user_command_wrapper("switch_mode")
     async def on_switch_scheduled_check_task(self, msg: BaseMessage):
         user_id = msg.user_id
         group_id = None
         all_args = self.extract_args(msg)
         
         if not all_args["text_args"] or all_args.get("text_args")[0] not in ["0", "1", "2", "3"]:
-            return await msg.reply("请输入存在的模式\n用法：{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}")
+            return await msg.reply(f"请输入存在的模式\n用法：{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}")
         mode = all_args.get("text_args")[0]
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
@@ -509,7 +510,9 @@ class Hulaquan(BasePlugin):
         if mode == "2":
             await msg.reply("已关注呼啦圈的上新/补票/回流通知")
         elif mode == "1":
-            await msg.reply("已关注呼啦圈的上新推送（仅上新时推送）")
+            await msg.reply("已关注呼啦圈的上新/补票通知")
+        elif mode == "3":
+            await msg.reply("已关注呼啦圈的上新/补票/回流/增减票通知")
         elif mode == "0":
             await msg.reply("已关闭呼啦圈上新推送。")
 
