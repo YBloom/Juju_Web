@@ -955,14 +955,14 @@ class Hulaquan(BasePlugin):
         if not args["text_args"]:
             return await msg.reply_text(f"请提供场次id或剧目名，用法：\n{HLQ_FOLLOW_TICKET_USAGE}")
         mode_args = args["mode_args"]
-        user_id = msg.user_id
+        user_id = str(msg.user_id)
         target_values = {"-1", "-2", "-3"}
 
         # 检查模式
         setting_mode = next((item for item in mode_args if item in target_values), None)
         if not setting_mode:
             return await msg.reply_text("缺少指定的模式（命令需带有-1，-2，-3其中之一）：\n" + HLQ_FOLLOW_TICKET_USAGE)
-
+        setting_mode = int(setting_mode[1])
         # 1. 按场次ID关注
         if "-t" in mode_args:
             ticket_id_list = args["text_args"]
@@ -1037,7 +1037,7 @@ class Hulaquan(BasePlugin):
     
     @user_command_wrapper("view_follow")
     async def on_view_follow(self, msg: BaseMessage):
-        user_id = msg.user_id
+        user_id = str(msg.user_id)
         events = User.subscribe_events(user_id)
         tickets = User.subscribe_tickets(user_id)
         lines = []
