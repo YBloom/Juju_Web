@@ -495,9 +495,8 @@ class Hulaquan(BasePlugin):
                     ticket = tickets[tid]
                     eid = ticket['event_id']
                     stat = ticket['categorized']
-                    if e_mode >= MODE.get(stat, 99):
-                        announce[eid].setdefault(stat, set())
-                        announce[eid][stat].add(tid)
+                    announce[eid].setdefault(stat, set())
+                    announce[eid][stat].add(tid)
         messages = []
         for eid, stats in announce.items():
             messages.append([])
