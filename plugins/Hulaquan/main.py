@@ -116,7 +116,7 @@ class Hulaquan(BasePlugin):
     async def _hulaquan_announcer_loop(self):
         while self._hulaquan_announcer_running:
             try:
-                await self.on_hulaquan_announcer()
+                await self.on_hulaquan_announcer(announce_admin_only=True)
             except Exception as e:
                 await self.on_traceback_message(f"呼啦圈定时任务异常: {e}")
             try:
@@ -436,6 +436,7 @@ class Hulaquan(BasePlugin):
             raise
         if len(categorized["new"]) >= 10:
             log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
+            return
         elapsed_time = round(time.time() - start_time, 2)
         if not announce_admin_only:
             _users = User.users()
