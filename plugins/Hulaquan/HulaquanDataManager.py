@@ -622,7 +622,7 @@ class HulaquanDataManager(BaseDataManager):
         update_time = event_data.get('update_time', '未知')
 
         # 获取剩余票务信息
-        ticket_info_message, no_saoju_data, pending_t = await self._generate_ticket_info_message(remaining_tickets, show_cast, event_data, show_ticket_id)
+        ticket_info_message, no_saoju_data, pending_t = await self._generate_ticket_info_message(remaining_tickets, show_cast, extract_city(event_data.get("location", "")), show_ticket_id)
         pending = pending_t[0]
         valid_from = pending_t[1] if pending else ""
         # 拼接消息
@@ -639,17 +639,16 @@ class HulaquanDataManager(BaseDataManager):
         message += f"\n数据更新时间: {self.data['update_time']}\n"
         return message
 
-    async def build_single_ticket_info_str(self, ticket, show_cast, event_data, show_ticket_id):
+    async def build_single_ticket_info_str(self, ticket, show_cast, city="上海", show_ticket_id=False):
         """
         根据ticket字典生成单条票务信息字符串。
         Args:
             ticket: 单个票务字典
             show_cast: 是否显示卡司
-            eName: 剧名（用于查卡司）
             event_data: 事件数据（用于查城市）
             show_ticket_id: 是否显示票id
         Returns:
-            (str, bool): 票务信息字符串, 是否无卡司数据
+            (str, bool, tuple): ✨ 32808《连壁》09-11 19:30￥199（原价￥299) 学生票 余票2/2 韩冰儿 胥子含, ,()
         """
         max_ticket_info_count = self.get_max_ticket_content_length([ticket])
         if ticket['status'] == 'active' and ticket['left_ticket_count'] > 0:
@@ -665,21 +664,21 @@ class HulaquanDataManager(BaseDataManager):
             ticket_details = ' ' + ticket['id'] + ticket_details
         no_saoju_data = False
         if show_cast:
-            cast_str = await self.get_cast_artists_str_async(ticket['title'], ticket, city=extract_city(event_data.get("location", "")))
+            cast_str = await self.get_cast_artists_str_async(ticket['title'], ticket, city=city)
             ticket_details += " " + cast_str
             if not cast_str:
                 no_saoju_data = True
         text = ticket_status + ticket_details
         return text, no_saoju_data, (ticket["status"] == 'pending', ticket["valid_from"])
 
-    async def _generate_ticket_info_message(self, remaining_tickets, show_cast, event_data, show_ticket_id):
+    async def _generate_ticket_info_message(self, remaining_tickets, show_cast, city, show_ticket_id):
         if not remaining_tickets:
             return "暂无余票。", True, (False, "")
         ticket_lines = []
         no_saoju_data = False
         pending_t = (False, "")
         for ticket in remaining_tickets:
-            text, no_cast, pending_t = await self.build_single_ticket_info_str(ticket, show_cast, event_data, show_ticket_id)
+            text, no_cast, pending_t = await self.build_single_ticket_info_str(ticket, show_cast, city, show_ticket_id)
             if no_cast:
                 no_saoju_data = True
             ticket_lines.append(text)

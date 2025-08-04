@@ -1039,29 +1039,36 @@ class Hulaquan(BasePlugin):
     async def on_view_follow(self, msg: BaseMessage):
         user_id = str(msg.user_id)
         events = User.subscribe_events(user_id)
-        tickets = User.subscribe_tickets(user_id)
+        _tickets = User.subscribe_tickets(user_id)
         lines = []
+        MODES = ["模式0-不接受通知", "模式1-上新/补票", "模式2-上新/补票/回流", "模式3-上新/补票/回流/增减票"]
         if events:
             lines.append("【关注的剧目】")
+            i = 0
             for e in events:
+                i += 1
                 eid = str(e['id'])
-                event = Hlq.event(event_id=eid)
-                title = event.get('title', eid) if event else eid
-                lines.append(f"- {title}")
-        if tickets:
+                title = Hlq.title(event_id=eid, keep_brackets=True)
+                lines.append(f"{i}.{title} {MODES[int(e['mode'])]}")
+        if _tickets:
             lines.append("\n【关注的场次】")
-            for t in tickets:
-                tid = str(t['id'])
-                eid = Hlq.ticketID_to_eventID(tid, default=None, raise_error=False)
-                event = Hlq.event(event_id=eid) if eid else None
-                title = event.get('title', eid) if event else eid
-                ticket = Hlq.ticket(tid, event_id=eid) if eid else None
-                stime = ticket.get('start_time', '') if ticket else ''
-                lines.append(f"- 场次ID:{tid} 剧名:{title} 开票时间:{stime}")
+            tickets = sorted(_tickets, key=lambda x: int(x['id']))
+            from itertools import groupby
+            tickets = {
+                key: sorted(list(group), key=lambda x: int(x['id']))
+                for key, group in groupby(_tickets, key=lambda x: x['mode'])
+            }
+            for mode in tickets:
+                lines.append(MODES[int(mode)])
+                for t in tickets[mode]:
+                    tid = str(t['id'])
+                    ticket = Hlq.ticket(tid, default={})
+                    text = (await Hlq.build_single_ticket_info_str(ticket, show_cast=True, show_ticket_id=True))[0]
+                    lines.append(text)
         if not events and not tickets:
             await msg.reply_text("你还没有关注任何剧目或场次。")
             return
-        await self.output_messages_by_pages(lines, msg, page_size=20)
+        await self.output_messages_by_pages(lines, msg, page_size=40)
 
     @user_command_wrapper("unfollow_ticket")
     async def on_unfollow_ticket(self, msg: BaseMessage):
