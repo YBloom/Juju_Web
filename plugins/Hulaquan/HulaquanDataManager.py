@@ -785,7 +785,7 @@ class HulaquanDataManager(BaseDataManager):
         return yes, denial
             
             
-    async def on_message_tickets_query(self, eName, ignore_sold_out=False, show_cast=True, refresh=False, show_ticket_id=show_ticket_id):
+    async def on_message_tickets_query(self, eName, ignore_sold_out=False, show_cast=True, refresh=False, show_ticket_id=False):
         if self.updating:
             await self._wait_for_data_update()
         eid, msg = await self.get_event_id_by_name(eName)
