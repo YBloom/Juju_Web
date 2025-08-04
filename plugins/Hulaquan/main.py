@@ -176,6 +176,8 @@ class Hulaquan(BasePlugin):
                     metadata={"category": "utility"}
         )
         
+        
+        
         self.register_config(
             key="scheduled_task_time",
             default=300,
@@ -380,6 +382,26 @@ class Hulaquan(BasePlugin):
             prefix="/关注学生票",
             description=HLQ_FOLLOW_TICKET_DESCRIPTION,
             usage=HLQ_FOLLOW_TICKET_USAGE,
+            examples=[""],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        self.register_user_func(
+            name=HLQ_UNFOLLOW_TICKET_NAME,
+            handler=self.on_unfollow_ticket,
+            prefix="/取消关注学生票",
+            description=HLQ_UNFOLLOW_TICKET_DESCRIPTION,
+            usage=HLQ_UNFOLLOW_TICKET_USAGE,
+            examples=[""],
+            tags=["呼啦圈", "学生票", "查询"],
+            metadata={"category": "utility"}
+        )
+        self.register_user_func(
+            name=HLQ_VIEW_FOLLOW_NAME,
+            handler=self.on_view_follow,
+            prefix="/查看关注",
+            description=HLQ_VIEW_FOLLOW_DESCRIPTION,
+            usage=HLQ_VIEW_FOLLOW_USAGE,
             examples=[""],
             tags=["呼啦圈", "学生票", "查询"],
             metadata={"category": "utility"}
@@ -927,7 +949,7 @@ class Hulaquan(BasePlugin):
             index += 1
         await self.output_messages_by_pages(lines, msg, page_size=40)
             
-            
+    @user_command_wrapper("follow_ticket")        
     async def on_follow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
@@ -951,19 +973,28 @@ class Hulaquan(BasePlugin):
             # 检查已关注
             already = []
             to_subscribe = []
+            mode_updated = []
             subscribed = User.subscribe_tickets(user_id)
-            subscribed_ids = {str(t['id']) for t in subscribed} if subscribed else set()
+            subscribed_dict = {str(t['id']): str(t.get('mode', '')) for t in subscribed} if subscribed else {}
             for tid in ticket_id_list:
-                if str(tid) in subscribed_ids:
-                    already.append(str(tid))
+                tid_str = str(tid)
+                if tid_str in subscribed_dict:
+                    # 如果模式不同则更新
+                    if subscribed_dict[tid_str] != setting_mode:
+                        User.update_ticket_subscribe_mode(user_id, tid_str, setting_mode)
+                        mode_updated.append(tid_str)
+                    else:
+                        already.append(tid_str)
                 else:
-                    to_subscribe.append(str(tid))
+                    to_subscribe.append(tid_str)
             if to_subscribe:
                 User.add_ticket_subscribe(user_id, to_subscribe, setting_mode)
                 txt += f"已成功关注以下场次,有票务变动会提醒您：{' '.join(to_subscribe)}\n"
+            if mode_updated:
+                txt += f"以下场次已关注，但已更新关注模式：{' '.join(mode_updated)}\n"
             if already:
                 txt += f"以下场次已关注：{' '.join(already)}\n"
-            if not to_subscribe and not already:
+            if not to_subscribe and not already and not mode_updated:
                 txt += "没有可关注的场次ID。\n"
             await msg.reply_text(txt.strip())
             return
@@ -974,8 +1005,9 @@ class Hulaquan(BasePlugin):
         event_ids = []
         already_events = []
         to_subscribe_events = []
+        mode_updated_events = []
         subscribed_events = User.subscribe_events(user_id)
-        subscribed_eids = {str(e['id']) for e in subscribed_events} if subscribed_events else set()
+        subscribed_eids_modes = {str(e['id']): str(e.get('mode', '')) for e in subscribed_events} if subscribed_events else {}
         for e in event_names:
             result = await self.get_event_id_by_name(e)
             if not result:
@@ -983,16 +1015,105 @@ class Hulaquan(BasePlugin):
                 continue
             eid = str(result[0])
             event_ids.append(eid)
-            if eid in subscribed_eids:
-                already_events.append(e)
+            if eid in subscribed_eids_modes:
+                if subscribed_eids_modes[eid] != setting_mode:
+                    User.update_event_subscribe_mode(user_id, eid, setting_mode)
+                    mode_updated_events.append(e)
+                else:
+                    already_events.append(e)
             else:
                 to_subscribe_events.append((eid, e))
         txt = "" if not no_response else f"未找到以下剧目：\n{chr(10).join(no_response)}\n\n"
         if to_subscribe_events:
             User.add_event_subscribe(user_id, [eid for eid, _ in to_subscribe_events], setting_mode)
             txt += f"已成功关注以下剧目,有票务变动会提醒您：\n{chr(10).join([e for _, e in to_subscribe_events])}\n"
+        if mode_updated_events:
+            txt += f"以下剧目已关注，但已更新关注模式：\n{chr(10).join(mode_updated_events)}\n"
         if already_events:
             txt += f"以下剧目已关注：\n{chr(10).join(already_events)}\n"
-        if not to_subscribe_events and not already_events:
+        if not to_subscribe_events and not already_events and not mode_updated_events:
             txt += "没有可关注的剧目。\n"
+        await msg.reply_text(txt.strip())
+    
+    @user_command_wrapper("view_follow")
+    async def on_view_follow(self, msg: BaseMessage):
+        user_id = msg.user_id
+        events = User.subscribe_events(user_id)
+        tickets = User.subscribe_tickets(user_id)
+        lines = []
+        if events:
+            lines.append("【关注的剧目】")
+            for e in events:
+                eid = str(e['id'])
+                event = Hlq.event(event_id=eid)
+                title = event.get('title', eid) if event else eid
+                lines.append(f"- {title}")
+        if tickets:
+            lines.append("\n【关注的场次】")
+            for t in tickets:
+                tid = str(t['id'])
+                eid = Hlq.ticketID_to_eventID(tid, default=None, raise_error=False)
+                event = Hlq.event(event_id=eid) if eid else None
+                title = event.get('title', eid) if event else eid
+                ticket = Hlq.ticket(tid, event_id=eid) if eid else None
+                stime = ticket.get('start_time', '') if ticket else ''
+                lines.append(f"- 场次ID:{tid} 剧名:{title} 开票时间:{stime}")
+        if not events and not tickets:
+            await msg.reply_text("你还没有关注任何剧目或场次。")
+            return
+        await self.output_messages_by_pages(lines, msg, page_size=20)
+
+    @user_command_wrapper("unfollow_ticket")
+    async def on_unfollow_ticket(self, msg: BaseMessage):
+        args = self.extract_args(msg)
+        if not args["text_args"]:
+            return await msg.reply_text(f"请提供场次id或剧目名，用法：\n{HLQ_UNFOLLOW_TICKET_USAGE}")
+        mode_args = args["mode_args"]
+        user_id = msg.user_id
+        # 1. 按场次ID取消关注
+        if "-t" in mode_args:
+            ticket_id_list = args["text_args"]
+            ticket_id_list, denial = Hlq.verify_ticket_id(ticket_id_list)
+            txt = ""
+            if denial:
+                txt += f"未找到以下场次id：{' '.join(denial)}\n"
+            removed = []
+            not_found = []
+            tickets = User.subscribe_tickets(user_id)
+            tickets_ids = {str(t['id']) for t in tickets} if tickets else set()
+            for tid in ticket_id_list:
+                if str(tid) in tickets_ids:
+                    User.remove_ticket_subscribe(user_id, str(tid))
+                    removed.append(str(tid))
+                else:
+                    not_found.append(str(tid))
+            if removed:
+                txt += f"已取消关注以下场次：{' '.join(removed)}\n"
+            if not_found:
+                txt += f"以下场次未关注：{' '.join(not_found)}\n"
+            await msg.reply_text(txt.strip())
+            return
+        # 2. 按剧目名取消关注（-E 或默认）
+        event_names = args["text_args"]
+        no_response = []
+        removed_events = []
+        not_found_events = []
+        events = User.subscribe_events(user_id)
+        events_ids = {str(e['id']) for e in events} if events else set()
+        for e in event_names:
+            result = await self.get_event_id_by_name(e)
+            if not result:
+                no_response.append(e)
+                continue
+            eid = str(result[0])
+            if eid in events_ids:
+                User.remove_event_subscribe(user_id, eid)
+                removed_events.append(e)
+            else:
+                not_found_events.append(e)
+        txt = "" if not no_response else f"未找到以下剧目：\n{chr(10).join(no_response)}\n\n"
+        if removed_events:
+            txt += f"已取消关注以下剧目：\n{chr(10).join(removed_events)}\n"
+        if not_found_events:
+            txt += f"以下剧目未关注：\n{chr(10).join(not_found_events)}\n"
         await msg.reply_text(txt.strip())

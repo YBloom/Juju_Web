@@ -23,6 +23,8 @@ def USER_MODEL():
 
 
 class UsersManager(BaseDataManager):
+
+    
     
     admin_id = "3022402752"
 
@@ -158,6 +160,22 @@ class UsersManager(BaseDataManager):
             return True
         return False
     
+    def remove_ticket_subscribe(self, user_id, ticket_id):
+        user_id = str(user_id)
+        ticket_id = str(ticket_id)
+        tickets = self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
+        before = len(tickets)
+        self.data["users"][user_id]["subscribe"]["subscribe_tickets"] = [t for t in tickets if str(t['id']) != ticket_id]
+        return before != len(self.data["users"][user_id]["subscribe"]["subscribe_tickets"])
+
+    def remove_event_subscribe(self, user_id, event_id):
+        user_id = str(user_id)
+        event_id = str(event_id)
+        events = self.data["users"][user_id]["subscribe"].setdefault("subscribe_events", [])
+        before = len(events)
+        self.data["users"][user_id]["subscribe"]["subscribe_events"] = [e for e in events if str(e['id']) != event_id]
+        return before != len(self.data["users"][user_id]["subscribe"]["subscribe_events"])
+    
     def switch_attention_to_hulaquan(self, user_id, mode=0, is_group=False):
         # mode = 0: 取消推送，mode = 1: 关注更新，mode = 2：关注一切推送（更新或无更新）
         if not isinstance(user_id, str):
@@ -256,3 +274,28 @@ class UsersManager(BaseDataManager):
     async def update_friends_list(self, bot: BasePlugin):
         await self.check_friend_status(bot)
         return await self.send_likes(bot)
+
+
+    def update_ticket_subscribe_mode(self, user_id, ticket_id, new_mode):
+        """
+        更新已关注场次的关注模式
+        """
+        user_id = str(user_id)
+        ticket_id = str(ticket_id)
+        tickets = self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
+        for t in tickets:
+            if str(t['id']) == ticket_id:
+                t['mode'] = new_mode
+                break
+
+    def update_event_subscribe_mode(self, user_id, event_id, new_mode):
+        """
+        更新已关注剧目的关注模式
+        """
+        user_id = str(user_id)
+        event_id = str(event_id)
+        events = self.data["users"][user_id]["subscribe"].setdefault("subscribe_events", [])
+        for e in events:
+            if str(e['id']) == event_id:
+                e['mode'] = new_mode
+                break

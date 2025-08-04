@@ -166,3 +166,25 @@ HLQ_SWITCH_FOLLOW_MODE_DESCRIPTION = "切换上新模式（所有）"
 HLQ_SWITCH_FOLLOW_MODE_USAGE = """
 /上新模式
 """
+
+HLQ_VIEW_FOLLOW_NAME = "查看关注的学生票"
+HLQ_VIEW_FOLLOW_DESCRIPTION = "查看当前用户关注的所有学生票（剧目或场次）"
+HLQ_VIEW_FOLLOW_USAGE = """
+/查看关注
+列出你关注的所有剧目和场次。
+剧目显示剧名，场次显示场次ID、剧名和开票时间。
+"""
+
+HLQ_UNFOLLOW_TICKET_NAME = "取消关注学生票"
+HLQ_UNFOLLOW_TICKET_DESCRIPTION = "取消关注学生票（剧目或场次）"
+HLQ_UNFOLLOW_TICKET_USAGE = """
+/取消关注学生票 场次id -T
+/取消关注学生票 剧目名 -E
+/取消关注学生票 剧目名
+
+-T表示取消关注场次id，需要输入对应的场次
+-E表示取消关注某些剧目，需要输入对应的剧目名
+
+例如：/取消关注学生票 10001 10002 10003 10005 -T
+/取消关注学生票 连璧 海雾 她对此 -E
+"""
