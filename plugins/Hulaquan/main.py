@@ -116,7 +116,7 @@ class Hulaquan(BasePlugin):
     async def _hulaquan_announcer_loop(self):
         while self._hulaquan_announcer_running:
             try:
-                await self.on_hulaquan_announcer(announce_admin_only=True)
+                await self.on_hulaquan_announcer()
             except Exception as e:
                 await self.on_traceback_message(f"呼啦圈定时任务异常: {e}")
             try:
