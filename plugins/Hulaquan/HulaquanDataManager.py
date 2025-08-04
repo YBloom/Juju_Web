@@ -161,7 +161,7 @@ class HulaquanDataManager(BaseDataManager):
         if ticket_id:
             event_id = self.ticketID_to_eventID(ticket_id)
         if event_id:
-            return self.events.get(str(event_id), default)
+            return self.events().get(str(event_id), default)
         return default
                 
 
