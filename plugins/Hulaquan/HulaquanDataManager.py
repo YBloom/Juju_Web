@@ -126,12 +126,11 @@ class HulaquanDataManager(BaseDataManager):
                     ticket_dump_list = {}
                     for i in range(len(ticket_list)):
                         ticket = ticket_list[i]
-                        tid = ticket.get("id", None)
+                        tid = ticket['id'] = str(ticket.get("id", 0))
                         if not tid or ticket.get("total_ticket", None) is None or not ticket.get('start_time') or ticket.get("status") not in ['active', 'pending']:
                             if ticket.get("status") != "expired":
                                 print(ticket)
                             continue
-                        ticket['id'] = str(ticket['id'])
                         ticket_dump_list[tid] = {key: ticket.get(key, None) for key in keys_to_extract}
                         if tid not in self.data['ticket_id_to_event_id'].keys():
                             self.data['ticket_id_to_event_id'][tid] = event_id
@@ -459,7 +458,7 @@ class HulaquanDataManager(BaseDataManager):
             new_total_ticket = new_item['total_ticket']
             if not new_item['title'] and not new_total_ticket:
                 continue
-            if str(new_id) not in list(old_data_dict.keys()):
+            if new_id not in list(old_data_dict.keys()):
                 # 如果 new_data 中存在新的 ticket id，则标记为 新上架
                 new_item['update_status'] = 'new'
                 update_data.append(new_item)
