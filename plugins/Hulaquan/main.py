@@ -374,7 +374,7 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
-        self.register_admin_func(
+        self.register_user_func(
             name=HLQ_FOLLOW_TICKET_NAME,
             handler=self.on_follow_ticket,
             prefix="/关注学生票",
