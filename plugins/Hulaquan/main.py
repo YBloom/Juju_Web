@@ -523,8 +523,9 @@ class Hulaquan(BasePlugin):
         messages = []
         for eid, stats in announce.items():
             messages.append([])
-            event_prefix = event_msgs[eid]
-            messages[-1].append(event_prefix)
+            if len(stats.keys()):
+                event_prefix = event_msgs[eid]
+                messages[-1].append(event_prefix)
             stats_ps = []
             for stat, t_ids in stats.items():
                 t_ids = list(t_ids)
