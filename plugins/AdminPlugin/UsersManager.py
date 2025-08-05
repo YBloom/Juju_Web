@@ -233,9 +233,11 @@ class UsersManager(BaseDataManager):
         return True
     
     def subscribe_tickets(self, user_id):
+        self.new_subscribe(user_id)
         return self.data["users"][user_id]["subscribe"]["subscribe_tickets"]
     
     def subscribe_events(self, user_id):
+        self.new_subscribe(user_id)
         return self.data["users"][user_id]["subscribe"]["subscribe_events"]
     
     def is_ticket_subscribed(self, user_id, ticket_id):
