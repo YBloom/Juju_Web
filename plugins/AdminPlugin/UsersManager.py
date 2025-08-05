@@ -115,6 +115,13 @@ class UsersManager(BaseDataManager):
                     goto(origin[k], v)
             
         goto(user, USER_MODEL())
+    
+    def attention_to_hulaquan(self, user_id, default=0):
+        """
+        需确定user存在
+        return int
+        """
+        return self.data['users'].get(user_id, {}).get("attention_to_hulaquan", default)
                
         
     def add_chats_count(self, user_id):
