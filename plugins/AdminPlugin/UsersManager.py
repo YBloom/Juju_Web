@@ -196,8 +196,8 @@ class UsersManager(BaseDataManager):
             user_id = str(user_id)
         if user_id not in self.data["users_list"]:
             self.add_user(user_id)
-        self.data["users"][user_id]["subscribe"]["is_subscribe"] = is_subscribe
-        self.data["users"][user_id]["subscribe"]["subscribe_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.data["users"][user_id]["subscribe"]["is_subscribe"] = True if self.data["users"][user_id]["subscribe"]["is_subscribe"] else is_subscribe
+        self.data["users"][user_id]["subscribe"].setdefault("subscribe_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_events", [])
         return self.data["users"][user_id]["subscribe"]

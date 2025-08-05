@@ -487,11 +487,8 @@ class Hulaquan(BasePlugin):
         announce = {} # event_id: {ticket_id: msg}, ...
         all_mode = int(user.get("attention_to_hulaquan", 0))
         if not is_group:
-            subscribe = user.get("subscribe", {})
-            if not subscribe:
-                subscribe = User.new_subscribe(user_id)
-            fo_events = subscribe.get("subscribe_events", {})
-            fo_tickets = subscribe.get("subscribe_tickets", {})
+            fo_events = User.subscribe_events(user_id)
+            fo_tickets = User.subscribe_tickets(user_id)
             for event in fo_events:
                 eid = event['id']
                 e_mode = int(event['mode'])
