@@ -9,7 +9,7 @@ def USER_MODEL():
         model = {
         "activate": True,
         "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "attention_to_hulaquan": 1,
+        "attention_to_hulaquan": 0,
         "chats_count":0,
         # 订阅权限
         "subscribe": {
@@ -282,6 +282,8 @@ class UsersManager(BaseDataManager):
     
     async def update_friends_list(self, bot: BasePlugin):
         await self.check_friend_status(bot)
+        for user_id in self.users_list():
+            self.update_user_keys(str(user_id))
         return await self.send_likes(bot)
 
 
