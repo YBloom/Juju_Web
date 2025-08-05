@@ -523,9 +523,10 @@ class Hulaquan(BasePlugin):
         messages = []
         for eid, stats in announce.items():
             messages.append([])
-            if len(stats.keys()):
-                event_prefix = event_msgs[eid]
-                messages[-1].append(event_prefix)
+            if not len(stats.keys()):
+                continue
+            event_prefix = event_msgs[eid]
+            messages[-1].append(event_prefix)
             stats_ps = []
             for stat, t_ids in stats.items():
                 t_ids = list(t_ids)
@@ -1040,7 +1041,7 @@ class Hulaquan(BasePlugin):
         _tickets = User.subscribe_tickets(user_id)
         lines = []
         MODES = ["模式0-不接受通知", "模式1-上新/补票", "模式2-上新/补票/回流", "模式3-上新/补票/回流/增减票"]
-        lines.append(f"您目前对剧目的通用通知设置为：{MODES[int(User.attention_to_hulaquan(user_id))]}\n可通过/呼啦圈通知 模式编号修改")
+        lines.append(f"您目前对剧目的通用通知设置为：\n{MODES[int(User.attention_to_hulaquan(user_id))]}\n可通过/呼啦圈通知 模式编号修改")
         if events:
             lines.append("【关注的剧目】")
             i = 0
