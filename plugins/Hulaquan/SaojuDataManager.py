@@ -33,18 +33,21 @@ class SaojuDataManager(BaseDataManager):
     async def search_day_async(self, date):
         url = "http://y.saoju.net/yyj/api/search_day/"
         data = {"date": date}
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=data, timeout=10) as response:
-                    response.raise_for_status()
-                    json_response = await response.json()
-        except aiohttp.ClientError as http_err:
-            print(f'SAOJU ERROR HTTP error occurred: {http_err}')
-            return None
-        except Exception as err:
-            print(f'SAOJU ERROR Other error occurred: {err}')
-            return None
-        return json_response
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, params=data, timeout=10) as response:
+                        response.raise_for_status()
+                        json_response = await response.json()
+                        return json_response
+            except aiohttp.ClientError as http_err:
+                print(f'SAOJU ERROR HTTP error occurred (attempt {attempt+1}): {http_err}')
+            except Exception as err:
+                print(f'SAOJU ERROR Other error occurred (attempt {attempt+1}): {err}')
+            await asyncio.sleep(1)  # 每次失败后等待1秒再重试
+        print('SAOJU ERROR: Failed to fetch data after 5 attempts.')
+        return
 
     async def get_data_by_date_async(self, date, update_delta_max_hours=1):
         if date in list(self.data["date_dict"].keys()):
