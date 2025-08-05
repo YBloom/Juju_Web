@@ -1076,7 +1076,7 @@ class Hulaquan(BasePlugin):
         if not args["text_args"]:
             return await msg.reply_text(f"请提供场次id或剧目名，用法：\n{HLQ_UNFOLLOW_TICKET_USAGE}")
         mode_args = args["mode_args"]
-        user_id = msg.user_id
+        user_id = str(msg.user_id)
         # 1. 按场次ID取消关注
         if "-t" in mode_args:
             ticket_id_list = args["text_args"]
