@@ -142,7 +142,7 @@ class HulaquanDataManager(BaseDataManager):
                         return data_dict
                 except asyncio.TimeoutError:
                     retry += 1
-                    if retry >= 3:
+                    if retry >= 15:
                         print(f"event_id {event_id} 请求超时，已重试2次，跳过")
                         return {}
                     else:
