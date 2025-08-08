@@ -129,6 +129,7 @@ class Hulaquan(BasePlugin):
             self._hulaquan_announcer_interval = interval
         if self._hulaquan_announcer_task and not self._hulaquan_announcer_task.done():
             return  # 已经在运行
+        log.debug("开始运行呼啦圈检测任务。")
         self._hulaquan_announcer_running = True
         self._hulaquan_announcer_interval = int(self._hulaquan_announcer_interval)
         self._hulaquan_announcer_task = asyncio.create_task(self._hulaquan_announcer_loop())
@@ -139,6 +140,7 @@ class Hulaquan(BasePlugin):
         if self._hulaquan_announcer_task:
             self._hulaquan_announcer_task.cancel()
             self._hulaquan_announcer_task = None
+            log.debug("停止运行呼啦圈检测任务。")
             log.info("呼啦圈检测定时任务已关闭")
 
 
@@ -438,6 +440,8 @@ class Hulaquan(BasePlugin):
         功能逻辑：
             1.先从hlq获取所有更新数据
         """
+        
+        log.debug("呼啦圈检测任务执行开启 hulaquan_announcer")
         MODE = {
             "add": 1,
             "new": 1,
@@ -456,7 +460,7 @@ class Hulaquan(BasePlugin):
             tickets = result['tickets']
         except RequestTimeoutException as e:
             raise
-        if len(categorized["new"]) >= 400:
+        if len(categorized["new"]) >= 100:
             log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
             if not announce_admin_only:
                 return
@@ -481,6 +485,7 @@ class Hulaquan(BasePlugin):
                     await self.api.post_group_msg(group_id, m)
         if len(categorized["pending"]) > 0:
             self.register_pending_tickets_announcer()
+        log.debug("呼啦圈检测任务执行结束 hulaquan_announcer")
         return True
 
     def __generate_announce_text(self, MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user, is_group=False):
