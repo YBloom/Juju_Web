@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import traceback, time, asyncio, re
 import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
@@ -552,13 +552,16 @@ class Hulaquan(BasePlugin):
                     continue
                 valid_date = standardize_datetime(valid_from, False)
                 valid_date = dateTimeToStr(valid_date - timedelta(minutes=30))
-                result = self.add_scheduled_task(
-                    job_func=self.on_pending_tickets_announcer,
-                    name=job_id,
-                    interval=valid_from,
-                    kwargs={"eid":eid, "message":text, "valid_from":valid_from},
-                    max_runs=1,
-                )
+                if valid_date < datetime.now():
+                    result = False
+                else:
+                    result = self.add_scheduled_task(
+                        job_func=self.on_pending_tickets_announcer,
+                        name=job_id,
+                        interval=valid_from,
+                        kwargs={"eid":eid, "message":text, "valid_from":valid_from},
+                        max_runs=1,
+                    )
                 if not result:
                     to_delete.append(Hlq.data["pending_events"][valid_from])
         for i in to_delete:
