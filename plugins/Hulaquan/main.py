@@ -476,9 +476,9 @@ class Hulaquan(BasePlugin):
         if not announce_admin_only:
             for group_id, group in User.groups().items():
                 messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, group_id, group, is_group=True)
-            for i in messages:
-                m = "\n\n".join(i)
-                await self.api.post_group_msg(group_id, m)
+                for i in messages:
+                    m = "\n\n".join(i)
+                    await self.api.post_group_msg(group_id, m)
         if len(categorized["pending"]) > 0:
             self.register_pending_tickets_announcer()
         return True
