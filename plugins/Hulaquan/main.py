@@ -563,7 +563,7 @@ class Hulaquan(BasePlugin):
                     max_runs=1,
                 )
                 if not result:
-                    to_delete.append(Hlq.data["pending_events"][valid_from])
+                    to_delete.append(valid_from)
         for i in to_delete:
             del Hlq.data["pending_events"][i]
     
