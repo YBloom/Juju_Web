@@ -540,6 +540,7 @@ class Hulaquan(BasePlugin):
         return messages
         
     def register_pending_tickets_announcer(self):
+        to_delete = []
         for valid_from, events in Hlq.data["pending_events"].items():
             if not valid_from or valid_from == "NG":
                 continue
@@ -551,13 +552,17 @@ class Hulaquan(BasePlugin):
                     continue
                 valid_date = standardize_datetime(valid_from, False)
                 valid_date = dateTimeToStr(valid_date - timedelta(minutes=30))
-                self.add_scheduled_task(
+                result = self.add_scheduled_task(
                     job_func=self.on_pending_tickets_announcer,
                     name=job_id,
                     interval=valid_from,
                     kwargs={"eid":eid, "message":text, "valid_from":valid_from},
                     max_runs=1,
                 )
+                if not result:
+                    to_delete.append(Hlq.data["pending_events"][valid_from])
+        for i in to_delete:
+            del Hlq.data["pending_events"][i]
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str, valid_from:str):
