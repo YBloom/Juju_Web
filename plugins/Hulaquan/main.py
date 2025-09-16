@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import traceback, time, asyncio, re
 import functools
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
@@ -129,7 +129,6 @@ class Hulaquan(BasePlugin):
             self._hulaquan_announcer_interval = interval
         if self._hulaquan_announcer_task and not self._hulaquan_announcer_task.done():
             return  # 已经在运行
-        log.debug("开始运行呼啦圈检测任务。")
         self._hulaquan_announcer_running = True
         self._hulaquan_announcer_interval = int(self._hulaquan_announcer_interval)
         self._hulaquan_announcer_task = asyncio.create_task(self._hulaquan_announcer_loop())
@@ -140,7 +139,6 @@ class Hulaquan(BasePlugin):
         if self._hulaquan_announcer_task:
             self._hulaquan_announcer_task.cancel()
             self._hulaquan_announcer_task = None
-            log.debug("停止运行呼啦圈检测任务。")
             log.info("呼啦圈检测定时任务已关闭")
 
 
@@ -440,8 +438,6 @@ class Hulaquan(BasePlugin):
         功能逻辑：
             1.先从hlq获取所有更新数据
         """
-        
-        log.debug("呼啦圈检测任务执行开启 hulaquan_announcer")
         MODE = {
             "add": 1,
             "new": 1,
@@ -460,7 +456,7 @@ class Hulaquan(BasePlugin):
             tickets = result['tickets']
         except RequestTimeoutException as e:
             raise
-        if len(categorized["new"]) >= 100:
+        if len(categorized["new"]) >= 400:
             log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
             if not announce_admin_only:
                 return
@@ -480,12 +476,11 @@ class Hulaquan(BasePlugin):
         if not announce_admin_only:
             for group_id, group in User.groups().items():
                 messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, group_id, group, is_group=True)
-                for i in messages:
-                    m = "\n\n".join(i)
-                    await self.api.post_group_msg(group_id, m)
+            for i in messages:
+                m = "\n\n".join(i)
+                await self.api.post_group_msg(group_id, m)
         if len(categorized["pending"]) > 0:
             self.register_pending_tickets_announcer()
-        log.debug("呼啦圈检测任务执行结束 hulaquan_announcer")
         return True
 
     def __generate_announce_text(self, MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user, is_group=False):
@@ -545,32 +540,24 @@ class Hulaquan(BasePlugin):
         return messages
         
     def register_pending_tickets_announcer(self):
-        to_delete = set()
         for valid_from, events in Hlq.data["pending_events"].items():
             if not valid_from or valid_from == "NG":
                 continue
             for eid, text in events.items():
-                result = True
                 eid = str(eid)
                 job_id = f"{valid_from}_{eid}"
                 _exist = self._time_task_scheduler.get_job_status(job_id)
                 if _exist:
                     continue
                 valid_date = standardize_datetime(valid_from, False)
-                if valid_date < datetime.now():
-                    result = False
                 valid_date = dateTimeToStr(valid_date - timedelta(minutes=30))
-                result = result if not result else self.add_scheduled_task(
+                self.add_scheduled_task(
                     job_func=self.on_pending_tickets_announcer,
                     name=job_id,
-                    interval=valid_date,
-                    kwargs={"eid":eid, "message":text, "valid_from":valid_date},
+                    interval=valid_from,
+                    kwargs={"eid":eid, "message":text, "valid_from":valid_from},
                     max_runs=1,
                 )
-                if not result:
-                    to_delete.add(valid_from)
-        for i in to_delete:
-            del Hlq.data["pending_events"][i]
     
     @user_command_wrapper("pending_announcer")
     async def on_pending_tickets_announcer(self, eid:str, message: str, valid_from:str):
@@ -627,7 +614,10 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("【因数据自动刷新间隔较短，目前已不支持-R参数】")
         if isinstance(msg, PrivateMessage):
             await msg.reply_text("查询中，请稍后…")
-        result = await Hlq.on_message_tickets_query(event_name, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=False, show_ticket_id=('-t' in args))
+        pattern = r"-(\d+)"
+        extra_ids = [re.search(pattern, item).group(1) for item in args if re.search(pattern, item)]
+        extra_id = extra_ids[0] if extra_ids else None
+        result = await Hlq.on_message_tickets_query(event_name, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=False, show_ticket_id=('-t' in args), extra_id=extra_id)
         await msg.reply_text(result if result else "未找到相关信息，请尝试更换搜索名")
         
 
