@@ -787,7 +787,7 @@ class HulaquanDataManager(BaseDataManager):
     async def on_message_tickets_query(self, eName, ignore_sold_out=False, show_cast=True, refresh=False, show_ticket_id=False, extra_id=None):
         if self.updating:
             await self._wait_for_data_update()
-        eid, msg = await self.get_event_id_by_name(eName)
+        eid, msg = await self.get_event_id_by_name(eName, extra_id=extra_id)
         if eid is None:
             return msg or "未找到该剧目。"
         return await self.generate_tickets_query_message(eid, show_cast=show_cast, ignore_sold_out=ignore_sold_out, refresh=refresh, show_ticket_id=show_ticket_id)
@@ -812,7 +812,7 @@ class HulaquanDataManager(BaseDataManager):
                         return result[extra_id-1][0], None
                 queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
             Alias.set_no_response(eName, search_name, reset=False)
-        return None, f"找到多个匹配的剧名，请重新以唯一的关键词查询，或使用/hlq {eName} -下面的序号 查询对应的剧：\n" + "\n".join(queue) if queue else default
+        return None, f"找到多个匹配的剧名，请重新以唯一的关键词查询，或使用\n/hlq {eName} -下面的序号\n查询对应的剧：\n" + "\n".join(queue) if queue else default
 
 
     async def get_hlq_co_cast_event(self, co_casts, show_others=True):
