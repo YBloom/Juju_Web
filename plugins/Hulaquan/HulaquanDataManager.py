@@ -559,7 +559,7 @@ class HulaquanDataManager(BaseDataManager):
                 if _city:
                     if not event_city or _city not in event_city:
                         continue
-                cast_str = await self.get_cast_artists_str_async(event_title, ticket, _city) or "无卡司信息"
+                cast_str = await self.get_cast_artists_str_async(event_title, ticket, event_city) or "无卡司信息"
                 time_key = t_start.strftime("%H:%M")
                 if event_city not in result_by_city:
                     result_by_city[event_city] = {}
