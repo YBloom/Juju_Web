@@ -457,7 +457,7 @@ class Hulaquan(BasePlugin):
         except RequestTimeoutException as e:
             raise
         if len(categorized["new"]) >= 400:
-            log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized["new"])}条数据刷新")
+            log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized['new'])}条数据刷新")
             if not announce_admin_only:
                 return
         elapsed_time = round(time.time() - start_time, 2)

@@ -554,7 +554,8 @@ class HulaquanDataManager(BaseDataManager):
                     continue
                 tInfo = extract_title_info(ticket.get("title", ""))
                 event_title = tInfo['title'][1:-1]
-                event_city = await self.get_ticket_city_async(event_title, ticket) or "未知城市"
+                city = tInfo["city"]
+                event_city = city if city else (await self.get_ticket_city_async(event_title, ticket) or "未知城市")  # 传入的是部分标题
                 if _city:
                     if not event_city or _city not in event_city:
                         continue
