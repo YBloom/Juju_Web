@@ -69,7 +69,6 @@ def parse_args_of_messages(message: BaseMessage):
 
 if __name__ == "__main__":
     from ncatbot.utils import config
-    config.set_ws_uri("ws://127.0.0.1:3001")
     # 设置 WebSocket 令牌
     config.set_ws_token("ncatbot_ws_token")
 
