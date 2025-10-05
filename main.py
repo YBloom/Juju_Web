@@ -70,6 +70,6 @@ def parse_args_of_messages(message: BaseMessage):
 if __name__ == "__main__":
     from ncatbot.utils import config
     # 设置 WebSocket 令牌
-    config.set_ws_token("ncatbot_ws_token")
+    #config.set_ws_token("ncatbot_ws_token")
 
     bot.run(bt_uin="3044829389", root="3022402752", enable_webui_interaction=False) # 这里写 Bot 的 QQ 号
