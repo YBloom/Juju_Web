@@ -589,10 +589,42 @@ class Hulaquan(BasePlugin):
         user_id = msg.user_id
         group_id = None
         all_args = self.extract_args(msg)
+        query_id = msg.group_id if isinstance(msg, GroupMessage) else msg.user_id
         
-        if not all_args["text_args"] or all_args.get("text_args")[0] not in ["0", "1", "2", "3"]:
-            return await msg.reply(f"请输入存在的模式\n用法：{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}")
+        # 获取当前模式
+        if isinstance(msg, GroupMessage):
+            current_user = User.groups().get(str(query_id), {})
+        else:
+            current_user = User.users().get(str(user_id), {})
+        
+        current_mode = current_user.get("attention_to_hulaquan", 0) if current_user else 0
+        
+        # 模式说明
+        mode_desc = {
+            0: "❌ 不接受通知",
+            1: "🆕 只推送上新/补票",
+            2: "🆕🔄 推送上新/补票/回流",
+            3: "🆕🔄📊 推送上新/补票/回流/增减票"
+        }
+        
+        # 如果没有参数，显示当前状态
+        if not all_args["text_args"]:
+            status_msg = [
+                "📊 当前呼啦圈通知状态：",
+                f"当前模式: 模式{current_mode} - {mode_desc.get(int(current_mode), '未知')}",
+                "",
+                "💡 若要设置，请使用：",
+                f"{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}",
+            ]
+            return await msg.reply("\n".join(status_msg))
+        
+        # 验证模式参数
+        if all_args.get("text_args")[0] not in ["0", "1", "2", "3"]:
+            return await msg.reply(f"请输入存在的模式（0-3）\n用法：{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}")
+        
         mode = all_args.get("text_args")[0]
+        
+        # 设置模式
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
             if User.is_op(user_id):
@@ -601,14 +633,16 @@ class Hulaquan(BasePlugin):
                 return await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
         else:
             User.switch_attention_to_hulaquan(user_id, mode)
+        
+        # 返回设置结果
         if mode == "2":
-            await msg.reply("已关注呼啦圈的上新/补票/回流通知")
+            await msg.reply("✅ 已设置为模式2\n已关注呼啦圈的上新/补票/回流通知")
         elif mode == "1":
-            await msg.reply("已关注呼啦圈的上新/补票通知")
+            await msg.reply("✅ 已设置为模式1\n已关注呼啦圈的上新/补票通知")
         elif mode == "3":
-            await msg.reply("已关注呼啦圈的上新/补票/回流/增减票通知")
+            await msg.reply("✅ 已设置为模式3\n已关注呼啦圈的上新/补票/回流/增减票通知")
         elif mode == "0":
-            await msg.reply("已关闭呼啦圈上新推送。")
+            await msg.reply("✅ 已设置为模式0\n已关闭呼啦圈上新推送")
             
 
     @user_command_wrapper("hulaquan_search")
