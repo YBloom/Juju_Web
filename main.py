@@ -16,13 +16,6 @@ bot_qq = "3044829389"
 async def on_group_message(msg: GroupMessage):
     if int(msg.user_id) != int(bot_qq):
         _log.info(msg)
-    key, args = parse_args_of_messages(msg)
-    if key:
-        if any(word in key for word in HELLOWORDS):
-            for m in hello_message():
-                await bot.api.post_group_msg(msg.group_id, text=m)
-    else:
-        pass
 
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):
