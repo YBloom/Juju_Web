@@ -486,9 +486,9 @@ class Hulaquan(BasePlugin):
         if not announce_admin_only:
             for group_id, group in User.groups().items():
                 messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, group_id, group, is_group=True)
-            for i in messages:
-                m = "\n\n".join(i)
-                await self.api.post_group_msg(group_id, m)
+                for i in messages:
+                    m = "\n\n".join(i)
+                    await self.api.post_group_msg(group_id, m)
         if len(categorized["pending"]) > 0:
             self.register_pending_tickets_announcer()
         return True
@@ -585,7 +585,7 @@ class Hulaquan(BasePlugin):
             del Hlq.data["pending_events"][valid_from]
             
     @user_command_wrapper("switch_mode")
-    async def on_switch_scheduled_check_task(self, msg: BaseMessage):
+    async def on_switch_scheduled_check_task(self, msg: BaseMessage, group_switch_verify=False):
         user_id = msg.user_id
         group_id = None
         all_args = self.extract_args(msg)
@@ -595,7 +595,7 @@ class Hulaquan(BasePlugin):
         if isinstance(msg, GroupMessage):
             current_user = User.groups().get(str(query_id), {})
         else:
-            current_user = User.users().get(str(user_id), {})
+            current_user = User.users().get(str(query_id), {})
         
         current_mode = current_user.get("attention_to_hulaquan", 0) if current_user else 0
         
@@ -627,7 +627,7 @@ class Hulaquan(BasePlugin):
         # 设置模式
         if isinstance(msg, GroupMessage):
             group_id = msg.group_id
-            if User.is_op(user_id):
+            if group_switch_verify and User.is_op(user_id):
                 User.switch_attention_to_hulaquan(group_id, mode, is_group=True)
             else:
                 return await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
