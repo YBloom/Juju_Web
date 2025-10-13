@@ -105,7 +105,7 @@ class UsersManager(BaseDataManager):
         user_id = str(user_id)
         user = self.data["users"].get(user_id, None)
         if user is None:
-            return self.add_user()
+            return self.add_user(user_id)
         
         def goto(origin, model):
             for k, v in model.items():
