@@ -9,6 +9,7 @@ _log = get_log()
 
 HELLOWORDS = ["哈咯","Hi","测试","哈喽","Hello","剧剧"]
 VERSION = "1.0"
+bot_qq = "3044829389"
 
 # ========= 注册回调函数 ==========
 @bot.group_event()
@@ -24,7 +25,8 @@ async def on_group_message(msg: GroupMessage):
 
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):
-    _log.info(msg)
+    if msg.user_id != bot_qq:
+        _log.info(msg)
 
 def hello_message():
     msg = []
@@ -72,4 +74,4 @@ if __name__ == "__main__":
     # 设置 WebSocket 令牌
     #config.set_ws_token("ncatbot_ws_token")
 
-    bot.run(bt_uin="3044829389", root="3022402752", enable_webui_interaction=False) # 这里写 Bot 的 QQ 号
+    bot.run(bt_uin=bot_qq, root="3022402752", enable_webui_interaction=False) # 这里写 Bot 的 QQ 号
