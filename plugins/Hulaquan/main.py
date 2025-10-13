@@ -614,7 +614,7 @@ class Hulaquan(BasePlugin):
                 f"当前模式: 模式{current_mode} - {mode_desc.get(int(current_mode), '未知')}",
                 "",
                 "💡 若要设置，请使用：",
-                f"{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}",
+                f"{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}"
             ]
             return await msg.reply("\n".join(status_msg))
         
