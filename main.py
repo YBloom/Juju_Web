@@ -14,7 +14,8 @@ bot_qq = "3044829389"
 # ========= 注册回调函数 ==========
 @bot.group_event()
 async def on_group_message(msg: GroupMessage):
-    _log.info(msg)
+    if int(msg.user_id) != int(bot_qq):
+        _log.info(msg)
     key, args = parse_args_of_messages(msg)
     if key:
         if any(word in key for word in HELLOWORDS):
