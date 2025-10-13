@@ -176,6 +176,16 @@ class Hulaquan(BasePlugin):
                     metadata={"category": "utility"}
         )
         
+        self.register_admin_func(
+                    name="调试上新通知（管理员）",
+                    handler=self.on_debug_announcer,
+                    prefix="/debug通知",
+                    description="调试上新通知功能（管理员）",
+                    usage="/debug通知 [check|user|mock]",
+                    examples=["/debug通知 check", "/debug通知 user", "/debug通知 mock"],
+                    metadata={"category": "debug"}
+        )
+        
         
         
         self.register_config(
@@ -1073,7 +1083,6 @@ class Hulaquan(BasePlugin):
             return
         await self.output_messages_by_pages(lines, msg, page_size=40)
 
-    @user_command_wrapper("unfollow_ticket")
     async def on_unfollow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
@@ -1127,3 +1136,134 @@ class Hulaquan(BasePlugin):
         if not_found_events:
             txt += f"以下剧目未关注：\n{chr(10).join(not_found_events)}\n"
         await msg.reply_text(txt.strip())
+    
+    @user_command_wrapper("debug_announcer")
+    async def on_debug_announcer(self, msg: BaseMessage):
+        """调试上新通知功能"""
+        from plugins.Hulaquan.debug_announcer import AnnouncerDebugger
+        
+        args = self.extract_args(msg)
+        command = args["text_args"][0] if args["text_args"] else "help"
+        
+        debugger = AnnouncerDebugger(self)
+        
+        if command == "check":
+            # 检查任务状态
+            info = []
+            info.append("⏰ 定时任务状态：")
+            info.append(f"运行状态: {'✅ 运行中' if self._hulaquan_announcer_running else '❌ 已停止'}")
+            info.append(f"检测间隔: {self._hulaquan_announcer_interval} 秒")
+            if self._hulaquan_announcer_task:
+                info.append(f"任务完成: {'是' if self._hulaquan_announcer_task.done() else '否'}")
+            await msg.reply_text("\n".join(info))
+            
+        elif command == "user":
+            # 查看用户设置
+            user_id = str(msg.user_id)
+            user = User.get_user(user_id)
+            if not user:
+                await msg.reply_text(f"❌ 用户 {user_id} 不存在")
+                return
+            
+            info = []
+            info.append(f"👤 用户 {user_id} 的关注设置：")
+            
+            all_mode = user.get("attention_to_hulaquan", 0)
+            mode_desc = {
+                0: "❌ 不接受通知",
+                1: "🆕 只推送上新/补票",
+                2: "🆕🔄 上新/补票/回流",
+                3: "🆕🔄📊 上新/补票/回流/增减票"
+            }
+            info.append(f"全局模式: {mode_desc.get(int(all_mode), '未知')}")
+            
+            events = User.subscribe_events(user_id)
+            if events:
+                info.append(f"\n📋 关注的剧目 ({len(events)}个):")
+                for event in events[:5]:  # 只显示前5个
+                    info.append(f"  EventID: {event['id']}, 模式: {event.get('mode', 'N/A')}")
+                if len(events) > 5:
+                    info.append(f"  ... 还有 {len(events)-5} 个")
+            else:
+                info.append("\n📋 关注的剧目: 无")
+            
+            tickets = User.subscribe_tickets(user_id)
+            if tickets:
+                info.append(f"\n🎫 关注的场次 ({len(tickets)}个):")
+                for ticket in tickets[:5]:
+                    info.append(f"  TicketID: {ticket['id']}, 模式: {ticket.get('mode', 'N/A')}")
+                if len(tickets) > 5:
+                    info.append(f"  ... 还有 {len(tickets)-5} 个")
+            else:
+                info.append("\n🎫 关注的场次: 无")
+            
+            await msg.reply_text("\n".join(info))
+            
+        elif command == "mock":
+            # 测试模拟数据
+            await msg.reply_text("🧪 开始模拟上新通知测试...")
+            
+            # 创建模拟数据
+            mock_tickets = [
+                debugger.create_mock_ticket("99001", "9001", "new", "测试剧目A", "2025-10-20", "A区1排1座", "100"),
+                debugger.create_mock_ticket("99002", "9001", "new", "测试剧目A", "2025-10-21", "A区1排2座", "100"),
+                debugger.create_mock_ticket("99003", "9002", "add", "测试剧目B", "2025-10-22", "B区2排1座", "150"),
+                debugger.create_mock_ticket("99004", "9003", "return", "测试剧目C", "2025-10-23", "C区3排1座", "200"),
+            ]
+            
+            mock_result = debugger.create_mock_result(mock_tickets)
+            
+            # 测试消息生成
+            user_id = str(msg.user_id)
+            messages = debugger.test_generate_announce_text(mock_result, user_id)
+            
+            if not messages:
+                await msg.reply_text(
+                    "⚠️ 没有生成任何消息！\n\n"
+                    "可能的原因：\n"
+                    "1. 你的全局模式为0（不接受通知）\n"
+                    "2. 你没有关注相关剧目/场次\n"
+                    "3. 票务变动类型不在你的关注范围内\n\n"
+                    "请使用 /debug通知 user 查看你的设置"
+                )
+            else:
+                result_info = [
+                    f"✅ 成功生成 {len(messages)} 组消息",
+                    f"\n模拟数据统计：",
+                    f"- 上新: {len(mock_result['categorized']['new'])} 张",
+                    f"- 补票: {len(mock_result['categorized']['add'])} 张",
+                    f"- 回流: {len(mock_result['categorized']['return'])} 张",
+                    f"\n以下是生成的消息预览："
+                ]
+                await msg.reply_text("\n".join(result_info))
+                
+                # 发送生成的消息预览
+                for idx, msg_group in enumerate(messages[:2], 1):  # 只发送前2组
+                    preview = "\n\n".join(msg_group)
+                    await msg.reply_text(f"【消息组 #{idx}】\n{preview}")
+                
+                if len(messages) > 2:
+                    await msg.reply_text(f"... 还有 {len(messages)-2} 组消息未显示")
+        
+        elif command == "log":
+            # 查看最近的日志
+            await msg.reply_text("📋 查看日志功能开发中...")
+            
+        else:
+            # 帮助信息
+            help_text = """
+🔍 呼啦圈上新通知调试工具
+
+可用命令：
+/debug通知 check - 检查定时任务状态
+/debug通知 user - 查看你的关注设置
+/debug通知 mock - 使用模拟数据测试通知
+
+调试步骤建议：
+1. 先用 check 确认定时任务是否运行
+2. 用 user 查看你的关注模式是否正确
+3. 用 mock 测试消息生成逻辑
+4. 如果 mock 没有生成消息，说明你的模式设置有问题
+5. 如果 mock 能生成消息，但实际没收到，说明数据比对或发送环节有问题
+"""
+            await msg.reply_text(help_text)
