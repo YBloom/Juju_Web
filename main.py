@@ -25,7 +25,7 @@ async def on_group_message(msg: GroupMessage):
 
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):
-    if msg.user_id != bot_qq:
+    if int(msg.user_id) != int(bot_qq):
         _log.info(msg)
 
 def hello_message():
