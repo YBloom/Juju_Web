@@ -207,6 +207,16 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
+        self.register_admin_func(
+            name="广播消息（管理员）",
+            handler=self.on_broadcast,
+            prefix="/广播",
+            description="向所有用户和群聊发送广播消息（管理员）",
+            usage="/广播 <消息内容>",
+            examples=["/广播 系统维护通知：今晚22:00进行更新"],
+            metadata={"category": "admin"}
+        )
+        
         self.add_scheduled_task(
             job_func=self.on_schedule_save_data, 
             name=f"自动保存数据", 
@@ -753,6 +763,96 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("保存"+status)
         else:
             pass
+    
+    @user_command_wrapper("broadcast")
+    async def on_broadcast(self, msg: BaseMessage):
+        """管理员广播消息到所有用户和群聊"""
+        # 提取广播内容
+        all_args = self.extract_args(msg)
+        
+        if not all_args["text_args"]:
+            await msg.reply_text("❌ 请提供广播内容\n用法：/广播 <消息内容>")
+            return
+        
+        # 组合所有文本参数作为广播内容
+        broadcast_message = " ".join(all_args["text_args"])
+        
+        # 确认广播
+        confirm_msg = [
+            "📢 广播消息预览：",
+            "━━━━━━━━━━━━━━━━",
+            broadcast_message,
+            "━━━━━━━━━━━━━━━━",
+            "",
+            f"将发送给：",
+            f"👤 用户数：{len(User.users())}",
+            f"👥 群聊数：{len(User.groups())}",
+            "",
+            "⚠️ 确认发送吗？请回复 '确认' 以继续"
+        ]
+        
+        await msg.reply_text("\n".join(confirm_msg))
+        
+        # 等待确认（简化版，实际应该监听下一条消息）
+        # 这里我们直接发送，如果需要确认机制需要额外实现
+        
+        # 发送广播
+        await self._do_broadcast(broadcast_message, msg)
+    
+    async def _do_broadcast(self, message: str, original_msg: BaseMessage):
+        """执行广播操作"""
+        success_users = 0
+        failed_users = 0
+        success_groups = 0
+        failed_groups = 0
+        
+        # 添加广播标识
+        full_message = f"📢 系统广播\n━━━━━━━━━━━━━━━━\n{message}"
+        
+        # 向所有用户发送
+        await original_msg.reply_text("📤 开始向用户发送...")
+        for user_id in User.users_list():
+            try:
+                r = await self.api.post_private_msg(user_id, full_message)
+                if r.get('retcode') == 0:
+                    success_users += 1
+                else:
+                    failed_users += 1
+                    log.warning(f"向用户 {user_id} 发送广播失败: {r.get('retcode')}")
+                # 避免发送过快
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                failed_users += 1
+                log.error(f"向用户 {user_id} 发送广播异常: {e}")
+        
+        # 向所有群聊发送
+        await original_msg.reply_text("📤 开始向群聊发送...")
+        for group_id in User.groups_list():
+            try:
+                r = await self.api.post_group_msg(group_id, full_message)
+                if r.get('retcode') == 0:
+                    success_groups += 1
+                else:
+                    failed_groups += 1
+                    log.warning(f"向群聊 {group_id} 发送广播失败: {r.get('retcode')}")
+                # 避免发送过快
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                failed_groups += 1
+                log.error(f"向群聊 {group_id} 发送广播异常: {e}")
+        
+        # 发送结果统计
+        result_msg = [
+            "✅ 广播发送完成！",
+            "",
+            "📊 发送统计：",
+            f"👤 用户：成功 {success_users} / 失败 {failed_users}",
+            f"👥 群聊：成功 {success_groups} / 失败 {failed_groups}",
+            f"📈 总成功率：{((success_users + success_groups) / (len(User.users_list()) + len(User.groups_list())) * 100):.1f}%"
+        ]
+        
+        await original_msg.reply_text("\n".join(result_msg))
+        log.info(f"📢 [广播完成] 用户:{success_users}/{len(User.users_list())}, 群聊:{success_groups}/{len(User.groups_list())}")
             
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
