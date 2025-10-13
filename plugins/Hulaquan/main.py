@@ -1189,6 +1189,10 @@ class Hulaquan(BasePlugin):
         lines = []
         MODES = ["模式0-不接受通知", "模式1-上新/补票", "模式2-上新/补票/回流", "模式3-上新/补票/回流/增减票"]
         lines.append(f"您目前对剧目的通用通知设置为：\n{MODES[int(User.attention_to_hulaquan(user_id))]}\n可通过/呼啦圈通知 模式编号修改")
+        
+        # 自动清理已过期的场次
+        expired_tickets = []
+        
         if events:
             lines.append("【关注的剧目】")
             i = 0
@@ -1209,9 +1213,26 @@ class Hulaquan(BasePlugin):
                 lines.append(MODES[int(mode)])
                 for t in tickets[mode]:
                     tid = str(t['id'])
-                    ticket = Hlq.ticket(tid, default={})
-                    text = (await Hlq.build_single_ticket_info_str(ticket, show_cast=True, show_ticket_id=True))[0]
-                    lines.append(text)
+                    try:
+                        ticket = Hlq.ticket(tid, default=None)
+                        if ticket is None:
+                            # 场次已不存在（可能已过期或被删除）
+                            lines.append(f"  ❌ [已过期] 场次ID: {tid}")
+                            expired_tickets.append(tid)
+                            continue
+                        text = (await Hlq.build_single_ticket_info_str(ticket, show_cast=True, show_ticket_id=True))[0]
+                        lines.append(text)
+                    except (KeyError, Exception) as e:
+                        # 捕获任何错误，显示友好提示
+                        lines.append(f"  ⚠️ [无法获取] 场次ID: {tid}")
+                        log.warning(f"获取场次 {tid} 信息失败: {e}")
+        
+        # 自动清理已过期的场次
+        if expired_tickets:
+            for tid in expired_tickets:
+                User.remove_ticket_subscribe(user_id, tid)
+            lines.append(f"\n✅ 已自动清理 {len(expired_tickets)} 个过期场次")
+        
         if not events and not _tickets:
             await msg.reply_text("你还没有关注任何剧目或场次。")
             return

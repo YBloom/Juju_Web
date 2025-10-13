@@ -706,18 +706,28 @@ class HulaquanDataManager(BaseDataManager):
         asyncio.create_task(self.__update_ticket_dict_async())
     
     def ticket(self, ticket_id, event_id=None, default=None):
-        if not event_id:
-            event_id = self.ticketID_to_eventID(ticket_id)
-        if event_id not in self.events() or ticket_id not in self.ticket_details(event_id):
+        try:
+            if not event_id:
+                event_id = self.ticketID_to_eventID(ticket_id, raise_error=False)
+                if not event_id:
+                    return default
+            if event_id not in self.events() or ticket_id not in self.ticket_details(event_id):
+                return default
+            return self.ticket_details(event_id)[ticket_id]
+        except (KeyError, Exception):
             return default
-        return self.ticket_details(event_id)[ticket_id]
     
     def delete_ticket(self, ticket_id, event_id=None):
-        if not event_id:
-            event_id = self.ticketID_to_eventID(ticket_id)
-        if event_id not in self.events():
+        try:
+            if not event_id:
+                event_id = self.ticketID_to_eventID(ticket_id, raise_error=False)
+                if not event_id:
+                    return None
+            if event_id not in self.events():
+                return None
+            return self.data['events'][event_id]["ticket_details"].pop(ticket_id, None)
+        except (KeyError, Exception):
             return None
-        return self.data['events'][event_id]["ticket_details"].pop(ticket_id, None)
     
     def ticket_details(self, event_id):
         """根据eventid获取票务数据
