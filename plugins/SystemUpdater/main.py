@@ -205,11 +205,12 @@ class SystemUpdater(BasePlugin):
         else:
             await msg.reply("已开始后台更新 main 分支（若超时或冲突将跳过），随后重启机器人。即将安全退出…")
 
-        # 稍等以确保消息发送完成，然后以 Ctrl+C 等效的方式优雅退出（触发 on_close）
+        # 稍等以确保消息发送完成，然后优雅退出（触发 on_close）
         await asyncio.sleep(0.5)
         try:
             import signal
-            os.kill(os.getpid(), signal.SIGINT)
+            # 优先 SIGTERM（更安静，不产生 KeyboardInterrupt 痕迹）
+            os.kill(os.getpid(), signal.SIGTERM)
         except Exception:
             # 回退方案：抛出 SystemExit，让上层框架捕获并触发关闭流程
             raise SystemExit(0)
