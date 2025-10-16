@@ -756,55 +756,84 @@ class Hulaquan(BasePlugin):
         show_others = "-o" in args["mode_args"]
         use_hulaquan = "-h" in args["mode_args"]
         
-        # -H 模式：仅检索呼啦圈系统中的同场演员
+        # -H 模式：通过扫剧查询同场，再映射到呼啦圈
         if use_hulaquan:
-            messages = []
-            for actor in casts:
-                # 使用 find_tickets_by_actor_async 检索该演员的所有场次
-                matched_tickets = await Hlq.find_tickets_by_actor_async(actor)
-                
-                if not matched_tickets:
-                    messages.append(f"❌ 未在呼啦圈系统中找到演员 {actor} 的场次")
-                    continue
-                
-                # 收集该演员所有场次的卡司信息
-                co_actors = set()
-                event_info = {}
-                
-                for ticket_id, event_id in matched_tickets.items():
-                    ticket = Hlq.ticket(ticket_id, default=None)
-                    if not ticket:
-                        continue
-                    
-                    event_title = Hlq.title(event_id=event_id, keep_brackets=True)
-                    event_info.setdefault(event_title, [])
-                    event_info[event_title].append(ticket_id)
-                    
-                    # 获取该场次的卡司
-                    cast_data = await Hlq.get_ticket_cast_and_city_async(event_title, ticket)
-                    cast_list = cast_data.get('cast', [])
-                    for cast_member in cast_list:
-                        artist_name = cast_member.get('artist', '').strip()
-                        if artist_name and artist_name.lower() != actor.strip().lower():
-                            co_actors.add(artist_name)
-                
-                # 生成消息
-                msg_lines = [f"【演员 {actor} 的同场演员】"]
-                msg_lines.append(f"在呼啦圈系统中共有 {len(matched_tickets)} 个场次")
-                
-                if co_actors:
-                    msg_lines.append(f"\n同场演员（共{len(co_actors)}位）：")
-                    msg_lines.append(", ".join(sorted(co_actors)))
-                else:
-                    msg_lines.append("\n暂无同场演员数据")
-                
-                msg_lines.append(f"\n涉及剧目：")
-                for event_title, ticket_ids in event_info.items():
-                    msg_lines.append(f"  {event_title} ({len(ticket_ids)}场)")
-                
-                messages.append("\n".join(msg_lines))
+            # 1. 先用扫剧查询同场数据
+            saoju_events = await Saoju.request_co_casts_data(casts, show_others=show_others)
             
-            await msg.reply("\n\n".join(messages))
+            if not saoju_events:
+                await msg.reply_text(f"❌ 在扫剧系统中未找到 {' '.join(casts)} 的同场演出")
+                return
+            
+            # 2. 将扫剧的剧目标题映射到呼啦圈事件ID
+            hlq_matches = []  # [(saoju_event, hlq_event_id, hlq_title)]
+            
+            for saoju_event in saoju_events:
+                saoju_title = saoju_event['title']
+                
+                # 使用 extract_title_info 提取标题信息（包括城市）
+                from .utils import extract_title_info
+                title_info = extract_title_info(saoju_title)
+                clean_title = title_info['title']  # 提取《》内的标题
+                saoju_city = title_info.get('city') or saoju_event.get('city', '上海')
+                
+                # 尝试用标题在呼啦圈中查找（使用别名系统）
+                search_names = Hlq.get_ordered_search_names(title=clean_title)
+                
+                hlq_event_id = None
+                hlq_title = None
+                
+                for search_name in search_names:
+                    # 尝试通过search_name获取event_id
+                    eid = Alias.get_event_id_by_name(search_name)
+                    if eid and str(eid) in Hlq.data.get('events', {}):
+                        hlq_event_id = str(eid)
+                        hlq_title = Hlq.title(event_id=hlq_event_id, keep_brackets=True)
+                        break
+                
+                # 如果别名系统找不到，尝试模糊搜索
+                if not hlq_event_id:
+                    # 使用已提取的 clean_title 进行模糊匹配
+                    for eid, event_data in Hlq.data.get('events', {}).items():
+                        event_title = event_data.get('title', '')
+                        # 提取呼啦圈标题的《》内容进行对比
+                        from .utils import extract_text_in_brackets
+                        hlq_clean_title = extract_text_in_brackets(event_title, keep_brackets=False)
+                        
+                        if clean_title.lower() in hlq_clean_title.lower() or hlq_clean_title.lower() in clean_title.lower():
+                            hlq_event_id = str(eid)
+                            hlq_title = event_title
+                            break
+                
+                if hlq_event_id:
+                    hlq_matches.append((saoju_event, hlq_event_id, hlq_title))
+            
+            if not hlq_matches:
+                await msg.reply_text(f"❌ 在扫剧中找到 {len(saoju_events)} 场演出，但均未在呼啦圈系统中找到对应学生票")
+                return
+            
+            # 3. 生成消息（与非-h格式一致）
+            messages = []
+            messages.append(" ".join(casts) + f" 同场的音乐剧演出，在呼啦圈系统中找到 {len(hlq_matches)} 场有学生票的演出。")
+            
+            for saoju_event, hlq_event_id, hlq_title in hlq_matches:
+                date_str = saoju_event['date']
+                city = saoju_event.get('city', '上海')
+                
+                # 格式化同场其他演员
+                others_str = ""
+                if show_others and 'others' in saoju_event:
+                    others_list = saoju_event['others']
+                    if isinstance(others_list, str):
+                        others_list = others_list.split()
+                    if others_list:
+                        others_str = "\n同场其他演员：" + " ".join(others_list)
+                
+                # 组装消息（格式与非-h一致）
+                msg_line = f"{date_str} {city} {hlq_title}{others_str}"
+                messages.append(msg_line)
+            
+            await msg.reply("\n".join(messages))
         else:
             # 原有逻辑：使用扫剧系统
             messages = await Saoju.match_co_casts(casts, show_others=show_others)
@@ -1447,6 +1476,8 @@ class Hulaquan(BasePlugin):
             # 为每个演员检索现有场次并关注
             total_tickets_added = 0
             actor_summary = []
+            all_ticket_details = []  # 存储所有场次的详细信息
+            
             for actor in actor_names:
                 # 检索该演员的所有场次
                 matched_tickets = await Hlq.find_tickets_by_actor_async(actor, include_eids, exclude_eids)
@@ -1483,18 +1514,38 @@ class Hulaquan(BasePlugin):
                         actor_summary.append(f"{actor}({len(new_tickets)}场)")
                     else:
                         actor_summary.append(f"{actor}(0场新增，{len(existing_tickets)}场已关注)")
+                    
+                    # 收集所有关注的场次详细信息
+                    for tid in ticket_ids:
+                        event_id = matched_tickets[tid]
+                        ticket = Hlq.ticket(tid, event_id)
+                        if ticket:
+                            ticket_info = await Hlq.build_single_ticket_info_str(
+                                ticket, 
+                                show_cast=True, 
+                                city="上海", 
+                                show_ticket_id=True
+                            )
+                            all_ticket_details.append(ticket_info[0])
                 
                 # 保存演员订阅（用于后续新排期匹配）
                 User.add_actor_subscribe(user_id, [actor], setting_mode, include_eids, exclude_eids)
             
-            txt = f"已为您关注以下演员的演出场次：\n{chr(10).join(actor_summary)}\n"
+            # 构建输出消息
+            txt = f"✅ 已为您关注以下演员的演出场次：\n{chr(10).join(actor_summary)}\n"
             if total_tickets_added > 0:
-                txt += f"共新增关注 {total_tickets_added} 个场次，有票务变动会提醒您。\n"
+                txt += f"\n📊 共新增关注 {total_tickets_added} 个场次，有票务变动会提醒您。\n"
             if include_eids:
                 txt += f"（仅关注指定剧目）\n"
             elif exclude_eids:
                 txt += f"（已排除指定剧目）\n"
-            txt += f"当有新排期上架时，系统会自动补充关注这些演员的新场次。"
+            txt += f"\n💡 当有新排期上架时，系统会自动补充关注这些演员的新场次。"
+            
+            # 添加场次详细信息
+            if all_ticket_details:
+                txt += f"\n\n{'='*30}\n📋 关注的场次详情：\n"
+                txt += "\n".join(all_ticket_details)
+            
             await msg.reply_text(txt)
             return
         
