@@ -1005,7 +1005,7 @@ class HulaquanDataManager(BaseDataManager):
             return {}
         
         # 为每个新事件检索卡司并匹配
-        user_new_tickets = {}  # {user_id: [(ticket_id, mode)]}
+        user_new_tickets = {}  # {user_id: [(ticket_id, mode, actor_name)]}
         
         for event_id in new_event_ids:
             event_data = self.data.get("events", {}).get(event_id)
@@ -1024,7 +1024,8 @@ class HulaquanDataManager(BaseDataManager):
                 # 匹配所有用户的演员订阅
                 for user_id, actors in all_users_actors.items():
                     for actor_sub in actors:
-                        actor_name = actor_sub.get('actor', '').strip().lower()
+                        actor_name = actor_sub.get('actor', '').strip()
+                        actor_name_lower = actor_name.lower()
                         mode = actor_sub.get('mode', 1)
                         include_events = actor_sub.get('include_events', [])
                         exclude_events = actor_sub.get('exclude_events', [])
@@ -1036,21 +1037,24 @@ class HulaquanDataManager(BaseDataManager):
                             continue
                         
                         # 检查演员是否在卡司中
-                        if actor_name in cast_actors_lower:
+                        if actor_name_lower in cast_actors_lower:
                             user_new_tickets.setdefault(user_id, [])
-                            user_new_tickets[user_id].append((str(ticket_id), mode))
+                            # 同时记录场次ID、模式和演员名
+                            user_new_tickets[user_id].append((str(ticket_id), mode, actor_name))
                             break  # 一个场次只为该用户添加一次
         
         # 为用户批量添加票务订阅
         user_counts = {}
         for user_id, tickets in user_new_tickets.items():
-            # 按模式分组
-            mode_tickets = {}
-            for tid, mode in tickets:
-                mode_tickets.setdefault(mode, []).append(tid)
+            # 按 (模式, 演员) 分组
+            mode_actor_tickets = {}  # {(mode, actor): [ticket_ids]}
+            for tid, mode, actor in tickets:
+                key = (mode, actor)
+                mode_actor_tickets.setdefault(key, []).append(tid)
             
-            for mode, ticket_ids in mode_tickets.items():
-                User.add_ticket_subscribe(user_id, ticket_ids, mode)
+            for (mode, actor), ticket_ids in mode_actor_tickets.items():
+                # 带演员关联添加场次订阅
+                User.add_ticket_subscribe(user_id, ticket_ids, mode, related_to_actors=[actor])
             
             user_counts[user_id] = len(tickets)
         

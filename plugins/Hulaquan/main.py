@@ -1158,7 +1158,7 @@ class Hulaquan(BasePlugin):
             await msg.reply_text(error_msg)
             log.error(f"❌ [Notion同步失败] {e}")
             import traceback
-            traceback.print_exc()
+            log.error(traceback.format_exc())
             
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
@@ -1453,16 +1453,43 @@ class Hulaquan(BasePlugin):
                 ticket_ids = list(matched_tickets.keys())
                 
                 if ticket_ids:
-                    # 关注这些场次
-                    User.add_ticket_subscribe(user_id, ticket_ids, setting_mode)
-                    total_tickets_added += len(ticket_ids)
-                    actor_summary.append(f"{actor}({len(ticket_ids)}场)")
+                    # 检查哪些场次已关注
+                    subscribed = User.subscribe_tickets(user_id)
+                    subscribed_ids = {str(t['id']) for t in subscribed} if subscribed else set()
+                    
+                    new_tickets = []
+                    existing_tickets = []
+                    
+                    for tid in ticket_ids:
+                        tid_str = str(tid)
+                        if tid_str in subscribed_ids:
+                            # 场次已关注，添加演员关联
+                            User.add_actor_to_ticket_relation(user_id, tid_str, actor)
+                            existing_tickets.append(tid_str)
+                        else:
+                            # 新场次，添加时标记演员关联
+                            new_tickets.append(tid_str)
+                    
+                    # 关注新场次（带演员关联）
+                    if new_tickets:
+                        User.add_ticket_subscribe(user_id, new_tickets, setting_mode, related_to_actors=[actor])
+                    
+                    total_tickets_added += len(new_tickets)
+                    
+                    # 统计信息
+                    if new_tickets and existing_tickets:
+                        actor_summary.append(f"{actor}(新增{len(new_tickets)}场，已关注{len(existing_tickets)}场)")
+                    elif new_tickets:
+                        actor_summary.append(f"{actor}({len(new_tickets)}场)")
+                    else:
+                        actor_summary.append(f"{actor}(0场新增，{len(existing_tickets)}场已关注)")
                 
                 # 保存演员订阅（用于后续新排期匹配）
                 User.add_actor_subscribe(user_id, [actor], setting_mode, include_eids, exclude_eids)
             
             txt = f"已为您关注以下演员的演出场次：\n{chr(10).join(actor_summary)}\n"
-            txt += f"共关注 {total_tickets_added} 个场次，有票务变动会提醒您。\n"
+            if total_tickets_added > 0:
+                txt += f"共新增关注 {total_tickets_added} 个场次，有票务变动会提醒您。\n"
             if include_eids:
                 txt += f"（仅关注指定剧目）\n"
             elif exclude_eids:
@@ -1664,23 +1691,34 @@ class Hulaquan(BasePlugin):
             actor_names = args["text_args"]
             removed = []
             not_found = []
+            tickets_removed_summary = []
+            
             actors = User.subscribe_actors(user_id)
             subscribed_actors_lower = {a.get('actor', '').strip().lower() for a in actors} if actors else set()
             
             for actor in actor_names:
                 actor_lower = actor.strip().lower()
                 if actor_lower in subscribed_actors_lower:
-                    User.remove_actor_subscribe(user_id, actor)
+                    # 移除演员订阅并清理关联场次
+                    result = User.remove_actor_subscribe(user_id, actor)
                     removed.append(actor)
+                    
+                    # 记录清理的场次数量
+                    if result['tickets_removed'] > 0:
+                        tickets_removed_summary.append(f"{actor}({result['tickets_removed']}场)")
                 else:
                     not_found.append(actor)
             
             txt = ""
             if removed:
-                txt += f"已取消关注以下演员：{' '.join(removed)}\n"
+                txt += f"✅ 已取消关注以下演员：{' '.join(removed)}\n"
+                if tickets_removed_summary:
+                    txt += f"🎫 同时移除了因关注演员而关注的场次：\n{chr(10).join(tickets_removed_summary)}\n"
+                    txt += "💡 提示：仅移除了因关注这些演员而自动关注的场次，手动关注的场次保留。"
+                else:
+                    txt += "💡 提示：未移除任何场次（可能这些演员的场次是手动关注的，或与其他演员共享）。"
             if not_found:
-                txt += f"以下演员未关注：{' '.join(not_found)}\n"
-            txt += f"注意：取消演员关注不会自动删除已关注的场次，如需删除请使用 /取消关注学生票 场次ID -T"
+                txt += f"\n❌ 以下演员未关注：{' '.join(not_found)}"
             await msg.reply_text(txt.strip())
             return
         

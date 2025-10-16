@@ -211,19 +211,44 @@ class UsersManager(BaseDataManager):
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_actors", [])  # 确保演员订阅字段存在
         return self.data["users"][user_id]["subscribe"]
    
-    def add_ticket_subscribe(self, user_id, ticket_ids, mode):
+    def add_ticket_subscribe(self, user_id, ticket_ids, mode, related_to_actors=None):
+        """
+        为用户添加场次订阅
+        
+        Args:
+            user_id: 用户ID
+            ticket_ids: 场次ID或场次ID列表
+            mode: 订阅模式 (1/2/3)
+            related_to_actors: 关联的演员名列表（因关注演员而关注的场次）
+                             - None: 非演员关联的场次订阅
+                             - []: 空列表（暂时不应该出现，会被转换为None）
+                             - ['actor1', 'actor2']: 因关注这些演员而订阅的场次
+        """
         user_id = str(user_id)
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
         if user_id not in self.users_list():
             self.add_user(user_id)
         if isinstance(ticket_ids, int) or isinstance(ticket_ids, str):
             ticket_ids = [ticket_ids]
+        
+        # 标准化 related_to_actors
+        if related_to_actors is not None:
+            if isinstance(related_to_actors, str):
+                related_to_actors = [related_to_actors]
+            # 空列表转为 None
+            if not related_to_actors:
+                related_to_actors = None
+        
         for i in ticket_ids:
-            self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(
-                {
-                    'id': str(i),
-                    'mode': mode
-                })
+            ticket_entry = {
+                'id': str(i),
+                'mode': mode
+            }
+            # 只有非None时才添加字段
+            if related_to_actors is not None:
+                ticket_entry['related_to_actors'] = related_to_actors
+            
+            self.data["users"][user_id]["subscribe"]["subscribe_tickets"].append(ticket_entry)
         return True
     
     def add_event_subscribe(self, user_id, event_ids, mode):
@@ -361,16 +386,67 @@ class UsersManager(BaseDataManager):
     
     def remove_actor_subscribe(self, user_id, actor_name):
         """
-        移除演员订阅
+        移除演员订阅，并清理仅因该演员而关注的场次
+        
+        Args:
+            user_id: 用户ID
+            actor_name: 演员名
+            
+        Returns:
+            dict: {
+                'actor_removed': bool,  # 是否成功移除演员订阅
+                'tickets_removed': int  # 移除的场次数量
+            }
         """
         user_id = str(user_id)
-        actor_name = str(actor_name)
+        actor_name_lower = str(actor_name).strip().lower()
+        
+        # 1. 移除演员订阅
         actors = self.data["users"][user_id]["subscribe"].get("subscribe_actors", [])
         before = len(actors)
         self.data["users"][user_id]["subscribe"]["subscribe_actors"] = [
-            a for a in actors if a.get('actor', '').strip().lower() != actor_name.strip().lower()
+            a for a in actors if a.get('actor', '').strip().lower() != actor_name_lower
         ]
-        return before != len(self.data["users"][user_id]["subscribe"]["subscribe_actors"])
+        actor_removed = before != len(self.data["users"][user_id]["subscribe"]["subscribe_actors"])
+        
+        # 2. 清理关联场次
+        tickets = self.data["users"][user_id]["subscribe"].get("subscribe_tickets", [])
+        tickets_to_keep = []
+        tickets_removed_count = 0
+        
+        for ticket in tickets:
+            related_actors = ticket.get('related_to_actors')
+            
+            # 如果没有关联演员（None），保留场次
+            if related_actors is None:
+                tickets_to_keep.append(ticket)
+                continue
+            
+            # 如果有关联演员列表，移除当前演员
+            if isinstance(related_actors, list):
+                # 过滤掉当前演员（不区分大小写）
+                updated_actors = [
+                    a for a in related_actors 
+                    if str(a).strip().lower() != actor_name_lower
+                ]
+                
+                # 如果还有其他演员，更新列表并保留场次
+                if updated_actors:
+                    ticket['related_to_actors'] = updated_actors
+                    tickets_to_keep.append(ticket)
+                else:
+                    # 列表为空，移除该场次
+                    tickets_removed_count += 1
+            else:
+                # 数据异常，保留场次
+                tickets_to_keep.append(ticket)
+        
+        self.data["users"][user_id]["subscribe"]["subscribe_tickets"] = tickets_to_keep
+        
+        return {
+            'actor_removed': actor_removed,
+            'tickets_removed': tickets_removed_count
+        }
     
     def subscribe_actors(self, user_id):
         """
@@ -379,6 +455,41 @@ class UsersManager(BaseDataManager):
         """
         self.new_subscribe(user_id)
         return self.data["users"][user_id]["subscribe"]["subscribe_actors"]
+    
+    def add_actor_to_ticket_relation(self, user_id, ticket_id, actor_name):
+        """
+        为已存在的场次订阅添加演员关联
+        
+        Args:
+            user_id: 用户ID
+            ticket_id: 场次ID
+            actor_name: 演员名
+            
+        Returns:
+            bool: 是否成功添加关联
+        """
+        user_id = str(user_id)
+        ticket_id = str(ticket_id)
+        actor_name = str(actor_name).strip()
+        
+        tickets = self.data["users"][user_id]["subscribe"].get("subscribe_tickets", [])
+        
+        for ticket in tickets:
+            if str(ticket.get('id')) == ticket_id:
+                related_actors = ticket.get('related_to_actors')
+                
+                # 如果是None，创建新列表
+                if related_actors is None:
+                    ticket['related_to_actors'] = [actor_name]
+                # 如果是列表，添加演员（避免重复）
+                elif isinstance(related_actors, list):
+                    actor_lower = actor_name.lower()
+                    if not any(a.strip().lower() == actor_lower for a in related_actors):
+                        related_actors.append(actor_name)
+                
+                return True
+        
+        return False
     
     def update_actor_subscribe_mode(self, user_id, actor_name, new_mode):
         """
