@@ -210,6 +210,16 @@ class Hulaquan(BasePlugin):
         )
         
         self.register_admin_func(
+                    name="更新帮助文档（管理员）",
+                    handler=self.on_sync_notion_help,
+                    prefix="/update-notion",
+                    description="更新帮助文档",
+                    usage="/update-notion",
+                    examples=["/update-notion"],
+                    metadata={"category": "utility"}
+        )
+        
+        self.register_admin_func(
                     name="调试上新通知（管理员）",
                     handler=self.on_debug_announcer,
                     prefix="/debug通知",
