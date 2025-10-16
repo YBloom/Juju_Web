@@ -91,10 +91,33 @@ class Hulaquan(BasePlugin):
     dependencies = {
         }  # 插件依赖，格式: {"插件名": "版本要求"}
     
+    # Notion 配置
+    # 方案 1：直接设置帮助文档的公开链接（推荐）
+    NOTION_HELP_URL = "https://www.notion.so/286de516043f80c3a177ce09dda22d96"  # 帮助文档页面
+    
+    # 方案 2：使用 API 动态创建（需要配置父页面 ID）
+    NOTION_PARENT_PAGE_ID = None  # 设置为您的 Notion 父页面 ID
+    _notion_help_page_id = "286de516-043f-80c3-a177-ce09dda22d96"  # 当前帮助文档页面 ID
+    
+    # Notion API Token（用于自动同步）
+    # ⚠️ 重要：请在环境变量中配置
+    # 配置方法：
+    #   Linux/Mac:  export NOTION_TOKEN=ntn_your_integration_token
+    #   Windows:    $env:NOTION_TOKEN="ntn_your_integration_token"
+    _notion_token = ""
+    
     async def on_load(self):
         # 插件加载时执行的操作
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
+        
+        # 从环境变量加载 Notion Token
+        import os
+        self._notion_token = self._notion_token or os.getenv('NOTION_TOKEN')
+        if self._notion_token:
+            print(f"✅ Notion Token 已加载（自动同步功能可用）")
+        else:
+            print(f"⚠️  未配置 NOTION_TOKEN（自动同步功能不可用）")
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
@@ -711,8 +734,61 @@ class Hulaquan(BasePlugin):
             return
         casts = args["text_args"]
         show_others = "-o" in args["mode_args"]
-        messages = await Saoju.match_co_casts(casts, show_others=show_others)
-        await msg.reply("\n".join(messages))
+        use_hulaquan = "-h" in args["mode_args"]
+        
+        # -H 模式：仅检索呼啦圈系统中的同场演员
+        if use_hulaquan:
+            messages = []
+            for actor in casts:
+                # 使用 find_tickets_by_actor_async 检索该演员的所有场次
+                matched_tickets = await Hlq.find_tickets_by_actor_async(actor)
+                
+                if not matched_tickets:
+                    messages.append(f"❌ 未在呼啦圈系统中找到演员 {actor} 的场次")
+                    continue
+                
+                # 收集该演员所有场次的卡司信息
+                co_actors = set()
+                event_info = {}
+                
+                for ticket_id, event_id in matched_tickets.items():
+                    ticket = Hlq.ticket(ticket_id, default=None)
+                    if not ticket:
+                        continue
+                    
+                    event_title = Hlq.title(event_id=event_id, keep_brackets=True)
+                    event_info.setdefault(event_title, [])
+                    event_info[event_title].append(ticket_id)
+                    
+                    # 获取该场次的卡司
+                    cast_data = await Hlq.get_ticket_cast_and_city_async(event_title, ticket)
+                    cast_list = cast_data.get('cast', [])
+                    for cast_member in cast_list:
+                        artist_name = cast_member.get('artist', '').strip()
+                        if artist_name and artist_name.lower() != actor.strip().lower():
+                            co_actors.add(artist_name)
+                
+                # 生成消息
+                msg_lines = [f"【演员 {actor} 的同场演员】"]
+                msg_lines.append(f"在呼啦圈系统中共有 {len(matched_tickets)} 个场次")
+                
+                if co_actors:
+                    msg_lines.append(f"\n同场演员（共{len(co_actors)}位）：")
+                    msg_lines.append(", ".join(sorted(co_actors)))
+                else:
+                    msg_lines.append("\n暂无同场演员数据")
+                
+                msg_lines.append(f"\n涉及剧目：")
+                for event_title, ticket_ids in event_info.items():
+                    msg_lines.append(f"  {event_title} ({len(ticket_ids)}场)")
+                
+                messages.append("\n".join(msg_lines))
+            
+            await msg.reply("\n\n".join(messages))
+        else:
+            # 原有逻辑：使用扫剧系统
+            messages = await Saoju.match_co_casts(casts, show_others=show_others)
+            await msg.reply("\n".join(messages))
     
        
     @user_command_wrapper("search_by_date") 
@@ -744,12 +820,104 @@ class Hulaquan(BasePlugin):
         
     @user_command_wrapper("help")
     async def on_help(self, msg: BaseMessage):
-        text = self._get_help()
-        send = text["user"]
-        if User.is_op(msg.user_id):
-            send += "\n以下是管理员功能："+text["admin"]
-            send = "以下是用户功能：\n" + send
-        await msg.reply(send)
+        """
+        显示帮助文档
+        用法：
+          /help        - 发送 Notion 帮助文档链接（推荐）
+          /help -t     - 显示文本格式
+          /help -i     - 显示图片格式（需要 Pillow）
+          /help -r     - 强制刷新缓存
+          /help -n     - 强制使用 Notion 并同步
+        """
+        from .user_func_help import get_help_v2
+        
+        # 解析参数
+        text_mode = "-t" in msg.raw_text or "--text" in msg.raw_text
+        image_mode = "-i" in msg.raw_text or "--image" in msg.raw_text
+        force_refresh = "-r" in msg.raw_text or "--refresh" in msg.raw_text
+        force_notion = "-n" in msg.raw_text or "--notion" in msg.raw_text
+        
+        # 优先尝试 Notion 模式（除非明确要求文本或图片）
+        if not text_mode and not image_mode:
+            # 尝试获取或创建 Notion 页面
+            notion_url = await self._get_or_create_notion_help(force_sync=force_notion or force_refresh)
+            if notion_url:
+                await msg.reply(
+                    f"📖 呼啦圈学生票机器人 - 帮助文档\n"
+                    f"🔗 点击查看完整帮助：\n{notion_url}\n\n"
+                    f"💡 提示：\n"
+                    f"  • 使用 /help -t 查看文本版本\n"
+                    f"  • 使用 /help -i 查看图片版本\n"
+                    f"  • 使用 /help -n 强制刷新 Notion"
+                )
+                return
+            else:
+                log.warning("Notion 帮助文档获取失败，回退到文本模式")
+                text_mode = True
+        
+        # 文本模式
+        if text_mode:
+            help_content = get_help_v2(force_refresh=force_refresh, as_image=False)
+            await msg.reply(help_content)
+            return
+        
+        # 图片模式
+        if image_mode:
+            help_image = get_help_v2(force_refresh=force_refresh, as_image=True)
+            if isinstance(help_image, bytes):
+                # 成功生成图片
+                try:
+                    # 保存临时文件并发送
+                    import tempfile
+                    import os
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                        tmp_file.write(help_image)
+                        tmp_path = tmp_file.name
+                    
+                    try:
+                        await msg.reply_image(tmp_path)
+                    finally:
+                        # 清理临时文件
+                        try:
+                            os.unlink(tmp_path)
+                        except:
+                            pass
+                except Exception as e:
+                    log.error(f"发送帮助图片失败：{e}，回退到文本模式")
+                    help_text = get_help_v2(force_refresh=force_refresh, as_image=False)
+                    await msg.reply(help_text)
+            else:
+                # 图片生成失败，已经返回文本
+                await msg.reply(help_image)
+    
+    async def _get_or_create_notion_help(self, force_sync=False):
+        """
+        获取 Notion 帮助文档链接
+        
+        Args:
+            force_sync: 是否强制重新同步（暂时忽略）
+        
+        Returns:
+            str: Notion 页面的 URL，失败返回 None
+        """
+        # 方案 1：直接返回预设的 URL（最简单）
+        if self.NOTION_HELP_URL:
+            return self.NOTION_HELP_URL
+        
+        # 方案 2：尝试使用 API 创建（需要额外配置）
+        if not self.NOTION_PARENT_PAGE_ID:
+            log.debug("未配置 NOTION_HELP_URL 或 NOTION_PARENT_PAGE_ID")
+            return None
+        
+        try:
+            # TODO: 实现 MCP Notion API 调用
+            # 这里可以调用 Notion API 创建或更新页面
+            log.info("Notion API 同步功能待实现")
+            return None
+            
+        except Exception as e:
+            log.error(f"获取 Notion 帮助文档失败: {e}")
+            return None
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None, on_close=False):
@@ -853,6 +1021,95 @@ class Hulaquan(BasePlugin):
         
         await original_msg.reply_text("\n".join(result_msg))
         log.info(f"📢 [广播完成] 用户:{success_users}/{len(User.users_list())}, 群聊:{success_groups}/{len(User.groups_list())}")
+    
+    @user_command_wrapper("sync_notion_help")
+    async def on_sync_notion_help(self, msg: BaseMessage):
+        """同步帮助文档到 Notion（管理员命令）"""
+        if not User.is_op(msg.user_id):
+            await msg.reply_text("❌ 此命令仅管理员可用")
+            return
+        
+        if not self._notion_help_page_id:
+            await msg.reply_text("❌ 未配置 Notion 页面 ID")
+            return
+        
+        if not self._notion_token:
+            error_msg = [
+                "❌ 未配置 NOTION_TOKEN",
+                "",
+                "请按以下步骤配置：",
+                "1. 创建 Notion Integration:",
+                "   https://www.notion.so/my-integrations",
+                "2. 获取 Internal Integration Token",
+                "3. 将 Token 配置为环境变量:",
+                "   Windows: $env:NOTION_TOKEN=\"ntn_xxx\"",
+                "   Linux/Mac: export NOTION_TOKEN=ntn_xxx",
+                "4. 重启机器人",
+                "",
+                "⚠️ 注意：Integration Token 需要有页面的编辑权限"
+            ]
+            await msg.reply_text("\n".join(error_msg))
+            return
+        
+        await msg.reply_text("🔄 开始同步帮助文档到 Notion...")
+        
+        try:
+            from .user_func_help import HELP_SECTIONS, HELP_DOC_VERSION, BOT_VERSION, HELP_DOC_UPDATE_DATE
+            from .notion_help_manager_v2 import NotionHelpManager
+            
+            # 生成 Notion blocks
+            mgr = NotionHelpManager()
+            blocks = mgr.generate_notion_blocks(
+                HELP_SECTIONS,
+                {
+                    'version': HELP_DOC_VERSION,
+                    'bot_version': BOT_VERSION,
+                    'update_date': HELP_DOC_UPDATE_DATE
+                }
+            )
+            
+            await msg.reply_text(f"✅ 生成了 {len(blocks)} 个 blocks\n⏳ 正在上传到 Notion...")
+            
+            # 上传到 Notion
+            result = await mgr.upload_to_notion(
+                page_id=self._notion_help_page_id,
+                blocks=blocks,
+                notion_token=self._notion_token
+            )
+            
+            if result['success']:
+                success_msg = [
+                    "✅ 帮助文档同步成功！",
+                    "",
+                    f"📊 Blocks 数量: {result['blocks_added']}",
+                    f"📄 页面 ID: {self._notion_help_page_id}",
+                    f"🔗 页面链接: {self.NOTION_HELP_URL}",
+                    "",
+                    "💡 提示: 确保页面已设置为 'Share to web' 以便用户访问"
+                ]
+                await msg.reply_text("\n".join(success_msg))
+                log.info(f"✅ [Notion同步成功] 上传了 {result['blocks_added']} 个 blocks")
+            else:
+                error_msg = [
+                    "❌ 帮助文档同步失败",
+                    "",
+                    f"错误信息: {result['message']}",
+                    f"已上传: {result['blocks_added']} blocks",
+                    "",
+                    "请检查:",
+                    "1. NOTION_TOKEN 是否正确",
+                    "2. Integration 是否有页面编辑权限",
+                    "3. 页面 ID 是否正确"
+                ]
+                await msg.reply_text("\n".join(error_msg))
+                log.error(f"❌ [Notion同步失败] {result['message']}")
+            
+        except Exception as e:
+            error_msg = f"❌ 同步失败: {str(e)}"
+            await msg.reply_text(error_msg)
+            log.error(f"❌ [Notion同步失败] {e}")
+            import traceback
+            traceback.print_exc()
             
     @user_command_wrapper("traceback")            
     async def on_traceback_message(self, context="", announce_admin=True):
@@ -877,9 +1134,9 @@ class Hulaquan(BasePlugin):
             await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
             return
         
-    async def get_event_id_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False):
+    async def get_event_id_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False, extra_id=None):
         # return :: (event_id, event_name) or False
-        result = await Hlq.get_event_id_by_name(search_name, None)
+        result = await Hlq.get_event_id_by_name(search_name, None, extra_id=extra_id)
         if not result[0]:
             if notFoundAndRegister:
                 event_id = Stats.register_event(search_name)
@@ -889,14 +1146,8 @@ class Hulaquan(BasePlugin):
                 if eid := Stats.get_event_id(search_name):
                     return (eid, Stats.get_event_title(eid))
             if msg:
-                await msg.reply_text(msg_prefix+"未找到该剧目")
+                await msg.reply_text(msg_prefix+(result[1] if result[1] else "未找到该剧目"))
             return False
-        else:
-            if result[1]:
-                if msg:
-                    queue = [f"{i}. {event[1]}" for i, event in enumerate(result, start=1)]
-                    await msg.reply_text(msg_prefix+f"根据搜索名，找到多个匹配的剧名，请更换为唯一的搜索关键词：\n" + "\n".join(queue))
-                return False
         return (result[0], search_name)
 
     @user_command_wrapper("on_list_aliases")    
@@ -1109,6 +1360,68 @@ class Hulaquan(BasePlugin):
         if not setting_mode:
             return await msg.reply_text("缺少指定的模式（命令需带有-1，-2，-3其中之一）：\n" + HLQ_FOLLOW_TICKET_USAGE)
         setting_mode = int(setting_mode[1])
+        
+        # 0. 按演员名关注（-A 模式）
+        if "-a" in mode_args:
+            actor_names = args["text_args"]
+            
+            # 解析剧目筛选参数
+            include_events = None
+            exclude_events = None
+            for item in mode_args:
+                if item.startswith('-i'):  # -I event1,event2
+                    # 提取事件名列表
+                    event_str = item[2:] if len(item) > 2 else ""
+                    if event_str:
+                        include_events = [e.strip() for e in event_str.split(',')]
+                elif item.startswith('-x'):  # -X event1,event2
+                    event_str = item[2:] if len(item) > 2 else ""
+                    if event_str:
+                        exclude_events = [e.strip() for e in event_str.split(',')]
+            
+            # 将事件名转换为事件ID
+            include_eids = None
+            exclude_eids = None
+            if include_events:
+                include_eids = []
+                for e_name in include_events:
+                    result = await self.get_event_id_by_name(e_name)
+                    if result:
+                        include_eids.append(result[0])
+            if exclude_events:
+                exclude_eids = []
+                for e_name in exclude_events:
+                    result = await self.get_event_id_by_name(e_name)
+                    if result:
+                        exclude_eids.append(result[0])
+            
+            # 为每个演员检索现有场次并关注
+            total_tickets_added = 0
+            actor_summary = []
+            for actor in actor_names:
+                # 检索该演员的所有场次
+                matched_tickets = await Hlq.find_tickets_by_actor_async(actor, include_eids, exclude_eids)
+                ticket_ids = list(matched_tickets.keys())
+                
+                if ticket_ids:
+                    # 关注这些场次
+                    User.add_ticket_subscribe(user_id, ticket_ids, setting_mode)
+                    total_tickets_added += len(ticket_ids)
+                    actor_summary.append(f"{actor}({len(ticket_ids)}场)")
+                
+                # 保存演员订阅（用于后续新排期匹配）
+                User.add_actor_subscribe(user_id, [actor], setting_mode, include_eids, exclude_eids)
+            
+            txt = f"已为您关注以下演员的演出场次：\n{chr(10).join(actor_summary)}\n"
+            txt += f"共关注 {total_tickets_added} 个场次，有票务变动会提醒您。\n"
+            if include_eids:
+                txt += f"（仅关注指定剧目）\n"
+            elif exclude_eids:
+                txt += f"（已排除指定剧目）\n"
+            txt += f"当有新排期上架时，系统会自动补充关注这些演员的新场次。"
+            await msg.reply_text(txt)
+            return
+        
         # 1. 按场次ID关注
         if "-t" in mode_args:
             ticket_id_list = args["text_args"]
@@ -1147,6 +1460,17 @@ class Hulaquan(BasePlugin):
 
         # 2. 按剧目名关注（-E 或默认）
         event_names = args["text_args"]
+        
+        # 检查是否为虚拟事件模式
+        is_virtual_mode = "-v" in mode_args
+        
+        # 解析 -数字 参数用于多结果选择
+        extra_id = None
+        for item in mode_args:
+            if item.startswith('-') and item[1:].isdigit():
+                extra_id = int(item[1:])
+                break
+        
         no_response = []
         event_ids = []
         already_events = []
@@ -1155,7 +1479,26 @@ class Hulaquan(BasePlugin):
         subscribed_events = User.subscribe_events(user_id)
         subscribed_eids_modes = {str(e['id']): str(e.get('mode', '')) for e in subscribed_events} if subscribed_events else {}
         for e in event_names:
-            result = await self.get_event_id_by_name(e)
+            # 虚拟事件模式：直接创建虚拟事件ID
+            if is_virtual_mode:
+                virtual_id, is_new = Stats.register_virtual_event(e)
+                eid = str(virtual_id)
+                if is_new:
+                    to_subscribe_events.append((eid, f"{e}(虚拟剧目)"))
+                else:
+                    # 检查是否已关注
+                    if eid in subscribed_eids_modes:
+                        if subscribed_eids_modes[eid] != setting_mode:
+                            User.update_event_subscribe_mode(user_id, eid, setting_mode)
+                            mode_updated_events.append(f"{e}(虚拟)")
+                        else:
+                            already_events.append(f"{e}(虚拟)")
+                    else:
+                        to_subscribe_events.append((eid, f"{e}(虚拟剧目)"))
+                continue
+            
+            # 正常模式：查询呼啦圈系统
+            result = await self.get_event_id_by_name(e, msg=msg, msg_prefix="", extra_id=extra_id)
             if not result:
                 no_response.append(e)
                 continue
@@ -1186,6 +1529,7 @@ class Hulaquan(BasePlugin):
         user_id = str(msg.user_id)
         events = User.subscribe_events(user_id)
         _tickets = User.subscribe_tickets(user_id)
+        actors = User.subscribe_actors(user_id)
         lines = []
         MODES = ["模式0-不接受通知", "模式1-上新/补票", "模式2-上新/补票/回流", "模式3-上新/补票/回流/增减票"]
         lines.append(f"您目前对剧目的通用通知设置为：\n{MODES[int(User.attention_to_hulaquan(user_id))]}\n可通过/呼啦圈通知 模式编号修改")
@@ -1201,6 +1545,27 @@ class Hulaquan(BasePlugin):
                 eid = str(e['id'])
                 title = Hlq.title(event_id=eid, keep_brackets=True)
                 lines.append(f"{i}.{title} {MODES[int(e['mode'])]}")
+        
+        if actors:
+            lines.append("\n【关注的演员】")
+            i = 0
+            for a in actors:
+                i += 1
+                actor_name = a.get('actor', '')
+                mode = int(a.get('mode', 1))
+                include_events = a.get('include_events', [])
+                exclude_events = a.get('exclude_events', [])
+                
+                filter_text = ""
+                if include_events:
+                    event_names = [Hlq.title(event_id=eid, keep_brackets=True) for eid in include_events]
+                    filter_text = f" [仅关注: {', '.join(event_names)}]"
+                elif exclude_events:
+                    event_names = [Hlq.title(event_id=eid, keep_brackets=True) for eid in exclude_events]
+                    filter_text = f" [排除: {', '.join(event_names)}]"
+                
+                lines.append(f"{i}.{actor_name} {MODES[mode]}{filter_text}")
+        
         if _tickets:
             lines.append("\n【关注的场次】")
             tickets = sorted(_tickets, key=lambda x: int(x['id']))
@@ -1233,17 +1598,43 @@ class Hulaquan(BasePlugin):
                 User.remove_ticket_subscribe(user_id, tid)
             lines.append(f"\n✅ 已自动清理 {len(expired_tickets)} 个过期场次")
         
-        if not events and not _tickets:
-            await msg.reply_text("你还没有关注任何剧目或场次。")
+        if not events and not _tickets and not actors:
+            await msg.reply_text("你还没有关注任何剧目、场次或演员。")
             return
         await self.output_messages_by_pages(lines, msg, page_size=40)
 
     async def on_unfollow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
-            return await msg.reply_text(f"请提供场次id或剧目名，用法：\n{HLQ_UNFOLLOW_TICKET_USAGE}")
+            return await msg.reply_text(f"请提供场次id、剧目名或演员名，用法：\n{HLQ_UNFOLLOW_TICKET_USAGE}")
         mode_args = args["mode_args"]
         user_id = str(msg.user_id)
+        
+        # 0. 按演员名取消关注（-A 模式）
+        if "-a" in mode_args:
+            actor_names = args["text_args"]
+            removed = []
+            not_found = []
+            actors = User.subscribe_actors(user_id)
+            subscribed_actors_lower = {a.get('actor', '').strip().lower() for a in actors} if actors else set()
+            
+            for actor in actor_names:
+                actor_lower = actor.strip().lower()
+                if actor_lower in subscribed_actors_lower:
+                    User.remove_actor_subscribe(user_id, actor)
+                    removed.append(actor)
+                else:
+                    not_found.append(actor)
+            
+            txt = ""
+            if removed:
+                txt += f"已取消关注以下演员：{' '.join(removed)}\n"
+            if not_found:
+                txt += f"以下演员未关注：{' '.join(not_found)}\n"
+            txt += f"注意：取消演员关注不会自动删除已关注的场次，如需删除请使用 /取消关注学生票 场次ID -T"
+            await msg.reply_text(txt.strip())
+            return
+        
         # 1. 按场次ID取消关注
         if "-t" in mode_args:
             ticket_id_list = args["text_args"]

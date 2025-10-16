@@ -13,6 +13,7 @@ REPORT_ERROR_DETAILS = 'report_error_details'  # 报错用户ID
 EVENT_ID_TO_EVENT_TITLE = 'event_id_to_event_title'
 LATEST_EVENT_ID = 'latest_event_id'
 LATEST_20_REPOS = 'latest_20_repos'
+VIRTUAL_EVENTS = 'virtual_events'  # 虚拟事件映射: {virtual_id: {title, normalized_title, is_active, create_time}}
 
 maxLatestReposCount = 20
 maxErrorTimes = 3  # 报错次数超过2次则删除report
@@ -38,6 +39,7 @@ class StatsDataManager(BaseDataManager):
         self.data.setdefault(LATEST_REPO_ID, 1000)
         self.data.setdefault(LATEST_EVENT_ID, 100000)
         self.data.setdefault(LATEST_20_REPOS, []) #[(event_id, report_id]
+        self.data.setdefault(VIRTUAL_EVENTS, {})  # 虚拟事件字典
         self.check_events_to_title_dict()
 
     def on_command(self, command_name):
@@ -279,4 +281,43 @@ class StatsDataManager(BaseDataManager):
                 del self.data[HLQ_TICKETS_REPO][event_id]
             return True
         return False
+    
+    def register_virtual_event(self, title: str):
+        """
+        注册虚拟事件（未上架的剧目）
+        检查是否已存在相同标准化名称的虚拟事件，如果存在则返回已有ID
+        返回: (virtual_event_id, is_new_created)
+        """
+        normalized = extract_text_in_brackets(title, True).strip().lower()
+        
+        # 检查是否已存在相同标准化名称的虚拟事件
+        for vid, vdata in self.data[VIRTUAL_EVENTS].items():
+            if vdata.get('normalized_title') == normalized and vdata.get('is_active', True):
+                return (vid, False)
+        
+        # 创建新虚拟事件
+        virtual_id = self.new_id(LATEST_EVENT_ID)
+        self.data[VIRTUAL_EVENTS][virtual_id] = {
+            'title': title,
+            'normalized_title': normalized,
+            'is_active': True,
+            'create_time': now_time_str()
+        }
+        return (virtual_id, True)
+    
+    def get_active_virtual_events(self):
+        """获取所有活跃的虚拟事件: {vid: normalized_title}"""
+        return {
+            vid: vdata['normalized_title'] 
+            for vid, vdata in self.data[VIRTUAL_EVENTS].items() 
+            if vdata.get('is_active', True)
+        }
+    
+    def deactivate_virtual_event(self, virtual_id: str):
+        """将虚拟事件标记为已迁移（不活跃）"""
+        if virtual_id in self.data[VIRTUAL_EVENTS]:
+            self.data[VIRTUAL_EVENTS][virtual_id]['is_active'] = False
+            return True
+        return False
+
 

@@ -17,6 +17,7 @@ def USER_MODEL():
             "subscribe_time": None,
             "subscribe_tickets": [],
             "subscribe_events": [],
+            "subscribe_actors": [],  # [{actor: str, mode: int}]
             }
         }
         return model
@@ -207,6 +208,7 @@ class UsersManager(BaseDataManager):
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_tickets", [])
         self.data["users"][user_id]["subscribe"].setdefault("subscribe_events", [])
+        self.data["users"][user_id]["subscribe"].setdefault("subscribe_actors", [])  # 确保演员订阅字段存在
         return self.data["users"][user_id]["subscribe"]
    
     def add_ticket_subscribe(self, user_id, ticket_ids, mode):
@@ -310,3 +312,83 @@ class UsersManager(BaseDataManager):
             if str(e['id']) == event_id:
                 e['mode'] = new_mode
                 break
+    
+    def migrate_event_subscriptions(self, from_event_id: str, to_event_id: str):
+        """
+        将所有用户从旧事件ID的订阅迁移到新事件ID
+        用于虚拟事件到真实事件的自动迁移
+        返回: 迁移的用户数量
+        """
+        from_event_id = str(from_event_id)
+        to_event_id = str(to_event_id)
+        migrated_count = 0
+        
+        for user_id in self.data.get("users_list", []):
+            events = self.data["users"][user_id]["subscribe"].get("subscribe_events", [])
+            for e in events:
+                if str(e['id']) == from_event_id:
+                    e['id'] = to_event_id
+                    migrated_count += 1
+                    break
+        
+        return migrated_count
+    
+    def add_actor_subscribe(self, user_id, actor_names, mode, include_events=None, exclude_events=None):
+        """
+        为用户添加演员订阅
+        actor_names: 演员名列表或单个演员名
+        mode: 订阅模式 (1/2/3)
+        include_events: 白名单，仅关注这些剧目的该演员（event_id列表）
+        exclude_events: 黑名单，不关注这些剧目的该演员（event_id列表）
+        """
+        user_id = str(user_id)
+        self.new_subscribe(user_id)
+        if isinstance(actor_names, str):
+            actor_names = [actor_names]
+        
+        actors = self.data["users"][user_id]["subscribe"]["subscribe_actors"]
+        for actor in actor_names:
+            actor_entry = {
+                'actor': actor, 
+                'mode': mode,
+            }
+            if include_events:
+                actor_entry['include_events'] = [str(e) for e in include_events]
+            if exclude_events:
+                actor_entry['exclude_events'] = [str(e) for e in exclude_events]
+            actors.append(actor_entry)
+        return True
+    
+    def remove_actor_subscribe(self, user_id, actor_name):
+        """
+        移除演员订阅
+        """
+        user_id = str(user_id)
+        actor_name = str(actor_name)
+        actors = self.data["users"][user_id]["subscribe"].get("subscribe_actors", [])
+        before = len(actors)
+        self.data["users"][user_id]["subscribe"]["subscribe_actors"] = [
+            a for a in actors if a.get('actor', '').strip().lower() != actor_name.strip().lower()
+        ]
+        return before != len(self.data["users"][user_id]["subscribe"]["subscribe_actors"])
+    
+    def subscribe_actors(self, user_id):
+        """
+        获取用户订阅的演员列表
+        返回: [{actor: str, mode: int}, ...]
+        """
+        self.new_subscribe(user_id)
+        return self.data["users"][user_id]["subscribe"]["subscribe_actors"]
+    
+    def update_actor_subscribe_mode(self, user_id, actor_name, new_mode):
+        """
+        更新演员订阅模式
+        """
+        user_id = str(user_id)
+        actor_name = str(actor_name).strip().lower()
+        actors = self.data["users"][user_id]["subscribe"].get("subscribe_actors", [])
+        for a in actors:
+            if a.get('actor', '').strip().lower() == actor_name:
+                a['mode'] = new_mode
+                break
+

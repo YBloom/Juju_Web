@@ -36,13 +36,14 @@ class HulaquanDataManager(BaseDataManager):
         super().__init__(file_path)
            
     def on_load(self):
-        global Saoju, Stats, Alias
+        global Saoju, Stats, Alias, User
         import importlib
         
         dataManagers = importlib.import_module('plugins.Hulaquan.data_managers')
         Saoju = dataManagers.Saoju  # 动态获取
         Stats = dataManagers.Stats  # 动态获取
         Alias = dataManagers.Alias  # 动态获取
+        User = dataManagers.User  # 动态获取
         self.semaphore = asyncio.Semaphore(10)  # 限制并发量10
         self.data.setdefault("events", {})  # 确保有一个事件字典来存储数据
         self.data["pending_events"] = self.data.get("pending_events", {}) # 确保有一个pending_events来存储待办事件
@@ -124,6 +125,10 @@ class HulaquanDataManager(BaseDataManager):
                     keys_to_extract = ["id","event_id","title", "start_time", "end_time","status","create_time","ticket_price","total_ticket", "left_ticket_count", "left_days", "valid_from"]
                     ticket_list = json_data["ticket_details"]
                     ticket_dump_list = {}
+                    
+                    # 获取旧的 ticket_details 以保留 cast 和 city 数据
+                    old_tickets = self.data.get("events", {}).get(event_id, {}).get("ticket_details", {})
+                    
                     for i in range(len(ticket_list)):
                         ticket = ticket_list[i]
                         tid = ticket['id'] = str(ticket.get("id", 0))
@@ -132,6 +137,14 @@ class HulaquanDataManager(BaseDataManager):
                                 print(ticket)
                             continue
                         ticket_dump_list[tid] = {key: ticket.get(key, None) for key in keys_to_extract}
+                        
+                        # 保留已有的 cast 和 city 数据
+                        if tid in old_tickets:
+                            if "cast" in old_tickets[tid]:
+                                ticket_dump_list[tid]["cast"] = old_tickets[tid]["cast"]
+                            if "city" in old_tickets[tid]:
+                                ticket_dump_list[tid]["city"] = old_tickets[tid]["city"]
+                        
                         if tid not in self.data['ticket_id_to_event_id'].keys():
                             self.data['ticket_id_to_event_id'][tid] = event_id
                     if data_dict is None:
@@ -237,6 +250,19 @@ class HulaquanDataManager(BaseDataManager):
         save_cache = False
         new_data = new_data_all.get("events", {})
         old_data = old_data_all.get("events", {})
+        
+        # 检测新增的事件，用于虚拟事件迁移和演员订阅匹配
+        new_event_ids = set(new_data.keys()) - set(old_data.keys())
+        if new_event_ids:
+            # 虚拟事件迁移
+            await self.__migrate_virtual_events(new_event_ids, new_data)
+            # 演员订阅自动匹配
+            actor_match_counts = await self.match_actors_in_new_events_and_subscribe(new_event_ids)
+            if actor_match_counts:
+                from ncatbot.utils.logger import get_log
+                log = get_log()
+                log.info(f"新排期演员匹配完成，为 {len(actor_match_counts)} 个用户补充了票务订阅")
+        
         comp_data = {}
         for eid in new_data.keys():
             comp = self.compare_tickets(old_data.get(eid, {}), new_data[eid].get("ticket_details", None))
@@ -252,6 +278,37 @@ class HulaquanDataManager(BaseDataManager):
         if save_cache:
             self.save_data_cache(old_data_all, new_data_all, "update_data_cache")
         return result
+    
+    async def __migrate_virtual_events(self, new_event_ids, new_data):
+        """
+        检测新增事件是否匹配虚拟事件，如果匹配则自动迁移订阅
+        """
+        global Stats, User
+        virtual_events = Stats.get_active_virtual_events()
+        if not virtual_events:
+            return
+        
+        from ncatbot.utils.logger import get_log
+        log = get_log()
+        
+        for event_id in new_event_ids:
+            event_info = new_data.get(event_id, {})
+            event_title = event_info.get('title', '')
+            if not event_title:
+                continue
+            
+            # 标准化新事件标题
+            normalized_title = extract_text_in_brackets(event_title, True).strip().lower()
+            
+            # 检查是否匹配任何虚拟事件
+            for virtual_id, virtual_normalized in virtual_events.items():
+                if normalized_title == virtual_normalized:
+                    # 执行迁移
+                    migrated_count = User.migrate_event_subscriptions(virtual_id, event_id)
+                    Stats.deactivate_virtual_event(virtual_id)
+                    log.info(f"虚拟事件迁移: {virtual_id} -> {event_id} ({event_title}), 迁移用户数: {migrated_count}")
+                    break
+
     
     
     async def __generate_compare_message_text(self, compare_data):
@@ -882,3 +939,120 @@ class HulaquanDataManager(BaseDataManager):
             # 3. title本身为search_name
             return [t]
         return []
+    
+    async def find_tickets_by_actor_async(self, actor_name: str, include_eids=None, exclude_eids=None):
+        """
+        在当前缓存的所有事件中检索包含指定演员的场次
+        
+        参数:
+            actor_name: 演员名（大小写不敏感）
+            include_eids: 白名单，仅搜索这些事件ID（优先级更高）
+            exclude_eids: 黑名单，排除这些事件ID
+        
+        返回:
+            {ticket_id: event_id} 字典
+        """
+        actor_lower = actor_name.strip().lower()
+        matched_tickets = {}
+        
+        # 确定需要搜索的事件范围
+        events_to_search = self.data.get("events", {})
+        if include_eids:
+            include_eids_str = [str(e) for e in include_eids]
+            events_to_search = {eid: event for eid, event in events_to_search.items() if eid in include_eids_str}
+        elif exclude_eids:
+            exclude_eids_str = [str(e) for e in exclude_eids]
+            events_to_search = {eid: event for eid, event in events_to_search.items() if eid not in exclude_eids_str}
+        
+        # 遍历所有事件的所有场次
+        for event_id, event_data in events_to_search.items():
+            event_title = event_data.get('title', '')
+            tickets = event_data.get('ticket_details', {})
+            
+            for ticket_id, ticket_info in tickets.items():
+                # 获取该场次的卡司信息
+                cast_data = await self.get_ticket_cast_and_city_async(event_title, ticket_info)
+                cast_list = cast_data.get('cast', [])
+                
+                # 检查演员是否在卡司中
+                for cast_member in cast_list:
+                    if cast_member.get('artist', '').strip().lower() == actor_lower:
+                        matched_tickets[str(ticket_id)] = str(event_id)
+                        break
+        
+        return matched_tickets
+    
+    async def match_actors_in_new_events_and_subscribe(self, new_event_ids):
+        """
+        在新上架的事件中快速匹配所有用户订阅的演员，并自动为用户补充票务订阅
+        
+        参数:
+            new_event_ids: 新增的事件ID集合
+        
+        返回:
+            {user_id: added_ticket_count} 每个用户新增的票务订阅数量
+        """
+        global User
+        
+        # 收集所有用户的演员订阅
+        all_users_actors = {}  # {user_id: [{actor, mode, include_events, exclude_events}]}
+        for user_id in User.data.get("users_list", []):
+            actors = User.subscribe_actors(user_id)
+            if actors:
+                all_users_actors[user_id] = actors
+        
+        if not all_users_actors:
+            return {}
+        
+        # 为每个新事件检索卡司并匹配
+        user_new_tickets = {}  # {user_id: [(ticket_id, mode)]}
+        
+        for event_id in new_event_ids:
+            event_data = self.data.get("events", {}).get(event_id)
+            if not event_data:
+                continue
+            
+            event_title = event_data.get('title', '')
+            tickets = event_data.get('ticket_details', {})
+            
+            # 为该事件的每个场次获取卡司
+            for ticket_id, ticket_info in tickets.items():
+                cast_data = await self.get_ticket_cast_and_city_async(event_title, ticket_info)
+                cast_list = cast_data.get('cast', [])
+                cast_actors_lower = [c.get('artist', '').strip().lower() for c in cast_list]
+                
+                # 匹配所有用户的演员订阅
+                for user_id, actors in all_users_actors.items():
+                    for actor_sub in actors:
+                        actor_name = actor_sub.get('actor', '').strip().lower()
+                        mode = actor_sub.get('mode', 1)
+                        include_events = actor_sub.get('include_events', [])
+                        exclude_events = actor_sub.get('exclude_events', [])
+                        
+                        # 检查剧目筛选
+                        if include_events and event_id not in [str(e) for e in include_events]:
+                            continue
+                        if exclude_events and event_id in [str(e) for e in exclude_events]:
+                            continue
+                        
+                        # 检查演员是否在卡司中
+                        if actor_name in cast_actors_lower:
+                            user_new_tickets.setdefault(user_id, [])
+                            user_new_tickets[user_id].append((str(ticket_id), mode))
+                            break  # 一个场次只为该用户添加一次
+        
+        # 为用户批量添加票务订阅
+        user_counts = {}
+        for user_id, tickets in user_new_tickets.items():
+            # 按模式分组
+            mode_tickets = {}
+            for tid, mode in tickets:
+                mode_tickets.setdefault(mode, []).append(tid)
+            
+            for mode, ticket_ids in mode_tickets.items():
+                User.add_ticket_subscribe(user_id, ticket_ids, mode)
+            
+            user_counts[user_id] = len(tickets)
+        
+        return user_counts
+

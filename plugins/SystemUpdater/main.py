@@ -108,8 +108,8 @@ rm -f "$STATUS_FILE" 2>/dev/null || true
 {{ napcat restart{qq_arg} ; }} >> {shlex.quote(str(log))} 2>&1 || echo "[WARN] napcat restart failed" >> {shlex.quote(str(log))}
 # 状态记录（napcat 执行结果无法可靠判定，这里仅标注模式）
 echo "NAPCAT_MODE" > "$STATUS_FILE"
-{shlex.quote(py)} {shlex.quote(str(main_py))} >> {shlex.quote(str(log))} 2>&1 &
-disown
+# 前台运行机器人（输出同时到终端和日志，可用 Ctrl+C 退出）
+{shlex.quote(py)} {shlex.quote(str(main_py))} 2>&1 | tee -a {shlex.quote(str(log))}
 """.strip()
         else:
                 body = f"""
@@ -135,8 +135,8 @@ else
     echo "[WARN] local branch 'main' missing; skip update" >> {shlex.quote(str(log))}
     echo "NO_LOCAL_MAIN" > "$STATUS_FILE"
 fi
-{shlex.quote(py)} {shlex.quote(str(main_py))} >> {shlex.quote(str(log))} 2>&1 &
-disown
+# 前台运行机器人（输出同时到终端和日志，可用 Ctrl+C 退出）
+{shlex.quote(py)} {shlex.quote(str(main_py))} 2>&1 | tee -a {shlex.quote(str(log))}
 """.strip()
 
         return header + "\n" + body + "\n"
