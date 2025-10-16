@@ -831,11 +831,12 @@ class Hulaquan(BasePlugin):
         """
         from .user_func_help import get_help_v2
         
-        # 解析参数
-        text_mode = "-t" in msg.raw_text or "--text" in msg.raw_text
-        image_mode = "-i" in msg.raw_text or "--image" in msg.raw_text
-        force_refresh = "-r" in msg.raw_text or "--refresh" in msg.raw_text
-        force_notion = "-n" in msg.raw_text or "--notion" in msg.raw_text
+        # 解析参数（使用 raw_message 属性）
+        msg_text = msg.raw_message if hasattr(msg, 'raw_message') else str(msg)
+        text_mode = "-t" in msg_text or "--text" in msg_text
+        image_mode = "-i" in msg_text or "--image" in msg_text
+        force_refresh = "-r" in msg_text or "--refresh" in msg_text
+        force_notion = "-n" in msg_text or "--notion" in msg_text
         
         # 优先尝试 Notion 模式（除非明确要求文本或图片）
         if not text_mode and not image_mode:
