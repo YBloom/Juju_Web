@@ -77,7 +77,17 @@ def user_command_wrapper(command_name):
                 try:
                     return await func(this, *args, **kwargs)
                 except Exception as e:
-                    await this.on_traceback_message(f"{command_name} 命令异常: {e}")
+                    # 避免循环报错：先记录日志，再尝试通知
+                    log.error(f"{command_name} 命令异常: {e}")
+                    import traceback
+                    log.error(traceback.format_exc())
+                    
+                    # 安全地通知管理员（避免再次触发错误）
+                    try:
+                        await this.on_traceback_message(f"{command_name} 命令异常: {e}", announce_admin=True)
+                    except Exception as notify_error:
+                        # 如果通知失败，只记录日志，不再继续
+                        log.error(f"通知管理员失败: {notify_error}")
             return wrapper
         return decorator
 
@@ -829,67 +839,95 @@ class Hulaquan(BasePlugin):
           /help -r     - 强制刷新缓存
           /help -n     - 强制使用 Notion 并同步
         """
-        from .user_func_help import get_help_v2
-        
-        # 解析参数（使用 raw_message 属性）
-        msg_text = msg.raw_message if hasattr(msg, 'raw_message') else str(msg)
-        text_mode = "-t" in msg_text or "--text" in msg_text
-        image_mode = "-i" in msg_text or "--image" in msg_text
-        force_refresh = "-r" in msg_text or "--refresh" in msg_text
-        force_notion = "-n" in msg_text or "--notion" in msg_text
-        
-        # 优先尝试 Notion 模式（除非明确要求文本或图片）
-        if not text_mode and not image_mode:
-            # 尝试获取或创建 Notion 页面
-            notion_url = await self._get_or_create_notion_help(force_sync=force_notion or force_refresh)
-            if notion_url:
-                await msg.reply(
-                    f"📖 呼啦圈学生票机器人 - 帮助文档\n"
-                    f"🔗 点击查看完整帮助：\n{notion_url}\n\n"
-                    f"💡 提示：\n"
-                    f"  • 使用 /help -t 查看文本版本\n"
-                    f"  • 使用 /help -i 查看图片版本\n"
-                    f"  • 使用 /help -n 强制刷新 Notion"
-                )
-                return
-            else:
-                log.warning("Notion 帮助文档获取失败，回退到文本模式")
-                text_mode = True
-        
-        # 文本模式
-        if text_mode:
-            help_content = get_help_v2(force_refresh=force_refresh, as_image=False)
-            await msg.reply(help_content)
-            return
-        
-        # 图片模式
-        if image_mode:
-            help_image = get_help_v2(force_refresh=force_refresh, as_image=True)
-            if isinstance(help_image, bytes):
-                # 成功生成图片
+        try:
+            from .user_func_help import get_help_v2
+            
+            # 安全地解析参数
+            msg_text = ""
+            try:
+                if hasattr(msg, 'raw_message'):
+                    msg_text = msg.raw_message
+                elif hasattr(msg, 'text'):
+                    msg_text = msg.text
+                else:
+                    msg_text = str(msg)
+            except Exception as e:
+                log.warning(f"无法获取消息文本，使用默认模式: {e}")
+                msg_text = ""
+            
+            text_mode = "-t" in msg_text or "--text" in msg_text
+            image_mode = "-i" in msg_text or "--image" in msg_text
+            force_refresh = "-r" in msg_text or "--refresh" in msg_text
+            force_notion = "-n" in msg_text or "--notion" in msg_text
+            
+            # 优先尝试 Notion 模式（除非明确要求文本或图片）
+            if not text_mode and not image_mode:
+                # 尝试获取或创建 Notion 页面
                 try:
-                    # 保存临时文件并发送
-                    import tempfile
-                    import os
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
-                        tmp_file.write(help_image)
-                        tmp_path = tmp_file.name
-                    
-                    try:
-                        await msg.reply_image(tmp_path)
-                    finally:
-                        # 清理临时文件
-                        try:
-                            os.unlink(tmp_path)
-                        except:
-                            pass
+                    notion_url = await self._get_or_create_notion_help(force_sync=force_notion or force_refresh)
+                    if notion_url:
+                        await msg.reply(
+                            f"📖 呼啦圈学生票机器人 - 帮助文档\n"
+                            f"🔗 点击查看完整帮助：\n{notion_url}\n\n"
+                            f"💡 提示：\n"
+                            f"  • 使用 /help -t 查看文本版本\n"
+                            f"  • 使用 /help -i 查看图片版本\n"
+                            f"  • 使用 /help -n 强制刷新 Notion"
+                        )
+                        return
+                    else:
+                        log.warning("Notion 帮助文档获取失败，回退到文本模式")
+                        text_mode = True
                 except Exception as e:
-                    log.error(f"发送帮助图片失败：{e}，回退到文本模式")
-                    help_text = get_help_v2(force_refresh=force_refresh, as_image=False)
-                    await msg.reply(help_text)
-            else:
-                # 图片生成失败，已经返回文本
-                await msg.reply(help_image)
+                    log.error(f"Notion 模式失败: {e}")
+                    text_mode = True
+            
+            # 文本模式
+            if text_mode:
+                help_content = get_help_v2(force_refresh=force_refresh, as_image=False)
+                await msg.reply(help_content)
+                return
+            
+            # 图片模式
+            if image_mode:
+                help_image = get_help_v2(force_refresh=force_refresh, as_image=True)
+                if isinstance(help_image, bytes):
+                    # 成功生成图片
+                    try:
+                        # 保存临时文件并发送
+                        import tempfile
+                        import os
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+                            tmp_file.write(help_image)
+                            tmp_path = tmp_file.name
+                        
+                        try:
+                            await msg.reply_image(tmp_path)
+                        finally:
+                            # 清理临时文件
+                            try:
+                                os.unlink(tmp_path)
+                            except:
+                                pass
+                    except Exception as e:
+                        log.error(f"发送帮助图片失败：{e}，回退到文本模式")
+                        help_text = get_help_v2(force_refresh=force_refresh, as_image=False)
+                        await msg.reply(help_text)
+                else:
+                    # 图片生成失败，已经返回文本
+                    await msg.reply(help_image)
+        
+        except Exception as e:
+            # 最终的安全回退：发送基本错误信息
+            log.error(f"帮助命令完全失败: {e}")
+            try:
+                await msg.reply_text(
+                    "❌ 帮助文档加载失败\n\n"
+                    "请联系管理员或稍后重试。"
+                )
+            except:
+                # 如果连错误消息都发不出去，只能放弃
+                pass
     
     async def _get_or_create_notion_help(self, force_sync=False):
         """
