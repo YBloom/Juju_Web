@@ -205,3 +205,5 @@ NcatBot/
 testment.py
 *.md
 replace.txt
+error_announcement_cache/
+update_data_cache/
