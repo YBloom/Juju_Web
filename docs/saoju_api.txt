@@ -1,0 +1,158 @@
+1. 查询某日演出
+接口格式：https://y.saoju.net/yyj/api/search_day/?date={}
+例：https://y.saoju.net/yyj/api/search_day/?date=2023-07-25
+"date": "2023-07-25"
+"show_list":
+"city": "X城市"
+"musical": "XX音乐剧"
+"theatre": "XX剧院"
+"time": "19:30"
+"cast":
+{"role": "A角色", "artist": "X演员"}
+{"role": "B角色", "artist": "Y演员"}
+2. 查询某日某城市演出
+接口格式：https://y.saoju.net/yyj/api/search_day/?date={}&city={}
+例：https://y.saoju.net/yyj/api/search_day/?date=2023-07-25&city=上海
+"date": "2023-07-25"
+"city": "上海"
+"show_list":
+"musical": "XX音乐剧"
+"theatre": "XX剧院"
+"time": "19:30"
+"cast":
+{"role": "A角色", "artist": "X演员"}
+{"role": "B角色", "artist": "Y演员"}
+3. 查询某剧给定时间范围内的演出信息
+接口格式：https://y.saoju.net/yyj/api/search_musical_show/?musical={}&begin_date={}&end_date={}
+例：https://y.saoju.net/yyj/api/search_musical_show/?musical=阿波罗尼亚&begin_date=2025-08-20&end_date=2025-08-21
+"show_list":
+"city": "X城市"
+"theatre": "XX剧院"
+"time": "2025-08-20 19:30"
+"cast":
+{"role": "A角色", "artist": "X演员"}
+{"role": "B角色", "artist": "Y演员"}
+数据接口
+以下接口全部返回json数据
+1. 获取全部演员/主创
+https://y.saoju.net/yyj/api/artist/
+pk: 2591（代表数据库中的主键，即该条数据的id）
+model: "yyj.artist"（代码里的模型名称）
+fields:
+name: "XX演员/主创"（姓名）
+note: "其他信息"（一般用于同名时的备注信息）
+2. 获取全部制作出品方
+https://y.saoju.net/yyj/api/produce/
+pk: 368
+model: "yyj.produce"
+fields:
+name: "XX公司"
+3. 获取全部音乐剧
+https://y.saoju.net/yyj/api/musical/
+pk: 267
+model: "yyj.musical"
+fields:
+name: "XX音乐剧"
+is_original: true（原创性，true代表原创，false代表引进剧）
+progress: "SS"（进度，SS代表已上演，DD代表已定档，ZZ代表制作中）
+premiere_date: "2023-10-24"（首演时间）
+premiere_date_text: "2023年10月"（如首演时间确定在某一天，则此项为null，如果不确定，则此项存储大致的首演时间文字，且premiere_date字段的时间作废）
+info: "其他信息"（一般存储改编原作、原版主创等信息）
+4. 获取全部音乐剧出品制作信息
+https://y.saoju.net/yyj/api/musicalproduces/
+pk: 667
+model: "yyj.musicalproduces"
+fields:
+musical: 1（该音乐剧出品制作信息所关联的音乐剧id，即yyj.musical的pk值）
+produce: 1（该音乐剧出品制作信息所关联的制作出品方id，即yyj.produce的pk值）
+title: "出品"（制作出品信息）
+seq: 1（该制作出品信息在出品信息表中的排位）
+5. 获取全部音乐剧主创信息
+https://y.saoju.net/yyj/api/musicalstaff/
+pk: 2587
+model: "yyj.musicalstaff"
+fields:
+musical: 1（该音乐剧主创信息所关联的音乐剧id）
+artist: 1（该音乐剧主创信息所关联的主创id，即yyj.artist的pk值）
+job: "作曲"（主创信息内容）
+seq: 1（该主创信息在音乐剧主创信息表中的排位）
+6. 获取全部角色
+https://y.saoju.net/yyj/api/role/
+pk: 933
+model: "yyj.role"
+fields:
+musical: 63（该角色所属的音乐剧id，即yyj.musical的pk值）
+name: "XX角色"
+seq: 1（该角色在音乐剧卡司表中的排位）
+7. 获取全部音乐剧卡司信息
+https://y.saoju.net/yyj/api/musicalcast/
+pk: 2721
+model: "yyj.musicalcast"
+fields:
+role: 1（该音乐剧卡司信息所关联的角色id，即yyj.role的pk值）
+artist: 16（该音乐剧卡司信息所关联的演员id，即yyj.artist的pk值）
+seq: 1（该卡司信息在该角色演员列表中的排位）
+8. 获取全部城市
+https://y.saoju.net/yyj/api/city/
+pk: 74
+model: "yyj.city"
+fields:
+name: "XX城市"
+seq: 1（该城市在剧院列表的排位，一般按照该城市音乐剧演出数量手动调整）
+9. 获取全部地点
+https://y.saoju.net/yyj/api/location/
+pk: 1
+model: "yyj.location"（此模型仅表示剧院所在的地点区域，主要用于地图位置标记）
+fields:
+latitude: 31.23588（纬度）
+longitude: 121.47355（经度）
+name: "亚洲大厦"
+10. 获取全部剧院
+https://y.saoju.net/yyj/api/theatre/
+pk: 242
+model: "yyj.theatre"（此模型仅代表整个剧院，不指代具体的剧场舞台，因为一个剧院中可能包含多个剧场。但诸如亚洲大厦内的小剧场，因为是独立运营的空间，所以暂时作为不同的theatre处理。）
+fields:
+city: 8（该剧院所在的城市id，即yyj.city的pk值）
+location: 13（该剧院所在地点id，即yyj.location的pk值）
+name: "XX剧院"
+11. 获取全部剧场舞台
+https://y.saoju.net/yyj/api/stage/
+pk: 258
+model: "yyj.stage"
+fields:
+theatre: 8（该剧场舞台所属剧院id，即yyj.theatre的pk值）
+name: "大剧场"（如果一个剧院只有一个剧场，那此项一般为空）
+seats: 673（座位数）
+12. 获取全部巡演计划
+https://y.saoju.net/yyj/api/tour/
+pk: 227
+model: "yyj.tour"
+fields:
+musical: 63（该巡演计划所属的音乐剧id）
+name: "2023全国巡演"
+is_long_term: false（是否长期驻演，true代表是，false代表否）
+begin_date: "2023-09-21"（巡演开始时间）
+end_date: "2023-12-17"（巡演结束时间，如果is_long_term为true，则此项作废）
+13. 获取全部日程排期
+https://y.saoju.net/yyj/api/schedule/
+pk: 701
+model: "yyj.schedule"
+fields:
+tour: 240（该日程排期所属的巡演id，即yyj.tour的pk值）
+is_long_term: false（是否长期驻演，true代表是，false代表否）
+begin_date: "2023-09-21"（演出排期开始时间）
+end_date: "2023-12-17"（演出排期结束时间，如果is_long_term为true，则此项作废）
+stage: 15（该日程排期的演出剧场舞台id，即yyj.stage的pk值）
+14. 获取某一日程排期下的全部演出
+https://y.saoju.net/yyj/api/schedule/{}/show/
+其中{}代表该日程排期的id，即yyj.schedule的pk值。例：https://y.saoju.net/yyj/api/schedule/701/show/
+pk: 8115
+model: "yyj.show"
+fields:
+time: "2023-10-02T11:30:00Z"（演出时间，UTC格式，换算为北京时间需+8小时）
+15. 获取某一场演出的全部卡司
+https://y.saoju.net/yyj/api/show/{}/cast/
+其中{}代表该演出的id，即yyj.show的pk值。例：https://y.saoju.net/yyj/api/show/8618/cast/
+pk: 2114（卡司信息id，即yyj.musicalcast的pk）
+model: "yyj.musicalcast"
+fields:{}（此项为空，无需包含其他信息。根据卡司信息组合，即可知道当日演出演员，并根据卡司信息对应的角色信息seq值可得角色排位。
