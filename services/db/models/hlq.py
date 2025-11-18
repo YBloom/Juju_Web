@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import JSON, Column
+from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
 from .base import HLQTicketStatus, TimeStamped
@@ -18,7 +19,10 @@ class HLQEvent(TimeStamped, SQLModel, table=True):
     start_time: Optional[datetime] = Field(default=None, index=True)
     update_time: Optional[datetime] = Field(default=None, index=True)
 
-    tickets: List["HLQTicket"] = Relationship(back_populates="event")
+    tickets: Mapped[List["HLQTicket"]] = Relationship(
+        back_populates="event",
+        sa_relationship=relationship("HLQTicket", back_populates="event"),
+    )
 
 
 class HLQTicket(TimeStamped, SQLModel, table=True):
@@ -33,4 +37,7 @@ class HLQTicket(TimeStamped, SQLModel, table=True):
     start_time: Optional[datetime] = Field(default=None)
     payload: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
 
-    event: "HLQEvent" = Relationship(back_populates="tickets")
+    event: Mapped["HLQEvent"] = Relationship(
+        back_populates="tickets",
+        sa_relationship=relationship("HLQEvent", back_populates="tickets"),
+    )

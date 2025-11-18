@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import JSON, Column
+from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
 from .base import GroupType, SoftDelete, TimeStamped, utcnow
@@ -16,7 +17,10 @@ class Group(TimeStamped, SoftDelete, SQLModel, table=True):
     active: bool = Field(default=True, nullable=False)
     extra_json: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
 
-    members: List["Membership"] = Relationship(back_populates="group")
+    members: Mapped[List["Membership"]] = Relationship(
+        back_populates="group",
+        sa_relationship=relationship("Membership", back_populates="group"),
+    )
 
 
 class Membership(TimeStamped, SQLModel, table=True):
@@ -29,5 +33,11 @@ class Membership(TimeStamped, SQLModel, table=True):
     joined_at: Optional[datetime] = Field(default_factory=utcnow)
     receive_broadcast: bool = Field(default=True, nullable=False)
 
-    user: "User" = Relationship(back_populates="memberships")
-    group: "Group" = Relationship(back_populates="members")
+    user: Mapped["User"] = Relationship(
+        back_populates="memberships",
+        sa_relationship=relationship("User", back_populates="memberships"),
+    )
+    group: Mapped["Group"] = Relationship(
+        back_populates="members",
+        sa_relationship=relationship("Group", back_populates="members"),
+    )
