@@ -14,12 +14,13 @@ class Metric(TimeStamped, SQLModel, table=True):
     name: str = Field(index=True, max_length=128)
     value: float = Field(default=0)
     labels: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
+    labels_hash: Optional[str] = Field(default=None, index=True, max_length=64)
 
 
 class ErrorLog(TimeStamped, SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     scope: str = Field(index=True, max_length=64)
-    code: Optional[str] = Field(default=None, max_length=32)
+    code: Optional[str] = Field(default=None, max_length=32, index=True)
     message: str
     context: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
     ts: datetime = Field(default_factory=utcnow, index=True)

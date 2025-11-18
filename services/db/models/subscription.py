@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
 from .base import SubscriptionFrequency, SubscriptionTargetKind, TimeStamped
@@ -13,9 +14,18 @@ class Subscription(TimeStamped, SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(foreign_key="user.user_id", index=True)
 
-    user: "User" = Relationship(back_populates="subscriptions")
-    targets: List["SubscriptionTarget"] = Relationship(back_populates="subscription")
-    options: List["SubscriptionOption"] = Relationship(back_populates="subscription")
+    user: Mapped["User"] = Relationship(
+        back_populates="subscriptions",
+        sa_relationship=relationship("User", back_populates="subscriptions"),
+    )
+    targets: Mapped[List["SubscriptionTarget"]] = Relationship(
+        back_populates="subscription",
+        sa_relationship=relationship("SubscriptionTarget", back_populates="subscription"),
+    )
+    options: Mapped[List["SubscriptionOption"]] = Relationship(
+        back_populates="subscription",
+        sa_relationship=relationship("SubscriptionOption", back_populates="subscription"),
+    )
 
 
 class SubscriptionTarget(TimeStamped, SQLModel, table=True):
@@ -27,7 +37,10 @@ class SubscriptionTarget(TimeStamped, SQLModel, table=True):
     city_filter: Optional[str] = Field(default=None, max_length=64)
     flags: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
 
-    subscription: "Subscription" = Relationship(back_populates="targets")
+    subscription: Mapped["Subscription"] = Relationship(
+        back_populates="targets",
+        sa_relationship=relationship("Subscription", back_populates="targets"),
+    )
 
     __table_args__ = (
         UniqueConstraint(
@@ -47,4 +60,7 @@ class SubscriptionOption(TimeStamped, SQLModel, table=True):
     allow_broadcast: bool = Field(default=True, nullable=False)
     last_notified_at: Optional[datetime] = Field(default=None)
 
-    subscription: "Subscription" = Relationship(back_populates="options")
+    subscription: Mapped["Subscription"] = Relationship(
+        back_populates="options",
+        sa_relationship=relationship("Subscription", back_populates="options"),
+    )

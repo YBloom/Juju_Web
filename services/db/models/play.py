@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
 from .base import PlaySource, TimeStamped
@@ -16,9 +17,18 @@ class Play(TimeStamped, SQLModel, table=True):
     default_city_norm: Optional[str] = Field(default=None, index=True, max_length=64)
     note: Optional[str] = Field(default=None)
 
-    aliases: List["PlayAlias"] = Relationship(back_populates="play")
-    source_links: List["PlaySourceLink"] = Relationship(back_populates="play")
-    snapshots: List["PlaySnapshot"] = Relationship(back_populates="play")
+    aliases: Mapped[List["PlayAlias"]] = Relationship(
+        back_populates="play",
+        sa_relationship=relationship("PlayAlias", back_populates="play"),
+    )
+    source_links: Mapped[List["PlaySourceLink"]] = Relationship(
+        back_populates="play",
+        sa_relationship=relationship("PlaySourceLink", back_populates="play"),
+    )
+    snapshots: Mapped[List["PlaySnapshot"]] = Relationship(
+        back_populates="play",
+        sa_relationship=relationship("PlaySnapshot", back_populates="play"),
+    )
 
 
 class PlayAlias(TimeStamped, SQLModel, table=True):
@@ -31,7 +41,10 @@ class PlayAlias(TimeStamped, SQLModel, table=True):
     no_response_count: int = Field(default=0)
     last_used_at: Optional[datetime] = Field(default=None)
 
-    play: "Play" = Relationship(back_populates="aliases")
+    play: Mapped["Play"] = Relationship(
+        back_populates="aliases",
+        sa_relationship=relationship("Play", back_populates="aliases"),
+    )
 
     __table_args__ = (
         UniqueConstraint("play_id", "alias_norm", name="uq_play_alias_norm"),
@@ -49,7 +62,10 @@ class PlaySourceLink(TimeStamped, SQLModel, table=True):
     last_sync_at: Optional[datetime] = Field(default=None)
     payload_hash: Optional[str] = Field(default=None, max_length=64)
 
-    play: "Play" = Relationship(back_populates="source_links")
+    play: Mapped["Play"] = Relationship(
+        back_populates="source_links",
+        sa_relationship=relationship("Play", back_populates="source_links"),
+    )
 
     __table_args__ = (
         UniqueConstraint("source", "source_id", name="uq_source_link"),
@@ -65,4 +81,7 @@ class PlaySnapshot(TimeStamped, SQLModel, table=True):
     ttl_seconds: int = Field(default=0)
     stale: bool = Field(default=False)
 
-    play: "Play" = Relationship(back_populates="snapshots")
+    play: Mapped["Play"] = Relationship(
+        back_populates="snapshots",
+        sa_relationship=relationship("Play", back_populates="snapshots"),
+    )
