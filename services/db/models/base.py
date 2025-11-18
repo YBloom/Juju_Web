@@ -1,24 +1,74 @@
-# services/db/models/base.py
-from datetime import datetime
+"""Base models and enums shared across SQLModel tables."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from sqlmodel import SQLModel, Field
+
+from sqlmodel import Field, SQLModel
+
+
+def utcnow() -> datetime:
+    """Return a timezone-aware UTC timestamp.
+
+    SQLModel 默认使用 naive datetime，如果不做处理 SQLite 会混用本地时间。
+    统一调用该 helper，确保所有表都保存 UTC 时间，满足 PRD 的约束。
+    """
+
+    return datetime.now(timezone.utc)
+
 
 class TimeStamped(SQLModel, table=False):
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    """Mixin that stores creation/update timestamps in UTC."""
+
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=utcnow, nullable=False)
+
 
 class SoftDelete(SQLModel, table=False):
-    is_deleted: bool = Field(default=False)
+    """Mixin for soft-delete semantics."""
 
-# 业务枚举
+    is_deleted: bool = Field(default=False, nullable=False)
+    deleted_at: Optional[datetime] = Field(default=None, nullable=True)
+
+
 class GroupType(str, Enum):
-    BROADCAST = "broadcast"     # 广播群
-    FILTERED  = "filtered"      # 过滤群
-    PASSIVE   = "passive"       # 入驻/被动群
-    TOOL      = "tool"
+    BROADCAST = "broadcast"
+    FILTERED = "filtered"
+    PASSIVE = "passive"
+    TOOL = "tool"
 
-class ListingType(str, Enum):
-    SELL = "sell"
-    BUY  = "buy"
-    EXCHANGE = "exchange"
+
+class SubscriptionFrequency(str, Enum):
+    REALTIME = "realtime"
+    HOURLY = "hourly"
+    DAILY = "daily"
+
+
+class SubscriptionTargetKind(str, Enum):
+    PLAY = "play"
+    ACTOR = "actor"
+    EVENT = "event"
+    KEYWORD = "keyword"
+
+
+class PlaySource(str, Enum):
+    SAOJU = "saoju"
+    HULAQUAN = "hulaquan"
+    DAMAI = "damai"
+    LEGACY = "legacy"
+
+
+class HLQTicketStatus(str, Enum):
+    UNKNOWN = "unknown"
+    AVAILABLE = "available"
+    SOLD_OUT = "sold_out"
+    QUEUE = "queue"
+
+
+class SendQueueStatus(str, Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    RETRYING = "retrying"
