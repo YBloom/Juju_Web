@@ -1,17 +1,27 @@
-# services/db/models/user.py
-from typing import Optional, List
-from sqlmodel import SQLModel, Field, Relationship
+"""User table definition."""
 
-from .base import TimeStamped, SoftDelete
+from __future__ import annotations
+
+from typing import List, Optional
+
+from sqlalchemy import JSON, Column
+from sqlmodel import Field, Relationship, SQLModel
+
+from .base import SoftDelete, TimeStamped
+
 
 class User(SQLModel, TimeStamped, SoftDelete, table=True):
-    """QQ 用户。主键用 QQ 号字符串，便于对齐现网数据。"""
-    user_id: str = Field(primary_key=True)
-    nickname: Optional[str] = None
-    active: bool = Field(default=True)
-    transactions_success: int = Field(default=0, index=True)
-    trust_score: int = Field(default=0, index=True)
+    """QQ 用户模型，对应 PRD 中的 User 表。"""
 
-    # 关系（可选，轻度使用，避免过度 join）
+    user_id: str = Field(primary_key=True, max_length=32)
+    nickname: Optional[str] = Field(default=None, max_length=128)
+    active: bool = Field(default=True, nullable=False)
+    transactions_success: int = Field(default=0, nullable=False, index=True)
+    trust_score: int = Field(default=0, nullable=False, index=True)
+    extra_json: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+
     memberships: List["Membership"] = Relationship(back_populates="user")
     subscriptions: List["Subscription"] = Relationship(back_populates="user")

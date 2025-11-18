@@ -1,9 +1,16 @@
-from sqlmodel import SQLModel, create_engine
-from .models import User, Subscription
+"""Initialize database schema."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from sqlmodel import SQLModel
+
+from .connection import get_engine
+from .models import *  # noqa: F401,F403
 
 
-engine = create_engine("sqlite:///data/musicalbot.db", echo=False)
-
-
-def init_db():
+def init_db(db_path: Optional[str] = None):
+    engine = get_engine(db_path)
     SQLModel.metadata.create_all(engine)
+    return engine
