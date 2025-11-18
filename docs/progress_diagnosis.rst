@@ -2,40 +2,50 @@
 
 > 依据 `PRD v0.5` 的目标，对代码库的现状进行横向比对，方便后续排期。
 
+## 0. 重构进度表
+
+| 模块 | 状态 | 最新进展 | 下一步 |
+| --- | --- | --- | --- |
+| 数据模型 & 连接 | ✅ 基础结构已补齐 | `services/db/models/` 覆盖 User/Group/Subscription/Play/PlayAlias/PlaySourceLink/PlaySnapshot/HLQEvent/HLQTicket/Metric/ErrorLog/SendQueue，`base.py` 统一 `utcnow`/枚举/软删，`connection.py` 默认 WAL + `check_same_thread=False`，`init_db` 一次性建表。 | 为 service 层提供统一的数据访问封装，补齐 `updated_at` 自动更新钩子以及必要索引。 |
+| JSON → SQLite 迁移 | ⚠️ 初版导入脚本可用 | `scripts/import_v0_json.py` 支持导入用户/群组/订阅/别名/跨源映射，提供 `--dry-run` 便于验收，但暂未覆盖 HLQ 快照、票务与指标。 | 扩展到 HLQ/快照/日志，加入校验/回滚策略与导入报告。 |
+| Service / Compat | ❌ 未落地 | 插件仍直接依赖 JSON DataManager，无独立 Service/Compat 包。 | 拆分 `services/user|subscription|alias|play` 并提供 Compat 代理，让主插件优先切换读取路径。 |
+| 呼啦圈链路 | ❌ 未落地 | 仍停留在 DataManager 的同步命令，尚无轮询器/事件/快照管理。 | 构建轮询任务、事件总线与快照管理器，并落地 `PlaySnapshot`/`HLQ*` 的读写流程。 |
+| 稳定性与运维 | ⚠️ 零散组件 | `services/system` 仅含网络探测/降级 helper，NapCat 自愈、维护模式、分级日志/告警尚未实现。 | 补齐 NapCat 健康检查、自愈脚本、`logs/*.log` 目录与 `scripts/verify_logs.py`。 |
+| 测试与验收 | ❌ 未搭建 | `tests/` 仍只有爬虫 demo，缺少 CRUD/导入/HLQ 流程测试与压测脚本。 | 引入 pytest + 最低限度的数据层/导入单测及轮询压测脚本，纳入 CI。 |
+
 ## 1. 数据与模型层
 
-- 仅存在 `User`、`Group`/`Membership` 与 `Subscription` 三类 SQLModel，尚未覆盖别名、剧目、跨源映射、快照、呼啦圈最小镜像等模型；`init_db` 也只导入了 `User` 和 `Subscription`，意味着迁移脚本及其余表结构尚未落地。参见 `services/db/models/*.py` 以及 `services/db/init.py`。
-- `services/db/connection.py` 仍直接返回 `sqlite3.connect`，未按照 PRD 约定配置 `SQLModel` 会话、WAL、`check_same_thread=False` 等参数，也没有统一的 `SessionLocal`/`engine` 管理。
-- 仓库内不存在 `scripts/` 目录、`.env` 示例或任何 `import_v0_json.py`，因此历史 JSON -> SQLite 的迁移链路尚未启动。
+- SQLModel 结构现已覆盖 PRD v0.5 所需的主要实体：`services/db/models/` 下新增 Play、Alias、SourceLink、Snapshot、HLQEvent/HLQTicket 以及 Metrics/ErrorLog/SendQueue，统一使用 `utcnow()` 与 mixin 管理 `created_at/updated_at`、软删标记等字段。
+- `services/db/connection.py` 改为以 SQLModel `create_engine` 提供单例 engine/session，默认配置 `journal_mode=WAL`、`synchronous=NORMAL` 与 `check_same_thread=False`，满足 2C2G 服务器的并发与可靠性要求。
+- `scripts/import_v0_json.py` 可以把 `UsersManager.json` 与 `alias.json` 中的用户、群组、订阅、别名及 Legacy PlaySourceLink 导入 SQLite，支持 `--dry-run` 供预检查；但旧体系中的 HLQ 数据、统计指标与错误日志仍未迁移，需要在下一阶段补齐。
 
 ## 2. 服务层与兼容层
 
-- `services/` 目录只有 `crawler/`、`db/`、`system/` 三个子模块，没有 `user/`、`subscription/`、`group/`、`alias/`、`play/` 等服务实现，更没有 `compat/` 适配层。插件仍然通过 JSON DataManager 直接读写数据。参见 `plugins/Hulaquan/data_managers.py`。
-- `plugins/Hulaquan/main.py` 内所有命令依旧依赖 `UsersManager`、`HulaquanDataManager` 等旧式 JSON 文件，尚未解耦 IO，也没有调用任何 service API。
+- `services/` 目录依旧只有 `crawler/`、`db/`、`system/`，尚无 `user/`、`subscription/`、`alias/`、`play/` 等 Service 模块，也没有 `compat/` 适配层。`plugins/Hulaquan/data_managers.py` 仍然直接暴露 JSON DataManager 单例。
+- `plugins/Hulaquan/main.py`、`plugins/AdminPlugin/main.py` 等入口仍手动实例化 `UsersManager`/`HulaquanDataManager`，插件业务尚未解耦 IO 或引入新的服务接口。
 
 ## 3. 呼啦圈轮询 / 事件 / 快照链路
 
-- 目前仍是插件内部的同步命令逻辑：`StatsDataManager`/`HulaquanDataManager` 手动管理 repo、关注、错误报告等结构，没有单独的轮询器、事件总线或快照表。也未见 `PlaySnapshot`、`HLQEvent`/`HLQTicket` 等模型或监听器。
-- `services/crawler/` 虽然已经实现了 `AdvancedCrawlerClient`、连接池、熔断/健康探测，但这些能力尚未与呼啦圈数据流整合，未形成“轮询 → 变更写库 → 事件 → 快照”闭环。
+- 呼啦圈仍依赖 `StatsDataManager`/`HulaquanDataManager` 在命令执行时同步访问网络，既没有独立轮询器也没有事件机制或快照表写入，无法利用新建的 `HLQEvent`、`HLQTicket`、`PlaySnapshot`。
+- `services/crawler/` 的连接池、熔断、健康探测尚未与 HLQ 业务链路整合，仍缺乏“轮询 → 变更写库 → 事件 → 快照”闭环。
 
 ## 4. 稳定性与可观测性
 
-- 已实现 `services/system/network_health.py`、`error_protection.py`、`degradation.py` 等单体组件，但 NapCat 健康检查、自愈脚本、维护模式开关、分级日志目录 (`logs/framework.log` 等) 仍未出现。`main.py` 仍是最初的 NapCat 启动逻辑。
-- 没有看到 `logs/` 目录、统一日志格式或告警脚本（如 `scripts/verify_logs.py`）。
+- 除 `services/system/network_health.py`、`error_protection.py`、`degradation.py` 外，没有 NapCat 健康检查、自愈脚本、维护模式开关，也没有 PRD 要求的 `logs/{framework,network,db,plugin,health_check}.log` 目录。
+- `Metric`/`ErrorLog`/`SendQueue` 虽已存在表结构，但尚无写入管道或监控脚本，`scripts/verify_logs.py` 也未实现。
 
 ## 5. 测试与验收
 
-- `tests/` 目录只有 `tests/crawler/test_client.py`/`test_server.py` 等与爬虫相关的 benchmark/demo，尚无任何围绕 CRUD、别名解析、HLQ 流程或系统恢复的单测/压测脚本。
-- 也没有 `pytest`/`tox` 配置或 CI 入口，尚无法验证 PRD 提到的 CRUD 覆盖率与轮询压测。
+- `tests/` 依旧只包含 `tests/crawler` demo，未覆盖 CRUD、别名解析、HLQ 轮询链路或导入脚本；缺少 pytest/CI 配置，无法验证 PRD 所需的回归集。
 
 ## 6. 汇总结论
 
-| PRD 模块 | 当前状态 | 诊断 |
+| PRD 模块 | 当前状态 | 下一步 |
 | --- | --- | --- |
-| 数据模型 | 仅完成用户/群/订阅雏形 | 需要补齐 10+ 张表、迁移脚本、UTC 统一策略 |
-| 服务层 & compat | 未落地 | 插件仍强耦合 JSON，需要服务 API 与适配器 | 
-| 呼啦圈链路 | 未落地 | 只有旧 DataManager，缺少轮询/事件/快照 | 
-| 稳定性/运维 | 部分工具 | 无 NapCat 自愈、维护模式、独立日志 | 
-| 测试 | 仅有爬虫 demo | CRUD/集成/压测均未搭建 |
+| 数据模型 | ✅ SQLModel 全量建表 + WAL/UTC 统一策略；`import_v0_json.py` 已能迁移用户/别名核心数据。 | 扩展迁移脚本并输出 service 访问封装，保障插件可读写新表。 |
+| 服务层 & compat | ❌ 未落地。 | 创建 service/compat 包，将插件从 JSON 管理器迁移至 service API。 |
+| 呼啦圈链路 | ❌ 未落地。 | 落地轮询 → 事件 → 快照全链路，并接入新建的 HLQ/PlaySnapshot 表。 |
+| 稳定性/运维 | ⚠️ 零散组件。 | 实现 NapCat 健康检查、自愈、维护模式、分级日志与 `scripts/verify_logs.py`。 |
+| 测试 | ❌ 未搭建。 | 引入 CRUD/导入/HLQ 流程单元测试与压测脚本，纳入 CI。 |
 
-> 结论：截至当前提交，PRD v0.5 的核心重构尚处于“模型雏形 + 部分通用组件”阶段，尚未对旧插件/数据路径产生实质替换。建议优先完成：① 补齐 SQLModel + 迁移脚本；② 构建 service/compat 并让主插件只依赖 service；③ 实现 HLQ 轮询→事件→快照链路；④ 加入 NapCat 健康监控、自愈和日志分流；⑤ 补上 CRUD 单测与回归脚本。
+> 结论：数据库与迁移脚手架已就绪，但 service/compat、HLQ 事件链路、稳定性、测试体系仍待实现。下一阶段应聚焦“把插件流量切到 service 层”与“打通 HLQ 轮询链路”，随后在此基础上补齐可观测性与测试脚本。
