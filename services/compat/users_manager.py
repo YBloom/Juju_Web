@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import select
 
-from services.db.models import Group, User
+from services.db.models import Group, ManagerMetadata, User
 
 from .context import CompatContext, get_default_context
 from .utils import ensure_str, format_legacy_timestamp
@@ -67,6 +67,7 @@ class UsersManagerCompat:
             )
             users = [self._serialize_user(row) for row in session.exec(users_stmt).all()]
             groups = [self._serialize_group(row) for row in session.exec(groups_stmt).all()]
+            metadata = self._load_metadata(session, ("ops_list", "todays_likes"))
 
         users_dict = {user_id: payload for user_id, payload in users}
         groups_dict = {group_id: payload for group_id, payload in groups}
@@ -75,6 +76,8 @@ class UsersManagerCompat:
             "users_list": sorted(users_dict.keys()),
             "groups": groups_dict,
             "groups_list": sorted(groups_dict.keys()),
+            "ops_list": metadata.get("ops_list", []),
+            "todays_likes": metadata.get("todays_likes", []),
         }
 
     # ------------------------------------------------------------------
@@ -100,3 +103,13 @@ class UsersManagerCompat:
         payload.setdefault("create_time", format_legacy_timestamp(group.created_at))
         payload.setdefault("attention_to_hulaquan", payload.get("attention_to_hulaquan", 0))
         return group.group_id, payload
+
+    def _load_metadata(self, session, keys) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
+        for key in keys:
+            entry = session.get(ManagerMetadata, key)
+            if entry and entry.payload is not None:
+                result[key] = entry.payload
+            else:
+                result[key] = []
+        return result

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import json
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -59,6 +60,8 @@ def test_users_manager_roundtrip(compat_context: CompatContext, legacy_users_pay
     assert exported["groups"] == legacy_users_payload["groups"]
     assert sorted(exported["users_list"]) == sorted(legacy_users_payload["users_list"])
     assert sorted(exported["groups_list"]) == sorted(legacy_users_payload["groups_list"])
+    assert exported["ops_list"] == legacy_users_payload.get("ops_list", [])
+    assert exported["todays_likes"] == legacy_users_payload.get("todays_likes", [])
 
     sample_id = legacy_users_payload["users_list"][0]
     assert manager.get_user(sample_id) == legacy_users_payload["users"][sample_id]

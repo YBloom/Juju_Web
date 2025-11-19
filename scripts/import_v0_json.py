@@ -24,6 +24,7 @@ from sqlmodel import Session, select
 from services.db.init import init_db
 from services.db.models import (
     Group,
+    ManagerMetadata,
     Play,
     PlayAlias,
     PlaySource,
@@ -112,6 +113,8 @@ class LegacyImporter:
         users = payload.get("users", {})
         groups = payload.get("groups", {})
         subscribe_defaults = payload.get("subscribe", {})
+        self._upsert_metadata("ops_list", payload.get("ops_list", []))
+        self._upsert_metadata("todays_likes", payload.get("todays_likes", []))
 
         for user_id in payload.get("users_list", users.keys()):
             record = users.get(str(user_id), {})
@@ -165,6 +168,14 @@ class LegacyImporter:
             SubscriptionTargetKind.ACTOR,
         )
         return created
+
+    def _upsert_metadata(self, key: str, value: Any) -> None:
+        entry = self.session.get(ManagerMetadata, key)
+        if entry:
+            entry.payload = value
+            self.session.add(entry)
+        else:
+            self.session.add(ManagerMetadata(key=key, payload=value))
 
     def _import_subscription_list(
         self,

@@ -13,6 +13,7 @@ from .base import (
 )
 from .group import Group, Membership
 from .hlq import HLQEvent, HLQTicket
+from .metadata import ManagerMetadata
 from .observability import ErrorLog, Metric, SendQueue
 from .play import Play, PlayAlias, PlaySnapshot, PlaySourceLink
 from .subscription import Subscription, SubscriptionOption, SubscriptionTarget
@@ -24,6 +25,7 @@ __all__ = [
     "GroupType",
     "HLQEvent",
     "HLQTicket",
+    "ManagerMetadata",
     "Metric",
     "Membership",
     "Play",
