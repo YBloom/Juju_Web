@@ -20,3 +20,6 @@ Pillow>=10.0.0,<11.0.0  # 用于生成帮助文档图片
 notion-client>=2.0.0,<3.0.0  # Notion API Python SDK，用于自动同步帮助文档
 
 sqlmodel
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic-settings>=2.0.0

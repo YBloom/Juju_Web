@@ -19,14 +19,13 @@ from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 from ncatbot.utils.logger import get_log
 
-from services.compat import CompatContext
+from services.compat import CompatContext, get_default_context
 
 from .Exceptions import RequestTimeoutException
 from plugins.Hulaquan.data_managers import (
     Saoju,
     Stats,
     Alias,
-    Hlq,
     User,
     save_all,
     use_compat_context,
@@ -187,7 +186,6 @@ class Hulaquan(BasePlugin):
         self._hulaquan_announcer_task = None
         self._hulaquan_announcer_interval = 120
         self._hulaquan_announcer_running = False
-        self.register_hulaquan_announcement_tasks()
         self.register_hlq_query()
         self.start_hulaquan_announcer(self.data["config"].get("scheduled_task_time"))
         asyncio.create_task(User.update_friends_list(self))
@@ -700,40 +698,6 @@ class Hulaquan(BasePlugin):
             messages[-1][0] = f"{'|'.join(stats_ps)}提醒：\n" + messages[-1][0]
         return messages
         
-    def register_pending_tickets_announcer(self):
-        for valid_from, events in Hlq.data["pending_events"].items():
-            if not valid_from or valid_from == "NG":
-                continue
-            for eid, text in events.items():
-                eid = str(eid)
-                job_id = f"{valid_from}_{eid}"
-                _exist = self._time_task_scheduler.get_job_status(job_id)
-                if _exist:
-                    continue
-                valid_date = standardize_datetime(valid_from, False)
-                valid_date = dateTimeToStr(valid_date - timedelta(minutes=30))
-                self.add_scheduled_task(
-                    job_func=self.on_pending_tickets_announcer,
-                    name=job_id,
-                    interval=valid_from,
-                    kwargs={"eid":eid, "message":text, "valid_from":valid_from},
-                    max_runs=1,
-                )
-    
-    @user_command_wrapper("pending_announcer")
-    async def on_pending_tickets_announcer(self, eid:str, message: str, valid_from:str):
-        message = f"【即将开票】呼啦圈开票提醒：\n{message}"
-        for user_id, user in User.users().items():
-            mode = user.get("attention_to_hulaquan")
-            if mode == "1" or mode == "2":
-                await self.api.post_private_msg(user_id, message)
-        for group_id, group in User.groups().items():
-            mode = group.get("attention_to_hulaquan")
-            if mode == "1" or mode == "2":
-                await self.api.post_group_msg(group_id, message)
-        del Hlq.data["pending_events"][valid_from][eid]
-        if len(Hlq.data["pending_events"][valid_from]) == 0:
-            del Hlq.data["pending_events"][valid_from]
             
     @user_command_wrapper("switch_mode")
     async def on_switch_scheduled_check_task(self, msg: BaseMessage, group_switch_verify=False):
@@ -1067,8 +1031,6 @@ class Hulaquan(BasePlugin):
 
     @user_command_wrapper("auto_save")
     async def save_data_managers(self, msg=None, on_close=False):
-        while Hlq.updating:
-            await asyncio.sleep(0.1)
         success = await save_all(on_close)
         status = "成功" if success else "失败"
             

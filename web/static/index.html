@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MusicalBot Web</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>HULAQUAN WEB</h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-target="tab-search">Search /hlq</button>
+        <button class="tab-btn" data-target="tab-date">Date /date</button>
+        <button class="tab-btn" data-target="tab-cocast">Co-Cast /同场</button>
+    </div>
+
+    <!-- Search Tab -->
+    <div id="tab-search" class="tab-content active">
+        <div class="input-group">
+            <input type="text" id="search-input" placeholder="Enter event name or alias..." onkeydown="if(event.key==='Enter') doSearch()">
+            <button class="action-btn" onclick="doSearch()">GO</button>
+        </div>
+        <div id="search-results"></div>
+    </div>
+
+    <!-- Date Tab -->
+    <div id="tab-date" class="tab-content">
+        <div class="input-group">
+            <input type="date" id="date-input" onchange="doDateSearch()">
+            <button class="action-btn" onclick="doDateSearch()">GO</button>
+        </div>
+        <div id="date-results"></div>
+    </div>
+
+    <!-- Co-Cast Tab -->
+    <div id="tab-cocast" class="tab-content">
+        <div class="input-group">
+            <input type="text" id="cast-input" placeholder="Visual, 郑棋元 (comma separated)" onkeydown="if(event.key==='Enter') doCoCastSearch()">
+            <button class="action-btn" onclick="doCoCastSearch()">GO</button>
+        </div>
+        <div id="cast-results"></div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

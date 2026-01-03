@@ -463,3 +463,57 @@ class HulaquanService:
                 return event.id, event.title
                 
             return None
+    async def search_co_casts(self, cast_names: List[str]) -> List[TicketInfo]:
+        """
+        Find tickets where ALL specified casts are performing together.
+        """
+        if not cast_names:
+            return []
+            
+        with session_scope() as session:
+            # Find tickets for each cast
+            ticket_sets = []
+            for cast_name in cast_names:
+                stmt = select(TicketCastAssociation.ticket_id).join(HulaquanCast).where(HulaquanCast.name == cast_name)
+                tids = set(session.exec(stmt).all())
+                ticket_sets.append(tids)
+            
+            if not ticket_sets:
+                return []
+                
+            # Intersect to find common tickets
+            common_tids = set.intersection(*ticket_sets)
+            if not common_tids:
+                return []
+            
+            # Fetch ticket details
+            result = []
+            for tid in sorted(list(common_tids)):
+                t = session.get(HulaquanTicket, tid)
+                if not t: continue
+                
+                # Fetch cast info (can be optimized with eager loading, but this is fine for now)
+                cast_infos = []
+                stmt_c = (
+                    select(HulaquanCast, TicketCastAssociation.role)
+                    .join(TicketCastAssociation)
+                    .where(TicketCastAssociation.ticket_id == t.id)
+                )
+                cast_results = session.exec(stmt_c).all()
+                for c_obj, role in cast_results:
+                    cast_infos.append(CastInfo(name=c_obj.name, role=role))
+                
+                result.append(TicketInfo(
+                    id=t.id,
+                    title=t.title,
+                    session_time=t.session_time,
+                    price=t.price,
+                    stock=t.stock,
+                    total_ticket=t.total_ticket,
+                    city=t.city,
+                    status=t.status,
+                    valid_from=t.valid_from,
+                    cast=cast_infos
+                ))
+            
+            return result
