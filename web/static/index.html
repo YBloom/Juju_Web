@@ -1,49 +1,85 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MusicalBot Web</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
+
 <body>
     <header>
-        <h1>HULAQUAN WEB</h1>
+        <div class="header-inner">
+            <h1>HULAQUAN</h1>
+            <div class="header-search">
+                <input type="text" id="global-search" placeholder="搜索演员/主创、音乐剧、城市、剧院..."
+                    onkeydown="if(event.key==='Enter') doGlobalSearch()">
+                <button onclick="doGlobalSearch()"><i class="material-icons">search</i></button>
+            </div>
+        </div>
     </header>
 
-    <div class="tabs">
-        <button class="tab-btn active" data-target="tab-search">Search /hlq</button>
-        <button class="tab-btn" data-target="tab-date">Date /date</button>
-        <button class="tab-btn" data-target="tab-cocast">Co-Cast /同场</button>
+    <div class="nav-ribbon">
+        <button class="nav-btn active" data-target="tab-hlq" onclick="switchTab('tab-hlq')"><i
+                class="material-icons">confirmation_number</i> 呼啦圈学生票</button>
+        <button class="nav-btn" data-target="tab-date" onclick="switchTab('tab-date')"><i
+                class="material-icons">calendar_today</i> 日期查询</button>
+        <button class="nav-btn" data-target="tab-cocast" onclick="switchTab('tab-cocast')"><i
+                class="material-icons">people</i> 同场演员</button>
     </div>
 
-    <!-- Search Tab -->
-    <div id="tab-search" class="tab-content active">
-        <div class="input-group">
-            <input type="text" id="search-input" placeholder="Enter event name or alias..." onkeydown="if(event.key==='Enter') doSearch()">
-            <button class="action-btn" onclick="doSearch()">GO</button>
+    <main>
+        <!-- Hulaquan List Tab -->
+        <div id="tab-hlq" class="tab-content active">
+            <div class="toolbar">
+                <span class="toolbar-title">最新演出</span>
+                <!-- Future: Pagination or filter options -->
+            </div>
+            <div id="hlq-list-container">
+                <!-- Table will be rendered here -->
+            </div>
         </div>
-        <div id="search-results"></div>
-    </div>
 
-    <!-- Date Tab -->
-    <div id="tab-date" class="tab-content">
-        <div class="input-group">
-            <input type="date" id="date-input" onchange="doDateSearch()">
-            <button class="action-btn" onclick="doDateSearch()">GO</button>
+        <!-- Detail View (Hidden by default, overlays list) -->
+        <div id="detail-view" class="hidden">
+            <button class="back-btn" onclick="closeDetail()"><i class="material-icons">arrow_back</i> 返回列表</button>
+            <div id="detail-content"></div>
         </div>
-        <div id="date-results"></div>
-    </div>
 
-    <!-- Co-Cast Tab -->
-    <div id="tab-cocast" class="tab-content">
-        <div class="input-group">
-            <input type="text" id="cast-input" placeholder="Visual, 郑棋元 (comma separated)" onkeydown="if(event.key==='Enter') doCoCastSearch()">
-            <button class="action-btn" onclick="doCoCastSearch()">GO</button>
+        <!-- Date Tab -->
+        <div id="tab-date" class="tab-content">
+            <div class="input-panel">
+                <label>选择日期：</label>
+                <input type="date" id="date-input" onchange="doDateSearch()">
+            </div>
+            <div id="date-results"></div>
         </div>
-        <div id="cast-results"></div>
-    </div>
+
+        <!-- Co-Cast Tab -->
+        <div id="tab-cocast" class="tab-content">
+            <div class="cocast-panel">
+                <h3>同场卡司查询</h3>
+                <div id="cocast-inputs">
+                    <div class="input-row">
+                        <input type="text" class="cast-name-input" placeholder="输入演员姓名 (如: 郑棋元)">
+                    </div>
+                    <div class="input-row">
+                        <input type="text" class="cast-name-input" placeholder="输入演员姓名 (如: 徐均朔)">
+                    </div>
+                </div>
+                <div class="cocast-actions">
+                    <button class="add-input-btn" onclick="addCastInput()"><i class="material-icons">add</i>
+                        添加演员</button>
+                    <button class="search-btn" onclick="doCoCastSearch()">查询同台场次</button>
+                </div>
+            </div>
+            <div id="cast-results"></div>
+        </div>
+    </main>
 
     <script src="/static/js/app.js"></script>
 </body>
+
 </html>

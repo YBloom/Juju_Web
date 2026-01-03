@@ -54,6 +54,53 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # --- API Endpoints ---
 
+@app.get("/api/events/list")
+async def list_all_events():
+    """Get all events for the main listing."""
+    events = await service.get_all_events()
+    # Pydantic v2 uses model_dump. SQLModel objects should support it.
+    # We explicitly convert to dict to ensure serialization works as expected.
+    results = []
+    for e in events:
+        try:
+            # Try model_dump (Pydantic v2)
+            d = e.model_dump(exclude={"tickets"})
+        except AttributeError:
+            # Fallback for older Pydantic/SQLModel
+            d = e.dict(exclude={"tickets"})
+        results.append(d)
+        
+    return {"results": results}
+
+@app.get("/api/events/{event_id}")
+async def get_event_detail(event_id: str):
+    """Get full details for a specific event."""
+    # We reuse search logic or get direct
+    # Since we don't have direct request by ID in service yet exposed cleanly for "get one event object",
+    # we can use get_event_id_by_name if we knew the name, or iterate list.
+    # Let's add specific logic or use existing DB session.
+    # Service implementation detail:
+    from sqlmodel import select
+    from services.hulaquan.tables import HulaquanEvent
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        event = session.get(HulaquanEvent, event_id)
+        if not event:
+            return {"error": "Event not found"}
+        
+        # Manually construct to include tickets logic same as search_events result
+        # Or better: call service.search_events with exact title
+        # But title might be duplicate? ID is safer.
+        # Let's use the formatting logic from service.search_events but for single ID.
+        pass
+        
+    # Better approach: update Service to have get_event_by_id
+    # For now, let's just do search by title from the ID... wait, ID is safer.
+    # Let's just return what we can find. Or easier:
+    # use service.search_events(event.title)
+    return {"results": await service.get_event_details_by_id(event_id)}
+
 @app.get("/api/events/search")
 async def search_events(q: str):
     """Search events by title or alias."""

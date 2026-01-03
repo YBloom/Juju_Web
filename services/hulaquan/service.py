@@ -463,6 +463,50 @@ class HulaquanService:
                 return event.id, event.title
                 
             return None
+    async def get_event_details_by_id(self, event_id: str) -> List[EventInfo]:
+        """Get full details for a single event by ID."""
+        with session_scope() as session:
+            event = session.get(HulaquanEvent, event_id)
+            if not event:
+                return []
+            
+            # Reuse logic from search_events for ticket processing
+            tickets = []
+            for t in event.tickets:
+                if t.status == "expired": continue
+                
+                # Fetch cast info
+                cast_infos = []
+                stmt_c = (
+                    select(HulaquanCast, TicketCastAssociation.role)
+                    .join(TicketCastAssociation)
+                    .where(TicketCastAssociation.ticket_id == t.id)
+                )
+                cast_results = session.exec(stmt_c).all()
+                for c_obj, role in cast_results:
+                    cast_infos.append(CastInfo(name=c_obj.name, role=role))
+
+                tickets.append(TicketInfo(
+                    id=t.id,
+                    title=t.title,
+                    session_time=t.session_time,
+                    price=t.price,
+                    stock=t.stock,
+                    total_ticket=t.total_ticket,
+                    city=t.city,
+                    status=t.status,
+                    valid_from=t.valid_from,
+                    cast=cast_infos
+                ))
+            
+            return [EventInfo(
+                id=event.id,
+                title=event.title,
+                location=event.location,
+                update_time=event.updated_at,
+                tickets=tickets
+            )]
+
     async def search_co_casts(self, cast_names: List[str]) -> List[TicketInfo]:
         """
         Find tickets where ALL specified casts are performing together.
