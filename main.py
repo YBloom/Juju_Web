@@ -31,6 +31,7 @@ if __name__ == "__main__":
     #config.set_ws_token("ncatbot_ws_token")
 
     # Optimize NapCat OB11 configs without modifying dependencies
+    # 优化 NapCat OB11 配置，无需修改依赖项
     try:
         from ncatbot.adapter.nc.install import get_napcat_dir
         import json, os
@@ -54,6 +55,7 @@ if __name__ == "__main__":
             except Exception:
                 pass
             # Enable file logging
+            # 启用文件日志记录
             try:
                 napcat_json = os.path.join(napcat_dir, "config", "napcat.json")
                 if os.path.exists(napcat_json):
@@ -69,6 +71,7 @@ if __name__ == "__main__":
 
         nc_start.config_napcat = _patched_config_napcat
         # Apply once immediately to avoid relying on internal calls
+        # 立即应用一次，避免依赖内部调用
         _patched_config_napcat()
     except Exception:
         pass

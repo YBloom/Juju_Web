@@ -30,7 +30,9 @@ class TicketUpdate(BaseModel):
     event_id: str
     event_title: str
     change_type: str # new, restock, sold_out, etc.
+    # new, restock, sold_out 等
     message: str # Pre-formatted short message for now
+    # 目前为预格式化的短消息
     
 class SearchResult(BaseModel):
     events: List[EventInfo]

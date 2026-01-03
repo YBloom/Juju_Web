@@ -65,7 +65,9 @@ class HulaquanService:
             await self._session.close()
 
     async def _fetch_json(self, url: str) -> Optional[Dict]:
-        """Helper to fetch and parse JSON from API (handles BOM)."""
+        """Helper to fetch and parse JSON from API (handles BOM).
+        从 API 获取和解析 JSON 的帮助程序（处理 BOM）。
+        """
         await self._ensure_session()
         try:
             async with self._session.get(url) as response:
@@ -74,6 +76,7 @@ class HulaquanService:
                     return None
                 
                 # Read as bytes first to handle BOM properly via utf-8-sig
+                # 首先读取为字节，以便通过 utf-8-sig 正确处理 BOM
                 content = await response.read()
                 try:
                     text = content.decode('utf-8-sig')
@@ -81,6 +84,7 @@ class HulaquanService:
                 except Exception as e:
                     log.error(f"JSON decode error for {url}: {e}")
                     # Fallback
+                    # 回退
                     text = content.decode('utf-8', errors='ignore')
                     return json.loads(text)
         except Exception as e:
@@ -91,11 +95,14 @@ class HulaquanService:
     async def sync_all_data(self) -> List[TicketUpdate]:
         """
         Synchronize local database with remote API.
+        将本地数据库与远程 API 同步。
         Returns a list of detected updates (new tickets, restocks, etc.)
+        返回检测到的更新列表（新票、补货等）
         """
         log.info("Starting full Hulaquan data synchronization...")
         
         # 1. Fetch recommended events with retry logic (legacy behavior)
+        # 1. 使用重试逻辑获取推荐事件（旧有行为）
         limit = 95
         data = None
         while limit >= 10:
@@ -112,12 +119,14 @@ class HulaquanService:
             return []
 
         # Filter events by timeMark (following legacy logic)
+        # 通过 timeMark 过滤事件（沿用旧有逻辑）
         basic_infos = [e["basic_info"] for e in data["events"] if e.get("timeMark", 0) > 0]
         event_ids = [str(e["id"]) for e in basic_infos]
         
         updates = []
         
         # 2. Sequentially fetch details for each event to avoid SQLite lock issues
+        # 2. 顺序获取每个事件的详细信息以避免 SQLite 锁定问题
         for eid in event_ids:
             try:
                 res = await self._sync_event_details(eid)
@@ -131,7 +140,9 @@ class HulaquanService:
         return updates
 
     async def _sync_event_details(self, event_id: str) -> List[TicketUpdate]:
-        """Fetch and sync a single event's details and tickets."""
+        """Fetch and sync a single event's details and tickets.
+        获取并同步单个事件的详细信息和票据。
+        """
         async with self._semaphore:
             detail_url = f"{self.BASE_URL}/event/getEventDetails.html?id={event_id}"
             data = await self._fetch_json(detail_url)
@@ -141,6 +152,7 @@ class HulaquanService:
         updates = []
         with session_scope() as session:
             # 1. Sync Event
+            # 1. 同步事件
             b_info = data.get("basic_info", {})
             event = session.get(HulaquanEvent, event_id)
             if not event:
@@ -154,6 +166,7 @@ class HulaquanService:
             event.updated_at = datetime.now()
             
             # 2. Sync Tickets
+            # 2. 同步票据
             ticket_details = data.get("ticket_details", [])
             for t_data in ticket_details:
                 tid = str(t_data.get("id"))
@@ -161,6 +174,7 @@ class HulaquanService:
                     continue
                 
                 # Basic fields
+                # 基本字段
                 total_ticket = int(t_data.get("total_ticket", 0))
                 left_ticket = int(t_data.get("left_ticket_count", 0))
                 price = float(t_data.get("ticket_price", 0))
@@ -168,6 +182,7 @@ class HulaquanService:
                 title = t_data.get("title", "")
                 
                 # Skip invalid tickets (following legacy logic)
+                # 跳过无效票据（沿用旧有逻辑）
                 if not title and total_ticket == 0:
                     continue
                 if status == "expired":
@@ -186,6 +201,7 @@ class HulaquanService:
                     session.add(ticket)
                 
                 # Detect state changes for notification
+                # 检测状态更改以进行通知
                 if is_new:
                     if status == "pending":
                         updates.append(TicketUpdate(
@@ -205,6 +221,7 @@ class HulaquanService:
                         ))
                 else:
                     # Check for status change to pending
+                    # 检查状态是否更改为待处理
                     if status == "pending" and ticket.status != "pending":
                         updates.append(TicketUpdate(
                             ticket_id=tid,
@@ -231,6 +248,7 @@ class HulaquanService:
                         ))
                 
                 # Update ticket attributes
+                # 更新票据属性
                 ticket.title = title
                 ticket.stock = left_ticket
                 ticket.total_ticket = total_ticket
@@ -240,13 +258,16 @@ class HulaquanService:
                 ticket.session_time = self._parse_api_date(t_data.get("start_time"))
                 
                 # Extract city if not present
+                # 如果不存在，则提取城市
                 if not ticket.city:
                     info = extract_title_info(title)
                     ticket.city = info.get("city")
 
                 # 3. Sync Casts (Enrichment)
+                # 3. 同步演员阵容（丰富数据）
                 if not ticket.cast_members and ticket.session_time:
                     # Search name from title brackets
+                    # 从标题括号中搜索名称
                     search_name = extract_text_in_brackets(event.title, keep_brackets=False)
                     cast_data = await self._saoju.get_cast_for_show(
                         search_name, 
@@ -260,6 +281,7 @@ class HulaquanService:
                         if not artist_name: continue
                         
                         # Get or create Cast
+                        # 获取或创建演员
                         stmt = select(HulaquanCast).where(HulaquanCast.name == artist_name)
                         cast_obj = session.exec(stmt).first()
                         if not cast_obj:
@@ -268,6 +290,7 @@ class HulaquanService:
                             session.flush()
                         
                         # Link with role
+                        # 与角色关联
                         assoc = TicketCastAssociation(
                             ticket_id=tid,
                             cast_id=cast_obj.id,
@@ -287,7 +310,9 @@ class HulaquanService:
             return None
 
     async def search_events(self, query: str) -> List[EventInfo]:
-        """Search events by title query (case-insensitive)."""
+        """Search events by title query (case-insensitive).
+        按标题查询搜索事件（不区分大小写）。
+        """
         with session_scope() as session:
             statement = select(HulaquanEvent).where(HulaquanEvent.title.contains(query))
             events = session.exec(statement).all()
@@ -295,11 +320,13 @@ class HulaquanService:
             result = []
             for event in events:
                 # Load tickets
+                # 加载票据
                 tickets = []
                 for t in event.tickets:
                     if t.status == "expired": continue
                     
                     # Fetch cast info
+                    # 获取演员信息
                     cast_infos = []
                     stmt_c = (
                         select(HulaquanCast, TicketCastAssociation.role)
@@ -333,7 +360,9 @@ class HulaquanService:
             return result
 
     async def get_events_by_date(self, check_date: datetime, city: Optional[str] = None) -> List[TicketInfo]:
-        """Get tickets performing on a specific date."""
+        """Get tickets performing on a specific date.
+        获取特定日期演出的票据。
+        """
         start_of_day = check_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
         
@@ -351,6 +380,7 @@ class HulaquanService:
                 if t.status == "expired": continue
                 
                 # Fetch cast info
+                # 获取演员信息
                 cast_infos = []
                 stmt_c = (
                     select(HulaquanCast, TicketCastAssociation.role)
@@ -376,7 +406,9 @@ class HulaquanService:
             return result
 
     async def manage_subscription(self, user_id: str, target_id: str, target_type: str, mode: int):
-        """Add or update a user subscription. mode=0 means unsubscribe."""
+        """Add or update a user subscription. mode=0 means unsubscribe.
+        添加或更新用户订阅。mode=0 表示取消订阅。
+        """
         with session_scope() as session:
             statement = select(HulaquanSubscription).where(
                 HulaquanSubscription.user_id == user_id,
@@ -401,23 +433,38 @@ class HulaquanService:
             session.commit()
 
     async def get_user_subscriptions(self, user_id: str) -> List[HulaquanSubscription]:
-        """Get all subscriptions for a user."""
+        """Get all subscriptions for a user.
+        获取用户的所有订阅。
+        """
         with session_scope() as session:
             stmt = select(HulaquanSubscription).where(HulaquanSubscription.user_id == user_id)
             return session.exec(stmt).all()
 
-    async def get_all_events(self) -> List[HulaquanEvent]:
+    async def get_all_events(self) -> List[EventInfo]:
         """Get all known events."""
         with session_scope() as session:
-            return session.exec(select(HulaquanEvent)).all()
+            events = session.exec(select(HulaquanEvent)).all()
+            return [
+                EventInfo(
+                    id=e.id,
+                    title=e.title,
+                    location=e.location,
+                    update_time=e.updated_at,
+                    tickets=[]
+                ) for e in events
+            ]
 
     async def get_aliases(self) -> List[HulaquanAlias]:
-        """Get all theater aliases."""
+        """Get all theater aliases.
+        获取所有剧院别名。
+        """
         with session_scope() as session:
             return session.exec(select(HulaquanAlias)).all()
 
     async def add_alias(self, event_id: str, alias: str, search_name: Optional[str] = None):
-        """Add or update an alias for an event."""
+        """Add or update an alias for an event.
+        添加或更新事件的别名。
+        """
         with session_scope() as session:
             stmt = select(HulaquanAlias).where(HulaquanAlias.alias == alias)
             alias_obj = session.exec(stmt).first()
@@ -442,12 +489,14 @@ class HulaquanService:
         """
         with session_scope() as session:
             # 1. Exact title match
+            # 1. 精确标题匹配
             stmt = select(HulaquanEvent).where(HulaquanEvent.title == name)
             event = session.exec(stmt).first()
             if event:
                 return event.id, event.title
             
             # 2. Alias match
+            # 2. 别名匹配
             stmt_a = select(HulaquanAlias).where(HulaquanAlias.alias == name)
             alias = session.exec(stmt_a).first()
             if alias:
@@ -457,6 +506,7 @@ class HulaquanService:
                     return event.id, event.title
             
             # 3. Partial title match
+            # 3. 部分标题匹配
             stmt_p = select(HulaquanEvent).where(HulaquanEvent.title.contains(name))
             event = session.exec(stmt_p).first()
             if event:
@@ -464,13 +514,16 @@ class HulaquanService:
                 
             return None
     async def get_event_details_by_id(self, event_id: str) -> List[EventInfo]:
-        """Get full details for a single event by ID."""
+        """Get full details for a single event by ID.
+        按 ID 获取单个事件的完整详细信息。
+        """
         with session_scope() as session:
             event = session.get(HulaquanEvent, event_id)
             if not event:
                 return []
             
             # Reuse logic from search_events for ticket processing
+            # 重用 search_events 的逻辑进行票务处理
             tickets = []
             for t in event.tickets:
                 if t.status == "expired": continue
@@ -510,12 +563,14 @@ class HulaquanService:
     async def search_co_casts(self, cast_names: List[str]) -> List[TicketInfo]:
         """
         Find tickets where ALL specified casts are performing together.
+        查找所有指定演员共同演出的票据。
         """
         if not cast_names:
             return []
             
         with session_scope() as session:
             # Find tickets for each cast
+            # 查找每个演员的票据
             ticket_sets = []
             for cast_name in cast_names:
                 stmt = select(TicketCastAssociation.ticket_id).join(HulaquanCast).where(HulaquanCast.name == cast_name)
@@ -526,17 +581,20 @@ class HulaquanService:
                 return []
                 
             # Intersect to find common tickets
+            # 求交集以查找共同票据
             common_tids = set.intersection(*ticket_sets)
             if not common_tids:
                 return []
             
             # Fetch ticket details
+            # 获取票据详细信息
             result = []
             for tid in sorted(list(common_tids)):
                 t = session.get(HulaquanTicket, tid)
                 if not t: continue
                 
                 # Fetch cast info (can be optimized with eager loading, but this is fine for now)
+                # 获取演员信息（可以使用急切加载进行优化，但目前这样也可以）
                 cast_infos = []
                 stmt_c = (
                     select(HulaquanCast, TicketCastAssociation.role)

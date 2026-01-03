@@ -184,8 +184,8 @@ async function doCoCastSearch() {
     const inputs = document.querySelectorAll('.cast-name-input');
     const names = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
 
-    if (names.length < 2) {
-        alert("请至少输入两位演员姓名");
+    if (names.length === 0) {
+        alert("请至少输入一位演员姓名");
         return;
     }
 
