@@ -1,4 +1,6 @@
-"""Compat aware accessors for Hulaquan's legacy data managers."""
+"""Compat aware accessors for Hulaquan's legacy data managers.
+用于 Hulaquan 旧版数据管理器的兼容访问器。
+"""
 
 from __future__ import annotations
 
@@ -44,7 +46,9 @@ except Exception:
 
 
 def use_compat_context(context: Optional[CompatContext]) -> CompatContext:
-    """Install a compat context for module level manager references."""
+    """Install a compat context for module level manager references.
+    为模块级管理器引用安装兼容上下文。
+    """
 
     global _CURRENT_CONTEXT, User, Alias, Stats, Saoju, Hlq
     if context is None:
@@ -64,6 +68,8 @@ def current_context() -> CompatContext:
 
 
 async def save_all(on_close: bool = False) -> bool:
-    """Persist every manager tracked by the active context."""
+    """Persist every manager tracked by the active context.
+    持久化活动上下文跟踪的每个管理器。
+    """
 
     return await _CURRENT_CONTEXT.save_all(on_close)

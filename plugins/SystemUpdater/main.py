@@ -1,4 +1,6 @@
-"""System updater plugin that now consumes the compat context for auth checks."""
+"""System updater plugin that now consumes the compat context for auth checks.
+系统更新插件，现在使用兼容上下文进行权限检查。
+"""
 
 import asyncio
 import os
@@ -35,7 +37,9 @@ def _log_file(repo: Path) -> Path:
 
 
 def _is_op_safe(user_id: str, context: CompatContext | None = None) -> bool:
-    """Check admin privileges via the compat context (fallback to env vars)."""
+    """Check admin privileges via the compat context (fallback to env vars).
+    通过兼容上下文检查管理员权限（回退到环境变量）。
+    """
 
     compat = context or get_default_context()
     try:
@@ -49,11 +53,13 @@ def _is_op_safe(user_id: str, context: CompatContext | None = None) -> bool:
 
 def _parse_args(text: str) -> Tuple[bool, Optional[str]]:
     # Extract flags after prefix
+    # 提取前缀后的标志
     try:
         parts = shlex.split(text)
     except Exception:
         parts = text.split()
     # drop command token
+    # 丢弃命令本身的 token
     if parts and parts[0].startswith("/sys-update"):
         parts = parts[1:]
     napcat = False
@@ -106,6 +112,7 @@ rm -f "$STATUS_FILE" 2>/dev/null || true
                 qq_arg = f" {shlex.quote(qq)}" if qq else ""
                 body = f"""
 # NapCat mode: no git, only napcat restart then bot
+# NapCat 模式：无 git 操作，仅重启 napcat 然后重启 bot
 {{ napcat restart{qq_arg} ; }} >> {shlex.quote(str(log))} 2>&1 || echo "[WARN] napcat restart failed" >> {shlex.quote(str(log))}
 # 状态记录（napcat 执行结果无法可靠判定，这里仅标注模式）
 echo "NAPCAT_MODE" > "$STATUS_FILE"
@@ -115,6 +122,7 @@ echo "NAPCAT_MODE" > "$STATUS_FILE"
         else:
                 body = f"""
 # Normal mode: git ff-only pull main; timeout and conflicts tolerated (skip update)
+# 普通模式：git ff-only pull main；允许超时和冲突（跳过更新）
 GIT_TIMEOUT=30
 {{ git --version ; }} >> {shlex.quote(str(log))} 2>&1 || echo "[WARN] git not found" >> {shlex.quote(str(log))}
 if timeout $GIT_TIMEOUT git fetch origin >> {shlex.quote(str(log))} 2>&1 ; then

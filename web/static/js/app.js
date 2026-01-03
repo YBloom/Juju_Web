@@ -1,65 +1,155 @@
 // App State
 const state = {
-    allEvents: [], // Cache for HLQ list
-    currentTab: 'tab-hlq'
+    allEvents: [],
+    displayEvents: [], // Filtered/Sorted list
+    currentTab: 'tab-hlq',
+    // Sort Settings
+    sortField: 'city',
+    sortAsc: true,
+    // Column Visibility (Load from Storage)
+    visibleColumns: JSON.parse(localStorage.getItem('hlq_columns')) || {
+        city: true,
+        update: true,
+        title: true,
+        location: false, // Default hidden
+        price: true,
+        stock: true,
+        action: true
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial load
     initHlqTab();
+    renderColumnToggles();
 });
 
-function switchTab(tabId) {
-    state.currentTab = tabId;
+// --- Settings & Columns ---
 
-    // UI Update
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
+function renderColumnToggles() {
+    // Inject column settings UI into toolbar if not exists
+    const toolbar = document.querySelector('.toolbar');
+    if (!toolbar.querySelector('.column-config')) {
+        const div = document.createElement('div');
+        div.className = 'column-config';
+        div.style.display = 'flex';
+        div.style.gap = '10px';
+        div.style.alignItems = 'center';
 
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
+        // Define toggleable columns map
+        const cols = [
+            { id: 'city', label: '城市' },
+            { id: 'update', label: '更新时间' },
+            { id: 'title', label: '剧名' },
+            { id: 'location', label: '场馆' },
+            { id: 'stock', label: '余票' },
+            { id: 'price', label: '票价' },
+        ];
 
-    // Hide details if open
-    document.getElementById('detail-view').classList.add('hidden');
-    document.getElementById('tab-hlq').classList.remove('hidden'); // Ensure list is visible when switching back
+        let html = '<span style="font-size:0.9em;color:var(--text-secondary)">显示列: </span>';
+        cols.forEach(c => {
+            const checked = state.visibleColumns[c.id] ? 'checked' : '';
+            html += `<label style="font-size:0.85em;cursor:pointer"><input type="checkbox" onchange="toggleColumn('${c.id}')" ${checked}> ${c.label}</label>`;
+        });
 
-    if (tabId === 'tab-hlq' && state.allEvents.length === 0) {
-        initHlqTab(); // Load data if empty
+        div.innerHTML = html;
+        toolbar.appendChild(div);
     }
 }
 
-// --- Hulaquan Tab Logic ---
+function toggleColumn(colId) {
+    state.visibleColumns[colId] = !state.visibleColumns[colId];
+    localStorage.setItem('hlq_columns', JSON.stringify(state.visibleColumns));
+    renderEventTable(state.displayEvents);
+}
+
+function sortEvents(events) {
+    // Custom City Order: Shanghai > Beijing > Guangzhou > Shenzhen > Others
+    // const cityOrder = {'上海': 0, '北京': 1, '广州': 2, '深圳': 3}; 
+    // Wait, user said "Shanghai first".
+
+    return events.sort((a, b) => {
+        // First sort by City Priority
+        const cityA = getCityScore(a.city);
+        const cityB = getCityScore(b.city);
+
+        if (cityA !== cityB) {
+            return cityA - cityB;
+        }
+
+        // Then by chosen sort field (if we had clickable headers, for now default secondary sort)
+        // Default secondary sort: Update Time Descending
+        return new Date(b.update_time) - new Date(a.update_time);
+    });
+}
+
+function getCityScore(city) {
+    if (city.includes('上海')) return 0;
+    if (city.includes('北京')) return 1;
+    if (city.includes('广州')) return 2;
+    if (city.includes('深圳')) return 3;
+    if (city.includes('杭州')) return 4;
+    return 100; // Others
+}
+
+// --- Data Logic ---
 
 async function initHlqTab() {
     const container = document.getElementById('hlq-list-container');
-    container.innerHTML = '<div style="padding:20px;text-align:center">Loading events...</div>';
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:#888">正在加载演出数据...</div>';
 
     try {
         const res = await fetch('/api/events/list');
         const data = await res.json();
         state.allEvents = data.results;
-        renderEventTable(state.allEvents);
+
+        // Initial Sort & Filter
+        applyFilters();
     } catch (e) {
-        container.innerHTML = `<div style="color:red">Error loading events: ${e.message}</div>`;
+        container.innerHTML = `<div style="color:red;padding:20px;text-align:center">加载失败: ${e.message}</div>`;
     }
 }
+
+function applyFilters() {
+    // Filter
+    const q = document.getElementById('global-search').value.trim().toLowerCase();
+
+    let filtered = state.allEvents;
+    if (q) {
+        filtered = filtered.filter(e =>
+            e.title.toLowerCase().includes(q) ||
+            e.location.toLowerCase().includes(q) ||
+            e.city.includes(q)
+        );
+    }
+
+    // Sort
+    state.displayEvents = sortEvents(filtered);
+    renderEventTable(state.displayEvents);
+}
+
+// Hook global search input to live filter
+document.getElementById('global-search').addEventListener('input', applyFilters);
 
 function renderEventTable(events) {
     const container = document.getElementById('hlq-list-container');
     if (!events || events.length === 0) {
-        container.innerHTML = '<div style="padding:20px">No events found.</div>';
+        container.innerHTML = '<div style="padding:50px;text-align:center;color:#aaa">暂无符合条件的演出</div>';
         return;
     }
+
+    const col = state.visibleColumns;
 
     let html = `
         <table class="data-table">
             <thead>
                 <tr>
-                    <th width="80">城市</th>
-                    <th width="200">最新更新</th>
-                    <th>音乐剧</th>
-                    <th>演出场馆</th>
-                    <th width="100">操作</th>
+                    ${col.city ? '<th width="80">城市</th>' : ''}
+                    ${col.update ? '<th width="150">更新</th>' : ''}
+                    ${col.title ? '<th>剧目</th>' : ''}
+                    ${col.stock ? '<th width="100">总余票</th>' : ''}
+                    ${col.price ? '<th width="120">票价范围</th>' : ''}
+                    ${col.location ? '<th>场馆</th>' : ''}
+                    ${col.action ? '<th width="100">操作</th>' : ''}
                 </tr>
             </thead>
             <tbody>
@@ -67,45 +157,47 @@ function renderEventTable(events) {
 
     events.forEach(e => {
         const updateTime = e.update_time ? new Date(e.update_time).toLocaleDateString() : '-';
-        html += `
-            <tr onclick="loadEventDetail('${e.id}')">
-                <td class="city-cell">${extractCity(e.location) || '其他'}</td>
-                <td class="time-cell">${updateTime}</td>
-                <td class="title-cell">${e.title}</td>
-                <td>${e.location || '-'}</td>
-                <td><button onclick="event.stopPropagation(); loadEventDetail('${e.id}')">查看详情</button></td>
-            </tr>
-        `;
+        // HTML construction
+        html += `<tr onclick="loadEventDetail('${e.id}')">`;
+        if (col.city) html += `<td class="city-cell">${e.city}</td>`;
+        if (col.update) html += `<td class="time-cell">${updateTime}</td>`;
+        if (col.title) html += `<td class="title-cell">${e.title}</td>`;
+        if (col.stock) html += `<td>${e.total_stock}</td>`;
+        if (col.price) html += `<td>${e.price_range}</td>`;
+        if (col.location) html += `<td>${e.location || '-'}</td>`;
+        if (col.action) html += `<td><button onclick="event.stopPropagation(); loadEventDetail('${e.id}')">详情</button></td>`;
+        html += `</tr>`;
     });
 
     html += '</tbody></table>';
     container.innerHTML = html;
 }
 
-function extractCity(loc) {
-    if (!loc) return '';
-    if (loc.includes('上海')) return '上海';
-    if (loc.includes('北京')) return '北京';
-    if (loc.includes('广州')) return '广州';
-    if (loc.includes('深圳')) return '深圳';
-    return ''; // TODO: better city extraction
+// --- Detail & Other Tabs (Keep existing logic mostly, confirm variables) ---
+
+function switchTab(tabId) {
+    state.currentTab = tabId;
+
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
+
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+
+    document.getElementById('detail-view').classList.add('hidden');
+    document.getElementById('tab-hlq').classList.remove('hidden');
+
+    if (tabId === 'tab-hlq' && state.allEvents.length === 0) {
+        initHlqTab();
+    }
 }
 
-// --- Detail View Logic ---
-
 async function loadEventDetail(eventId) {
-    // Hide list, show detail
-    document.getElementById('tab-hlq').classList.remove('active'); // Hide tab content wrapper temporarily? 
-    // Actually better to keep tab active but hide list container and show detail container
-    // But structure is MAIN -> Tab Content -> List. Detail view is sibling to Tab Contents?
-    // Let's hide List Container inside tab-hlq
-
-    // Better: We defined #detail-view as sibling to tabs in HTML.
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('detail-view').classList.remove('hidden');
 
     const container = document.getElementById('detail-content');
-    container.innerHTML = 'Loading details...';
+    container.innerHTML = '<div style="padding:40px;text-align:center">加载详情中...</div>';
 
     try {
         const res = await fetch(`/api/events/${eventId}`);
@@ -122,23 +214,28 @@ async function loadEventDetail(eventId) {
 
 function closeDetail() {
     document.getElementById('detail-view').classList.add('hidden');
-    document.getElementById('tab-hlq').classList.add('active'); // Restore list view
+    // Restore tab
+    document.getElementById(state.currentTab).classList.add('active');
 }
 
 function renderDetailView(event) {
     const container = document.getElementById('detail-content');
 
-    // Render Tickets Table
     let html = `
-        <h2>${event.title}</h2>
-        <p>📍 ${event.location || 'Unknown Location'}</p>
-        <div style="margin-top:20px">
+        <div style="background:#fcfcfc; padding:20px; border-radius:10px; border:1px solid #eee; margin-bottom:20px">
+            <h2 style="margin-top:0; color:var(--primary-color)">${event.title}</h2>
+            <div style="display:flex; gap:20px; color:#666">
+                <span>📍 ${event.location || '未知场馆'}</span>
+                <span>📅 更新于: ${new Date(event.update_time).toLocaleString()}</span>
+            </div>
+        </div>
+        <div>
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th width="120">时间</th>
+                        <th width="140">时间</th>
                         <th>状态</th>
-                        <th>余票/总票</th>
+                        <th>库存</th>
                         <th>价格</th>
                         <th>卡司</th>
                     </tr>
@@ -146,14 +243,13 @@ function renderDetailView(event) {
                 <tbody>
     `;
 
-    // Sort logic
     const tickets = event.tickets.sort((a, b) => new Date(a.session_time) - new Date(b.session_time));
 
     tickets.forEach(t => {
         const timeStr = t.session_time ? new Date(t.session_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '待定';
-        const castStr = t.cast.map(c => c.name).join(' ');
+        const castStr = t.cast.map(c => c.name).join(' | ');
         const statusClass = t.stock > 0 ? 'active' : (t.status === 'pending' ? 'pending' : 'sold_out');
-        const statusText = t.status === 'pending' ? '预售/待开' : (t.stock > 0 ? '热卖中' : '缺货');
+        const statusText = t.status === 'pending' ? '预售' : (t.stock > 0 ? '热卖' : '缺货');
 
         html += `
             <tr>
@@ -170,8 +266,7 @@ function renderDetailView(event) {
     container.innerHTML = html;
 }
 
-// --- Co-Cast Logic ---
-
+// --- Co-Cast (Keep existing) ---
 function addCastInput() {
     const container = document.getElementById('cocast-inputs');
     const div = document.createElement('div');
@@ -190,7 +285,7 @@ async function doCoCastSearch() {
     }
 
     const container = document.getElementById('cast-results');
-    container.innerHTML = 'Searching...';
+    container.innerHTML = '<div style="text-align:center;padding:20px">查询中...</div>';
 
     try {
         const res = await fetch(`/api/events/co-cast?casts=${names.join(',')}`);
@@ -204,11 +299,10 @@ async function doCoCastSearch() {
 function renderCoCastResults(tickets) {
     const container = document.getElementById('cast-results');
     if (!tickets || tickets.length === 0) {
-        container.innerHTML = '<div style="padding:20px">无同台场次</div>';
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:#999">未找到同场演出</div>';
         return;
     }
 
-    // Re-use detail table logic or simplified
     let html = `
         <table class="data-table">
             <thead>
@@ -238,26 +332,8 @@ function renderCoCastResults(tickets) {
     container.innerHTML = html;
 }
 
-// Helper: Global Search
+// Global search function mainly for header call, mapped to live filter now
 async function doGlobalSearch() {
-    const q = document.getElementById('global-search').value.trim();
-    if (!q) return;
-
-    // Switch to HLQ tab to show results? Or show in a modal?
-    // Let's filter the HLQ list if loaded
-    if (state.currentTab !== 'tab-hlq') {
-        switchTab('tab-hlq');
-    }
-
-    // Assuming backend search
-    const container = document.getElementById('hlq-list-container');
-    container.innerHTML = 'Searching...';
-    const res = await fetch(`/api/events/search?q=${q}`);
-    const data = await res.json();
-
-    // Convert search results (EventInfo) into table format
-    // Search returns list of events with details tickets populated.
-    // We just want listing.
-    state.allEvents = data.results; // Override local list
-    renderEventTable(state.allEvents);
+    // Just trigger filter
+    applyFilters();
 }

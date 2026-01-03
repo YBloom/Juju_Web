@@ -5,16 +5,21 @@ from plugins.Hulaquan.main import Hulaquan
 
 async def verify_bot_logic():
     print("=== Bot Logic Verification ===")
+    print("=== Bot 逻辑验证 ===")
     
     # 1. Setup Mock Plugin
+    # 1. 设置模拟插件
     # Hulaquan needs event_bus and time_task_scheduler
+    # Hulaquan 需要 event_bus 和 time_task_scheduler
     event_bus = MagicMock()
     scheduler = MagicMock()
     plugin = Hulaquan(event_bus=event_bus, time_task_scheduler=scheduler)
     plugin.api = AsyncMock() # Mock the bot API
     
     # 2. Test Search Command
+    # 2. 测试搜索命令
     print("\n[Test 1] Mocking /hlq 连璧 search...")
+    print("\n[Test 1] 模拟 /hlq 连璧 搜索...")
     msg = MagicMock(spec=BaseMessage)
     msg.raw_message = "/hlq 连璧"
     msg.user_id = "test_user"
@@ -31,7 +36,9 @@ async def verify_bot_logic():
         print("Bot failed to reply to search.")
 
     # 3. Test Date Command
+    # 3. 测试日期命令
     print("\n[Test 2] Mocking /date 2026-01-10...")
+    print("\n[Test 2] 模拟 /date 2026-01-10...")
     msg_date = MagicMock(spec=BaseMessage)
     msg_date.raw_message = "/date 2026-01-10"
     msg_date.user_id = "test_user"

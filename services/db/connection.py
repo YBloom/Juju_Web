@@ -1,4 +1,6 @@
-"""Database engine/session helpers for SQLModel."""
+"""Database engine/session helpers for SQLModel.
+SQLModel 的数据库引擎/会话帮助程序。
+"""
 
 from __future__ import annotations
 

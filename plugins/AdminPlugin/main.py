@@ -1,9 +1,12 @@
 """Administrative commands that rely on the compat facade for state access.
+依赖兼容外观进行状态访问的管理命令。
 
 The module now consumes :class:`services.compat.CompatContext` so that unit
 tests or future service layers can inject SQLite-backed implementations.  When
 no context is provided the plugin falls back to ``get_default_context`` which
 wraps the legacy JSON ``UsersManager`` singleton.
+该模块现在使用 :class:`services.compat.CompatContext`，以便单元测试或未来的服务层可以注入 SQLite 支持的实现。
+当未提供上下文时，插件回退到封装了旧 JSON ``UsersManager`` 单例的 ``get_default_context``。
 """
 
 import os

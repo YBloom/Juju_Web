@@ -17,7 +17,9 @@ from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
 
 class SaojuDataManager(BaseDataManager):
-    """Manage Saoju data with the latest JSON APIs instead of HTML scraping."""
+    """Manage Saoju data with the latest JSON APIs instead of HTML scraping.
+    使用最新的 JSON API 而不是 HTML 抓取来管理扫剧数据。
+    """
 
     API_BASE = "https://y.saoju.net/yyj/api"
     DATE_CACHE_TTL_HOURS = 1
@@ -449,7 +451,9 @@ class SaojuDataManager(BaseDataManager):
 
 
 def search_artist_from_timetable(artist, timetable):
-    """Legacy synchronous helper used by match_artists_on_schedule."""
+    """Legacy synchronous helper used by match_artists_on_schedule.
+    match_artists_on_schedule 使用的旧同步助手。
+    """
 
     manager = SaojuDataManager()
     return manager.search_artist_from_timetable(artist, timetable)

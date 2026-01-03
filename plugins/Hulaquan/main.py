@@ -1,4 +1,5 @@
 """Hulaquan plugin entry-point.
+呼啦圈插件入口点。
 
 `Hulaquan` now retrieves its persistent state from
 ``services.compat.CompatContext``.  Production environments keep using the
@@ -8,10 +9,15 @@ the plugin constructor.  The module-level ``User``, ``Alias`` … references are
 updated through :func:`plugins.Hulaquan.data_managers.use_compat_context` so
 command handlers keep receiving the same objects regardless of how the context
 is provided.
+`Hulaquan` 现在从 ``services.compat.CompatContext`` 获取其持久状态。
+生产环境通过 :func:`get_default_context` 继续使用旧的 JSON ``DataManager`` 单例，
+而测试（以及未来的服务支持部署）可以通过插件构造函数传递自定义上下文。
+模块级 ``User``, ``Alias`` ... 引用通过 :func:`plugins.Hulaquan.data_managers.use_compat_context` 更新，
+以便命令处理程序无论上下文如何提供都能接收相同的对象。
 """
 
 from datetime import timedelta
-from typing import List
+from typing import List, Optional
 import traceback, time, asyncio, re
 import functools
 
@@ -555,9 +561,13 @@ class Hulaquan(BasePlugin):
     async def on_hulaquan_announcer(self, test=False, manual=False, announce_admin_only=False):
         """
         New Service-based Announcer.
+        新的基于服务的通知器。
         1. Sync data from API.
+        1. 从 API 同步数据。
         2. Filter updates based on subscriptions.
+        2. 根据订阅过滤更新。
         3. Format and send.
+        3. 格式化并发送。
         """
         MODE_MAP = {
             "new": 1,
