@@ -13,6 +13,7 @@ from ncatbot.plugin import BasePlugin, CompatibleEnrollment, Event
 from ncatbot.core import GroupMessage, PrivateMessage, BaseMessage
 from ncatbot.utils.logger import get_log
 
+
 from services.compat import CompatContext, get_default_context
 
 bot = CompatibleEnrollment  # 兼容回调函数注册器

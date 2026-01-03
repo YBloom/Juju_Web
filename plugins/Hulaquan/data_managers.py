@@ -16,19 +16,31 @@ from plugins.AdminPlugin.UsersManager import UsersManager
 
 log = get_log()
 
-User = UsersManager()
-Alias = AliasManager()
-Stats = StatsDataManager()
-Saoju = SaojuDataManager()
-Hlq = HulaquanDataManager()
+try:
+    User = UsersManager()
+    Alias = AliasManager()
+    Stats = StatsDataManager()
+    Saoju = SaojuDataManager()
+    Hlq = HulaquanDataManager()
+except RuntimeError:
+    # Handle cases where no event loop is running during import
+    User = None
+    Alias = None
+    Stats = None
+    Saoju = None
+    Hlq = None
 
-_CURRENT_CONTEXT = CompatContext(
-    users=User,
-    alias=Alias,
-    stats=Stats,
-    saoju=Saoju,
-    hulaquan=Hlq,
-)
+_CURRENT_CONTEXT = None
+try:
+    _CURRENT_CONTEXT = CompatContext(
+        users=User,
+        alias=Alias,
+        stats=Stats,
+        saoju=Saoju,
+        hulaquan=Hlq,
+    )
+except Exception:
+    pass
 
 
 def use_compat_context(context: Optional[CompatContext]) -> CompatContext:

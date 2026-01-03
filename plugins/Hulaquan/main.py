@@ -11,6 +11,7 @@ is provided.
 """
 
 from datetime import timedelta
+from typing import List
 import traceback, time, asyncio, re
 import functools
 
@@ -34,12 +35,26 @@ from plugins.Hulaquan.StatsDataManager import maxLatestReposCount
 from .user_func_help import *
 from .utils import parse_text_to_dict_with_mandatory_check, standardize_datetime, dateTimeToStr
 
+from services.hulaquan.service import HulaquanService
+from services.hulaquan.formatter import HulaquanFormatter
+from services.hulaquan.models import TicketInfo
+from services.hulaquan.tables import (
+    HulaquanEvent, 
+    HulaquanTicket, 
+    HulaquanSubscription,
+    HulaquanCast,
+    TicketCastAssociation,
+    HulaquanAlias
+)
+from services.db.connection import session_scope
+from sqlmodel import select
+
 bot = CompatibleEnrollment  # 兼容回调函数注册器
 
 log = get_log()
 
 
-def _install_context(context: CompatContext | None) -> CompatContext:
+def _install_context(context: Optional[CompatContext]) -> CompatContext:
     return use_compat_context(context)
 
 
@@ -92,7 +107,8 @@ def user_command_wrapper(command_name):
         def decorator(func):
             @functools.wraps(func)
             async def wrapper(this, *args, **kwargs):
-                Stats.on_command(command_name)
+                if Stats:
+                    Stats.on_command(command_name)
                 try:
                     return await func(this, *args, **kwargs)
                 except Exception as e:
@@ -128,8 +144,10 @@ class Hulaquan(BasePlugin):
         }  # 插件依赖，格式: {"插件名": "版本要求"}
 
     def __init__(self, *args, compat_context: CompatContext | None = None, **kwargs):
-        self.compat_context = _install_context(compat_context)
+        self.compat_context = compat_context or get_default_context()
         super().__init__(*args, **kwargs)
+        self.hlq_service = HulaquanService()
+        self.hlq_formatter = HulaquanFormatter()
     
     # Notion 配置
     # 方案 1：直接设置帮助文档的公开链接（推荐）
@@ -538,59 +556,91 @@ class Hulaquan(BasePlugin):
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, test=False, manual=False, announce_admin_only=False):
         """
-        用户可以选择关注ticketID、eventID
-        针对全部events/某eventID/某ticketID，有几种关注模式：
-            0 不关注
-            1 只推送上新/补票
-            2 额外关注回流票
-            3 额外关注票增/票减
-            
-        功能逻辑：
-            1.先从hlq获取所有更新数据
+        New Service-based Announcer.
+        1. Sync data from API.
+        2. Filter updates based on subscriptions.
+        3. Format and send.
         """
-        MODE = {
-            "add": 1,
+        MODE_MAP = {
             "new": 1,
-            "pending": 1,
-            "return": 2,
+            "restock": 1,
             "back": 3,
-            "sold": 3,
+            "sold_out": 3,
+            "pending": 2,
         }
-        start_time = time.time()
+        
         try:
-            result = await Hlq.compare_to_database_async()
-            event_id_to_ticket_ids = result["events"]
-            event_msgs = result["events_prefixes"]
-            PREFIXES = result["prefix"]
-            categorized = result["categorized"]
-            tickets = result['tickets']
-        except RequestTimeoutException as e:
-            raise
-        if len(categorized["new"]) >= 400:
-            log.error(f"呼啦圈数据刷新出现异常，存在{len(categorized['new'])}条数据刷新")
-            if not announce_admin_only:
-                return
-        elapsed_time = round(time.time() - start_time, 2)
-        if not announce_admin_only:
-            _users = User.users()
-        else:
-            _users = {User.admin_id: User.users()[User.admin_id]}
-        for user_id, user in _users.items():
-            messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user)
-            for i in messages:
-                m = "\n\n".join(i)
-                r = await self.api.post_private_msg(user_id, m)
-                if r['retcode'] == 1200:
-                    User.delete_user(user_id)
-                    break
-        if not announce_admin_only:
-            for group_id, group in User.groups().items():
-                messages = self.__generate_announce_text(MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, group_id, group, is_group=True)
-                for i in messages:
-                    m = "\n\n".join(i)
-                    await self.api.post_group_msg(group_id, m)
-        if len(categorized["pending"]) > 0:
-            self.register_pending_tickets_announcer()
+            async with self.hlq_service as service:
+                updates = await service.sync_all_data()
+        except Exception as e:
+            log.error(f"Announcer sync failed: {e}")
+            return False
+
+        if not updates:
+            return True
+
+        with session_scope() as session:
+            # Get all user_ids that have any subscription
+            stmt = select(HulaquanSubscription.user_id).distinct()
+            user_ids = session.exec(stmt).all()
+            
+            if announce_admin_only:
+                user_ids = [uid for uid in user_ids if uid == str(User.admin_id)]
+
+            for user_id in user_ids:
+                # Get user subscriptions
+                stmt_s = select(HulaquanSubscription).where(HulaquanSubscription.user_id == user_id)
+                subs = session.exec(stmt_s).all()
+                
+                user_updates = []
+                for u in updates:
+                    matched = False
+                    required_mode = MODE_MAP.get(u.change_type, 99)
+                    
+                    # 1. Check global sub
+                    global_sub = next((s for s in subs if s.target_type == "global"), None)
+                    if global_sub and global_sub.mode >= required_mode:
+                        matched = True
+                    
+                    # 2. Check event sub
+                    if not matched:
+                        event_sub = next((s for s in subs if s.target_type == "event" and s.target_id == u.event_id), None)
+                        if event_sub and event_sub.mode >= required_mode:
+                            matched = True
+                            
+                    # 3. Check ticket sub
+                    if not matched:
+                        ticket_sub = next((s for s in subs if s.target_type == "ticket" and s.target_id == u.ticket_id), None)
+                        if ticket_sub and ticket_sub.mode >= required_mode:
+                            matched = True
+                    
+                    # 4. Check cast (actor) sub
+                    if not matched:
+                        cast_subs = [s for s in subs if s.target_type == "cast"]
+                        if cast_subs:
+                            # Fetch ticket cast names
+                            stmt_c = (
+                                select(HulaquanCast.name)
+                                .join(TicketCastAssociation)
+                                .where(TicketCastAssociation.ticket_id == u.ticket_id)
+                            )
+                            ticket_casts = set(session.exec(stmt_c).all())
+                            for cs in cast_subs:
+                                if cs.target_id in ticket_casts and cs.mode >= required_mode:
+                                    matched = True
+                                    break
+                    
+                    if matched:
+                        user_updates.append(u)
+                
+                if user_updates:
+                    messages = self.hlq_formatter.format_updates_announcement(user_updates)
+                    for m in messages:
+                        is_group = user_id in User.groups()
+                        if is_group:
+                            await self.api.post_group_msg(user_id, m)
+                        else:
+                            await self.api.post_private_msg(user_id, m)
         return True
 
     def __generate_announce_text(self, MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user, is_group=False):
@@ -687,20 +737,17 @@ class Hulaquan(BasePlugin):
             
     @user_command_wrapper("switch_mode")
     async def on_switch_scheduled_check_task(self, msg: BaseMessage, group_switch_verify=False):
-        user_id = msg.user_id
-        group_id = None
+        user_id = str(msg.user_id)
         all_args = self.extract_args(msg)
-        query_id = msg.group_id if isinstance(msg, GroupMessage) else msg.user_id
+        query_id = str(msg.group_id) if isinstance(msg, GroupMessage) else str(msg.user_id)
         
-        # 获取当前模式
-        if isinstance(msg, GroupMessage):
-            current_user = User.groups().get(str(query_id), {})
-        else:
-            current_user = User.users().get(str(query_id), {})
+        # Get current global mode from DB
+        async with self.hlq_service as service:
+            subs = await service.get_user_subscriptions(query_id)
+            global_sub = next((s for s in subs if s.target_type == "global"), None)
+            current_mode = global_sub.mode if global_sub else 0
         
-        current_mode = current_user.get("attention_to_hulaquan", 0) if current_user else 0
-        
-        # 模式说明
+        # Description
         mode_desc = {
             0: "❌ 不接受通知",
             1: "🆕 只推送上新/补票",
@@ -708,40 +755,30 @@ class Hulaquan(BasePlugin):
             3: "🆕🔄📊 推送上新/补票/回流/增减票"
         }
         
-        # 如果没有参数，显示当前状态
+        # Show status if no args
         if not all_args["text_args"]:
             status_msg = [
                 "📊 当前呼啦圈通知状态：",
-                f"当前模式: 模式{current_mode} - {mode_desc.get(int(current_mode), '未知')}",
+                f"当前模式: 模式{current_mode} - {mode_desc.get(current_mode, '未知')}",
                 "",
                 "💡 若要设置，请使用：",
                 f"{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}"
             ]
             return await msg.reply("\n".join(status_msg))
         
-        # 验证模式参数
-        if all_args.get("text_args")[0] not in ["0", "1", "2", "3"]:
+        # Validate input
+        try:
+            mode = int(all_args.get("text_args")[0])
+            if mode not in [0, 1, 2, 3]:
+                raise ValueError()
+        except (ValueError, IndexError):
             return await msg.reply(f"请输入存在的模式（0-3）\n用法：{HLQ_SWITCH_ANNOUNCER_MODE_USAGE}")
         
-        mode = all_args.get("text_args")[0]
-        
-        # 设置模式
+        # Set mode
         if isinstance(msg, GroupMessage):
-            group_id = msg.group_id
-            if group_switch_verify and User.is_op(user_id):
-                User.switch_attention_to_hulaquan(group_id, mode, is_group=True)
-            else:
+            # Check OP for group settings if needed
+            if group_switch_verify and User and not User.is_op(user_id):
                 return await msg.reply("权限不足！需要管理员权限才能切换群聊的推送设置")
-        else:
-            User.switch_attention_to_hulaquan(user_id, mode)
-        
-        # 返回设置结果
-        if mode == "2":
-            await msg.reply("✅ 已设置为模式2\n已关注呼啦圈的上新/补票/回流通知")
-        elif mode == "1":
-            await msg.reply("✅ 已设置为模式1\n已关注呼啦圈的上新/补票通知")
-        elif mode == "3":
-            await msg.reply("✅ 已设置为模式3\n已关注呼啦圈的上新/补票/回流/增减票通知")
         elif mode == "0":
             await msg.reply("✅ 已设置为模式0\n已关闭呼啦圈上新推送")
             
@@ -759,11 +796,17 @@ class Hulaquan(BasePlugin):
             await msg.reply_text("【因数据自动刷新间隔较短，目前已不支持-R参数】")
         if isinstance(msg, PrivateMessage):
             await msg.reply_text("查询中，请稍后…")
-        pattern = r"-(\d+)"
-        extra_ids = [re.search(pattern, item).group(1) for item in args if re.search(pattern, item)]
-        extra_id = int(extra_ids[0]) if extra_ids else None
-        result = await Hlq.on_message_tickets_query(event_name, show_cast=("-c" in args), ignore_sold_out=("-i" in args), refresh=False, show_ticket_id=('-t' in args), extra_id=extra_id)
-        await msg.reply_text(result if result else "未找到相关信息，请尝试更换搜索名")
+        # Use new Service
+        async with self.hlq_service as service:
+            results = await service.search_events(event_name)
+            if not results:
+                await msg.reply_text("未找到相关信息，请尝试更换搜索名")
+                return
+            
+            # Show top 3 events (or just 1 if exact match favored)
+            for event in results[:3]:
+                output = self.hlq_formatter.format_event_search_result(event, show_id=("-t" in args))
+                await msg.reply_text(output)
         
 
     def extract_args(self, msg):
@@ -804,88 +847,58 @@ class Hulaquan(BasePlugin):
         show_others = "-o" in args["mode_args"]
         use_hulaquan = "-h" in args["mode_args"]
         
-        # -H 模式：通过扫剧查询同场，再映射到呼啦圈
+        # Priority: Search Hulaquan DB if requested
         if use_hulaquan:
-            # 1. 先用扫剧查询同场数据
-            saoju_events = await Saoju.request_co_casts_data(casts, show_others=show_others)
-            
-            if not saoju_events:
-                await msg.reply_text(f"❌ 在扫剧系统中未找到 {' '.join(casts)} 的同场演出")
-                return
-            
-            # 2. 将扫剧的剧目标题映射到呼啦圈事件ID
-            hlq_matches = []  # [(saoju_event, hlq_event_id, hlq_title)]
-            
-            for saoju_event in saoju_events:
-                saoju_title = saoju_event['title']
+            with session_scope() as session:
+                # Find tickets that have ALL requested casts
+                # This needs a subquote or multiple joins. 
+                # Simpler: find tickets for each cast and intersect.
+                ticket_sets = []
+                for cast_name in casts:
+                    stmt = select(TicketCastAssociation.ticket_id).join(HulaquanCast).where(HulaquanCast.name == cast_name)
+                    tids = set(session.exec(stmt).all())
+                    ticket_sets.append(tids)
                 
-                # 使用 extract_title_info 提取标题信息（包括城市）
-                from .utils import extract_title_info
-                title_info = extract_title_info(saoju_title)
-                clean_title = title_info['title']  # 提取《》内的标题
-                saoju_city = title_info.get('city') or saoju_event.get('city', '上海')
+                if not ticket_sets:
+                    common_tids = set()
+                else:
+                    common_tids = set.intersection(*ticket_sets)
                 
-                # 尝试用标题在呼啦圈中查找（使用别名系统）
-                search_names = Hlq.get_ordered_search_names(title=clean_title)
+                if not common_tids:
+                    await msg.reply_text(f"❌ 在呼啦圈系统中未找到 {' '.join(casts)} 的同场演出学生票")
+                    return
                 
-                hlq_event_id = None
-                hlq_title = None
-                
-                for search_name in search_names:
-                    # 尝试通过search_name获取event_id
-                    eid = Alias.get_event_id_by_name(search_name)
-                    if eid and str(eid) in Hlq.data.get('events', {}):
-                        hlq_event_id = str(eid)
-                        hlq_title = Hlq.title(event_id=hlq_event_id, keep_brackets=True)
-                        break
-                
-                # 如果别名系统找不到，尝试模糊搜索
-                if not hlq_event_id:
-                    # 使用已提取的 clean_title 进行模糊匹配
-                    for eid, event_data in Hlq.data.get('events', {}).items():
-                        event_title = event_data.get('title', '')
-                        # 提取呼啦圈标题的《》内容进行对比
-                        from .utils import extract_text_in_brackets
-                        hlq_clean_title = extract_text_in_brackets(event_title, keep_brackets=False)
+                # Fetch ticket details
+                messages = [f"【呼啦圈】{' '.join(casts)} 同场演出："]
+                for tid in sorted(list(common_tids)):
+                    ticket = session.get(HulaquanTicket, tid)
+                    if ticket:
+                        # Get all casts for this ticket for display
+                        stmt_casts = select(HulaquanCast.name).join(TicketCastAssociation).where(TicketCastAssociation.ticket_id == tid)
+                        all_casts = session.exec(stmt_casts).all()
                         
-                        if clean_title.lower() in hlq_clean_title.lower() or hlq_clean_title.lower() in clean_title.lower():
-                            hlq_event_id = str(eid)
-                            hlq_title = event_title
-                            break
+                        info = TicketInfo(
+                            id=ticket.id,
+                            event_id=ticket.event_id,
+                            title=ticket.title,
+                            price=ticket.price,
+                            stock=ticket.stock,
+                            total_ticket=ticket.total_ticket,
+                            status=ticket.status,
+                            cast=all_casts
+                        )
+                        messages.append(self.hlq_formatter.format_ticket_detail(info, show_id=True))
                 
-                if hlq_event_id:
-                    hlq_matches.append((saoju_event, hlq_event_id, hlq_title))
-            
-            if not hlq_matches:
-                await msg.reply_text(f"❌ 在扫剧中找到 {len(saoju_events)} 场演出，但均未在呼啦圈系统中找到对应学生票")
+                await msg.reply_text("\n".join(messages))
                 return
-            
-            # 3. 生成消息（与非-h格式一致）
-            messages = []
-            messages.append(" ".join(casts) + f" 同场的音乐剧演出，在呼啦圈系统中找到 {len(hlq_matches)} 场有学生票的演出。")
-            
-            for saoju_event, hlq_event_id, hlq_title in hlq_matches:
-                date_str = saoju_event['date']
-                city = saoju_event.get('city', '上海')
-                
-                # 格式化同场其他演员
-                others_str = ""
-                if show_others and 'others' in saoju_event:
-                    others_list = saoju_event['others']
-                    if isinstance(others_list, str):
-                        others_list = others_list.split()
-                    if others_list:
-                        others_str = "\n同场其他演员：" + " ".join(others_list)
-                
-                # 组装消息（格式与非-h一致）
-                msg_line = f"{date_str} {city} {hlq_title}{others_str}"
-                messages.append(msg_line)
-            
-            await msg.reply("\n".join(messages))
-        else:
-            # 原有逻辑：使用扫剧系统
+        
+        # Fallback to Saoju legacy matching
+        try:
             messages = await Saoju.match_co_casts(casts, show_others=show_others)
-            await msg.reply("\n".join(messages))
+            await msg.reply_text("\n".join(messages))
+        except Exception as e:
+            log.error(f"Saoju match_co_casts failed: {e}")
+            await msg.reply_text("查询失败，扫剧系统可能暂时不可用。")
     
        
     @user_command_wrapper("search_by_date") 
@@ -898,8 +911,15 @@ class Hulaquan(BasePlugin):
         date = args["text_args"][0]
         city = args["text_args"][1] if len(args["text_args"])>1 else None
         mode_args = args["mode_args"]
-        result = await Hlq.on_message_search_event_by_date(date, city, ignore_sold_out=("-i" in mode_args))
-        await msg.reply(result)
+        date_obj = standardize_datetime(date, False)
+        if not date_obj:
+            await msg.reply_text("【日期格式有误】以下是/date的用法\n"+HLQ_DATE_USAGE)
+            return
+
+        async with self.hlq_service as service:
+            tickets = await service.get_events_by_date(date_obj, city=city)
+            output = self.hlq_formatter.format_date_events(date_obj, tickets)
+            await msg.reply_text(output)
         
     async def on_hulaquan_announcer_manual(self, msg: BaseMessage):
         try:
@@ -1249,50 +1269,43 @@ class Hulaquan(BasePlugin):
     async def on_set_alias(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if len(args["text_args"]) < 2:
-            await msg.reply_text("用法：/alias <搜索名> <别名>")
+            await msg.reply_text("用法：/alias <剧目名> <别名>")
             return
         search_name, alias = args["text_args"][0], args["text_args"][1]
-        result = await self.get_event_id_by_name(search_name, msg)
-        if result:
-            event_id = result[0]
-            Alias.add_alias(event_id, alias)
-            Alias.add_search_name(event_id, search_name)
-            await msg.reply_text(f"已为剧目 {result[1]} 添加别名：{alias}，对应搜索名：{search_name}")
-            return
         
-    async def get_event_id_by_name(self, search_name: str, msg: BaseMessage=None, msg_prefix: str="", notFoundAndRegister=False, foundInState=False, extra_id=None):
-        # return :: (event_id, event_name) or False
-        result = await Hlq.get_event_id_by_name(search_name, None, extra_id=extra_id)
-        if not result[0]:
-            if notFoundAndRegister:
-                event_id = Stats.register_event(search_name)
-                await msg.reply_text(msg_prefix+f"未在呼啦圈系统中找到该剧目，已为您注册此剧名以支持更多功能：{search_name}")
-                return (event_id, search_name)
-            if foundInState:
-                if eid := Stats.get_event_id(search_name):
-                    return (eid, Stats.get_event_title(eid))
-            if msg:
-                await msg.reply_text(msg_prefix+(result[1] if result[1] else "未找到该剧目"))
-            return False
-        return (result[0], search_name)
+        async with self.hlq_service as service:
+            result = await service.get_event_id_by_name(search_name)
+            if result:
+                event_id, event_title = result
+                await service.add_alias(event_id, alias, search_name=search_name)
+                await msg.reply_text(f"✅ 已为剧目 《{event_title}》 添加别名：{alias}（搜索名：{search_name}）")
+            else:
+                # Fallback to Stats register if not found anywhere
+                if Stats:
+                    event_id = Stats.register_event(search_name)
+                    await service.add_alias(event_id, alias, search_name=search_name)
+                    await msg.reply_text(f"⚠️ 未在数据库找到剧目，已为您注册临时项并添加别名：{alias}")
+                else:
+                    await msg.reply_text("❌ 未找到匹配剧目且 Stats 管理器不可用。")
+        
 
     @user_command_wrapper("on_list_aliases")    
     async def on_list_aliases(self, msg: BaseMessage):
-        # 直接从 AliasManager 获取别名信息
-        alias_to_event = Alias.data.get("alias_to_event", {})
-        event_to_names = Alias.data.get("event_to_names", {})
-        events = Hlq.data.get("events", {})
-        if not alias_to_event:
-            await msg.reply_text("暂无别名记录。")
-            return
-        lines = []
-        for alias, event_id in alias_to_event.items():
-            event_name = events.get(event_id, {}).get("title", "未知剧目")
-            search_names = ", ".join(event_to_names.get(event_id, []))
-            lines.append(f"{alias}（{event_name}）: {search_names}")
-        if not lines:
-            await msg.reply_text("暂无别名记录。")
-        else:
+        async with self.hlq_service as service:
+            aliases = await service.get_aliases()
+            if not aliases:
+                return await msg.reply_text("暂无别名记录。")
+            
+            # Fetch events for titles
+            events = await service.get_all_events()
+            id_to_title = {e.id: e.title for e in events}
+            
+            lines = []
+            for a in aliases:
+                title = id_to_title.get(a.event_id, "未知剧目")
+                names = a.search_names or "无"
+                lines.append(f"🔹 {a.alias} ({title}) -> 搜索名: {names}")
+            
             await msg.reply_text("当前别名列表：\n" + "\n".join(lines))
     
     @user_command_wrapper("new_repo")    
@@ -1314,9 +1327,13 @@ class Hulaquan(BasePlugin):
         payable = match["payable"]
         
         print(f"{user_id}上传了一份repo：剧名: {title}\n日期: {date}\n座位: {seat}\n价格: {price}\n描述: {content}\n")
-        result = await self.get_event_id_by_name(title, msg, notFoundAndRegister=True)
-        event_id = result[0]
-        title = result[1]
+        async with self.hlq_service as service:
+            result = await service.get_event_id_by_name(title)
+            if result:
+                event_id, title = result
+            else:
+                event_id = Stats.register_event(title)
+                await msg.reply_text(f"⚠️ 未在呼啦圈找到该剧目，已为您注册以支持更多功能：{title}")
         if not event_id:
             event_id = Stats.register_event(title) 
         report_id = Stats.new_repo(
@@ -1344,11 +1361,18 @@ class Hulaquan(BasePlugin):
             return
         event_name = args["text_args"][0]
         event_price = args["text_args"][1] if len(args["text_args"]) > 1 else None
-        event = await self.get_event_id_by_name(event_name, msg, foundInState=True)
-        if not event:
-            return
-        event_id = event[0]
-        event_title = event[1]
+        
+        async with self.hlq_service as service:
+            result = await service.get_event_id_by_name(event_name)
+            if not result:
+                # Fallback to Stats for legacy/manual events
+                eid = Stats.get_event_id(event_name)
+                if not eid:
+                    await msg.reply_text(f"未找到剧目 {event_name}")
+                    return
+                event_id, event_title = eid, event_name
+            else:
+                event_id, event_title = result
         result = Stats.get_event_student_seat_repo(event_id, event_price)
         if not result:
             await msg.reply_text(f"未找到剧目 {event_title} 的学生票座位记录，快来上传吧！")
@@ -1460,322 +1484,129 @@ class Hulaquan(BasePlugin):
             
     @user_command_wrapper("list_all_events")
     async def on_list_all_hulaquan_events(self, msg: BaseMessage):
-        events = Hlq.data.get("events", {})
-        if not events:
-            await msg.reply_text("当前无呼啦圈事件数据。")
-            return
-        lines = []
-        index = 1
-        for eid, event in events.items():
-            title = event.get("title", "未知剧名")
-            lines.append(f"{index}. {title}")
-            index += 1
-        await self.output_messages_by_pages(lines, msg, page_size=40)
+        async with self.hlq_service as service:
+            events = await service.get_all_events()
+            if not events:
+                return await msg.reply_text("当前无呼啦圈事件数据。")
+            
+            lines = []
+            for i, e in enumerate(events, 1):
+                lines.append(f"{i}. {e.title} (ID: {e.id})")
+            
+            await self.output_messages_by_pages(lines, msg, page_size=40)
             
     @user_command_wrapper("follow_ticket")        
     async def on_follow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)
         if not args["text_args"]:
-            return await msg.reply_text(f"请提供场次id或剧目名，用法：\n{HLQ_FOLLOW_TICKET_USAGE}")
+            return await msg.reply_text(f"请提供场次id、剧目名或演员名，用法：\n{HLQ_FOLLOW_TICKET_USAGE}")
+        
         mode_args = args["mode_args"]
         user_id = str(msg.user_id)
         target_values = {"-1", "-2", "-3"}
 
-        # 检查模式
+        # Determine mode
         setting_mode = next((item for item in mode_args if item in target_values), None)
         if not setting_mode:
-            return await msg.reply_text("缺少指定的模式（命令需带有-1，-2，-3其中之一）：\n" + HLQ_FOLLOW_TICKET_USAGE)
-        setting_mode = int(setting_mode[1])
+            # Default to mode 1 if not specified
+            setting_mode = 1
+        else:
+            setting_mode = int(setting_mode[1])
         
-        # 0. 按演员名关注（-A 模式）
+        # 0. Follow Actors (-a)
         if "-a" in mode_args:
             actor_names = args["text_args"]
+            async with self.hlq_service as service:
+                for actor in actor_names:
+                    await service.manage_subscription(user_id, actor, "cast", mode=setting_mode)
             
-            # 解析剧目筛选参数
-            include_events = None
-            exclude_events = None
-            for item in mode_args:
-                if item.startswith('-i'):  # -I event1,event2
-                    # 提取事件名列表
-                    event_str = item[2:] if len(item) > 2 else ""
-                    if event_str:
-                        include_events = [e.strip() for e in event_str.split(',')]
-                elif item.startswith('-x'):  # -X event1,event2
-                    event_str = item[2:] if len(item) > 2 else ""
-                    if event_str:
-                        exclude_events = [e.strip() for e in event_str.split(',')]
-            
-            # 将事件名转换为事件ID
-            include_eids = None
-            exclude_eids = None
-            if include_events:
-                include_eids = []
-                for e_name in include_events:
-                    result = await self.get_event_id_by_name(e_name)
-                    if result:
-                        include_eids.append(result[0])
-            if exclude_events:
-                exclude_eids = []
-                for e_name in exclude_events:
-                    result = await self.get_event_id_by_name(e_name)
-                    if result:
-                        exclude_eids.append(result[0])
-            
-            # 为每个演员检索现有场次并关注
-            total_tickets_added = 0
-            actor_summary = []
-            all_ticket_details = []  # 存储所有场次的详细信息
-            
-            for actor in actor_names:
-                # 检索该演员的所有场次
-                matched_tickets = await Hlq.find_tickets_by_actor_async(actor, include_eids, exclude_eids)
-                ticket_ids = list(matched_tickets.keys())
-                
-                if ticket_ids:
-                    # 检查哪些场次已关注
-                    subscribed = User.subscribe_tickets(user_id)
-                    subscribed_ids = {str(t['id']) for t in subscribed} if subscribed else set()
-                    
-                    new_tickets = []
-                    existing_tickets = []
-                    
-                    for tid in ticket_ids:
-                        tid_str = str(tid)
-                        if tid_str in subscribed_ids:
-                            # 场次已关注，添加演员关联
-                            User.add_actor_to_ticket_relation(user_id, tid_str, actor)
-                            existing_tickets.append(tid_str)
-                        else:
-                            # 新场次，添加时标记演员关联
-                            new_tickets.append(tid_str)
-                    
-                    # 关注新场次（带演员关联）
-                    if new_tickets:
-                        User.add_ticket_subscribe(user_id, new_tickets, setting_mode, related_to_actors=[actor])
-                    
-                    total_tickets_added += len(new_tickets)
-                    
-                    # 统计信息
-                    if new_tickets and existing_tickets:
-                        actor_summary.append(f"{actor}(新增{len(new_tickets)}场，已关注{len(existing_tickets)}场)")
-                    elif new_tickets:
-                        actor_summary.append(f"{actor}({len(new_tickets)}场)")
-                    else:
-                        actor_summary.append(f"{actor}(0场新增，{len(existing_tickets)}场已关注)")
-                    
-                    # 收集所有关注的场次详细信息
-                    for tid in ticket_ids:
-                        event_id = matched_tickets[tid]
-                        ticket = Hlq.ticket(tid, event_id)
-                        if ticket:
-                            ticket_info = await Hlq.build_single_ticket_info_str(
-                                ticket, 
-                                show_cast=True, 
-                                city="上海", 
-                                show_ticket_id=True
-                            )
-                            all_ticket_details.append(ticket_info[0])
-                
-                # 保存演员订阅（用于后续新排期匹配）
-                User.add_actor_subscribe(user_id, [actor], setting_mode, include_eids, exclude_eids)
-            
-            # 构建输出消息
-            txt = f"✅ 已为您关注以下演员的演出场次：\n{chr(10).join(actor_summary)}\n"
-            if total_tickets_added > 0:
-                txt += f"\n📊 共新增关注 {total_tickets_added} 个场次，有票务变动会提醒您。\n"
-            if include_eids:
-                txt += f"（仅关注指定剧目）\n"
-            elif exclude_eids:
-                txt += f"（已排除指定剧目）\n"
-            txt += f"\n💡 当有新排期上架时，系统会自动补充关注这些演员的新场次。"
-            
-            # 添加场次详细信息
-            if all_ticket_details:
-                txt += f"\n\n{'='*30}\n📋 关注的场次详情：\n"
-                txt += "\n".join(all_ticket_details)
-            
-            await msg.reply_text(txt)
+            await msg.reply_text(f"✅ 已为您关注以下演员 (模式{setting_mode})：\n{' '.join(actor_names)}\n\n💡 当这些演员有新排期上架或票务变动时，系统会提醒您。")
             return
         
-        # 1. 按场次ID关注
+        # 1. Follow Tickets (-t)
         if "-t" in mode_args:
-            ticket_id_list = args["text_args"]
-            ticket_id_list, denial = Hlq.verify_ticket_id(ticket_id_list)
-            txt = ""
-            if denial:
-                txt += f"未找到以下场次id：{' '.join(denial)}\n"
-            # 检查已关注
-            already = []
-            to_subscribe = []
-            mode_updated = []
-            subscribed = User.subscribe_tickets(user_id)
-            subscribed_dict = {str(t['id']): str(t.get('mode', '')) for t in subscribed} if subscribed else {}
-            for tid in ticket_id_list:
-                tid_str = str(tid)
-                if tid_str in subscribed_dict:
-                    # 如果模式不同则更新
-                    if subscribed_dict[tid_str] != setting_mode:
-                        User.update_ticket_subscribe_mode(user_id, tid_str, setting_mode)
-                        mode_updated.append(tid_str)
-                    else:
-                        already.append(tid_str)
-                else:
-                    to_subscribe.append(tid_str)
-            if to_subscribe:
-                User.add_ticket_subscribe(user_id, to_subscribe, setting_mode)
-                txt += f"已成功关注以下场次,有票务变动会提醒您：{' '.join(to_subscribe)}\n"
-            if mode_updated:
-                txt += f"以下场次已关注，但已更新关注模式：{' '.join(mode_updated)}\n"
-            if already:
-                txt += f"以下场次已关注：{' '.join(already)}\n"
-            if not to_subscribe and not already and not mode_updated:
-                txt += "没有可关注的场次ID。\n"
-            await msg.reply_text(txt.strip())
+            ticket_ids = args["text_args"]
+            async with self.hlq_service as service:
+                for tid in ticket_ids:
+                    await service.manage_subscription(user_id, tid, "ticket", mode=setting_mode)
+            await msg.reply_text(f"✅ 已为您关注以下场次 (模式{setting_mode})：\n{' '.join(ticket_ids)}")
             return
 
-        # 2. 按剧目名关注（-E 或默认）
+        # 2. Follow Events (Default or -e)
         event_names = args["text_args"]
+        followed_count = 0
+        async with self.hlq_service as service:
+            for e in event_names:
+                result = await service.get_event_id_by_name(e)
+                if result:
+                    eid, _ = result
+                    await service.manage_subscription(user_id, eid, "event", mode=setting_mode)
+                    followed_count += 1
         
-        # 检查是否为虚拟事件模式
-        is_virtual_mode = "-v" in mode_args
-        
-        # 解析 -数字 参数用于多结果选择
-        extra_id = None
-        for item in mode_args:
-            if item.startswith('-') and item[1:].isdigit():
-                extra_id = int(item[1:])
-                break
-        
-        no_response = []
-        event_ids = []
-        already_events = []
-        to_subscribe_events = []
-        mode_updated_events = []
-        subscribed_events = User.subscribe_events(user_id)
-        subscribed_eids_modes = {str(e['id']): str(e.get('mode', '')) for e in subscribed_events} if subscribed_events else {}
-        for e in event_names:
-            # 虚拟事件模式：直接创建虚拟事件ID
-            if is_virtual_mode:
-                virtual_id, is_new = Stats.register_virtual_event(e)
-                eid = str(virtual_id)
-                if is_new:
-                    to_subscribe_events.append((eid, f"{e}(虚拟剧目)"))
-                else:
-                    # 检查是否已关注
-                    if eid in subscribed_eids_modes:
-                        if subscribed_eids_modes[eid] != setting_mode:
-                            User.update_event_subscribe_mode(user_id, eid, setting_mode)
-                            mode_updated_events.append(f"{e}(虚拟)")
-                        else:
-                            already_events.append(f"{e}(虚拟)")
-                    else:
-                        to_subscribe_events.append((eid, f"{e}(虚拟剧目)"))
-                continue
-            
-            # 正常模式：查询呼啦圈系统
-            result = await self.get_event_id_by_name(e, msg=msg, msg_prefix="", extra_id=extra_id)
-            if not result:
-                no_response.append(e)
-                continue
-            eid = str(result[0])
-            event_ids.append(eid)
-            if eid in subscribed_eids_modes:
-                if subscribed_eids_modes[eid] != setting_mode:
-                    User.update_event_subscribe_mode(user_id, eid, setting_mode)
-                    mode_updated_events.append(e)
-                else:
-                    already_events.append(e)
-            else:
-                to_subscribe_events.append((eid, e))
-        txt = "" if not no_response else f"未找到以下剧目：\n{chr(10).join(no_response)}\n\n"
-        if to_subscribe_events:
-            User.add_event_subscribe(user_id, [eid for eid, _ in to_subscribe_events], setting_mode)
-            txt += f"已成功关注以下剧目,有票务变动会提醒您：\n{chr(10).join([e for _, e in to_subscribe_events])}\n"
-        if mode_updated_events:
-            txt += f"以下剧目已关注，但已更新关注模式：\n{chr(10).join(mode_updated_events)}\n"
-        if already_events:
-            txt += f"以下剧目已关注：\n{chr(10).join(already_events)}\n"
-        if not to_subscribe_events and not already_events and not mode_updated_events:
-            txt += "没有可关注的剧目。\n"
-        await msg.reply_text(txt.strip())
+        if followed_count > 0:
+            await msg.reply_text(f"✅ 已成功关注 {followed_count} 个剧目 (模式{setting_mode})，有票务变动会提醒您。")
+        else:
+            await msg.reply_text("未找到匹配的剧目，请尝试更精确的名称。")
     
     @user_command_wrapper("view_follow")
     async def on_view_follow(self, msg: BaseMessage):
         user_id = str(msg.user_id)
-        events = User.subscribe_events(user_id)
-        _tickets = User.subscribe_tickets(user_id)
-        actors = User.subscribe_actors(user_id)
-        lines = []
+        
+        async with self.hlq_service as service:
+            subs = await service.get_user_subscriptions(user_id)
+            
+        if not subs:
+            await msg.reply_text("您目前没有关注任何剧目、场次或演员。")
+            return
+            
         MODES = ["模式0-不接受通知", "模式1-上新/补票", "模式2-上新/补票/回流", "模式3-上新/补票/回流/增减票"]
-        lines.append(f"您目前对剧目的通用通知设置为：\n{MODES[int(User.attention_to_hulaquan(user_id))]}\n可通过/呼啦圈通知 模式编号修改")
         
-        # 自动清理已过期的场次
-        expired_tickets = []
+        lines = []
+        global_sub = next((s for s in subs if s.target_type == "global"), None)
+        global_mode = global_sub.mode if global_sub else 0
+        lines.append(f"您目前对剧目的通用通知设置为：\n{MODES[global_mode]}\n可通过/呼啦圈通知 模式编号修改")
         
+        # Group by target type
+        events = [s for s in subs if s.target_type == "event"]
+        tickets = [s for s in subs if s.target_type == "ticket"]
+        actors = [s for s in subs if s.target_type == "cast"]
         if events:
-            lines.append("【关注的剧目】")
-            i = 0
-            for e in events:
-                i += 1
-                eid = str(e['id'])
-                title = Hlq.title(event_id=eid, keep_brackets=True)
-                lines.append(f"{i}.{title} {MODES[int(e['mode'])]}")
-        
+            lines.append("\n【关注的剧目】")
+            async with self.hlq_service as service:
+                for i, s in enumerate(events, 1):
+                    with session_scope() as session:
+                        result = session.get(HulaquanEvent, s.target_id)
+                        title = result.title if result else f"未知剧目({s.target_id})"
+                    lines.append(f"{i}. 《{title}》 {MODES[s.mode]}")
+                    
         if actors:
             lines.append("\n【关注的演员】")
-            i = 0
-            for a in actors:
-                i += 1
-                actor_name = a.get('actor', '')
-                mode = int(a.get('mode', 1))
-                include_events = a.get('include_events', [])
-                exclude_events = a.get('exclude_events', [])
+            for i, s in enumerate(actors, 1):
+                lines.append(f"{i}. {s.target_id} {MODES[s.mode]}")
                 
-                filter_text = ""
-                if include_events:
-                    event_names = [Hlq.title(event_id=eid, keep_brackets=True) for eid in include_events]
-                    filter_text = f" [仅关注: {', '.join(event_names)}]"
-                elif exclude_events:
-                    event_names = [Hlq.title(event_id=eid, keep_brackets=True) for eid in exclude_events]
-                    filter_text = f" [排除: {', '.join(event_names)}]"
-                
-                lines.append(f"{i}.{actor_name} {MODES[mode]}{filter_text}")
-        
-        if _tickets:
+        if tickets:
             lines.append("\n【关注的场次】")
-            tickets = sorted(_tickets, key=lambda x: int(x['id']))
-            from itertools import groupby
-            tickets = {
-                key: sorted(list(group), key=lambda x: int(x['id']))
-                for key, group in groupby(_tickets, key=lambda x: x['mode'])
-            }
-            for mode in tickets:
-                lines.append(MODES[int(mode)])
-                for t in tickets[mode]:
-                    tid = str(t['id'])
-                    try:
-                        ticket = Hlq.ticket(tid, default=None)
-                        if ticket is None:
-                            # 场次已不存在（可能已过期或被删除）
-                            lines.append(f"  ❌ [已过期] 场次ID: {tid}")
-                            expired_tickets.append(tid)
-                            continue
-                        text = (await Hlq.build_single_ticket_info_str(ticket, show_cast=True, show_ticket_id=True))[0]
-                        lines.append(text)
-                    except (KeyError, Exception) as e:
-                        # 捕获任何错误，显示友好提示
-                        lines.append(f"  ⚠️ [无法获取] 场次ID: {tid}")
-                        log.warning(f"获取场次 {tid} 信息失败: {e}")
-        
-        # 自动清理已过期的场次
-        if expired_tickets:
-            for tid in expired_tickets:
-                User.remove_ticket_subscribe(user_id, tid)
-            lines.append(f"\n✅ 已自动清理 {len(expired_tickets)} 个过期场次")
-        
-        if not events and not _tickets and not actors:
-            await msg.reply_text("你还没有关注任何剧目、场次或演员。")
-            return
+            async with self.hlq_service as service:
+                for i, s in enumerate(tickets, 1):
+                    with session_scope() as session:
+                        result = session.get(HulaquanTicket, s.target_id)
+                        if result:
+                            # Create a dummy TicketInfo for formatter
+                            t_info = TicketInfo(
+                                id=result.id,
+                                title=result.title,
+                                session_time=result.session_time,
+                                price=result.price,
+                                stock=result.stock,
+                                total_ticket=result.total_ticket,
+                                status=result.status,
+                                cast=[]
+                            )
+                            detail = self.hlq_formatter.format_ticket_detail(t_info, show_id=True)
+                            lines.append(f"{i}. {detail} {MODES[s.mode]}")
+                        else:
+                            lines.append(f"{i}. ❌ [已过期/不存在] ID: {s.target_id}")
+
         await self.output_messages_by_pages(lines, msg, page_size=40)
 
     async def on_unfollow_ticket(self, msg: BaseMessage):
@@ -1785,89 +1616,44 @@ class Hulaquan(BasePlugin):
         mode_args = args["mode_args"]
         user_id = str(msg.user_id)
         
-        # 0. 按演员名取消关注（-A 模式）
+        # 0. 按演员名取消关注（-a 模式）
         if "-a" in mode_args:
             actor_names = args["text_args"]
             removed = []
-            not_found = []
-            tickets_removed_summary = []
-            
-            actors = User.subscribe_actors(user_id)
-            subscribed_actors_lower = {a.get('actor', '').strip().lower() for a in actors} if actors else set()
-            
-            for actor in actor_names:
-                actor_lower = actor.strip().lower()
-                if actor_lower in subscribed_actors_lower:
-                    # 移除演员订阅并清理关联场次
-                    result = User.remove_actor_subscribe(user_id, actor)
+            async with self.hlq_service as service:
+                for actor in actor_names:
+                    await service.manage_subscription(user_id, actor, "cast", mode=0)
                     removed.append(actor)
-                    
-                    # 记录清理的场次数量
-                    if result['tickets_removed'] > 0:
-                        tickets_removed_summary.append(f"{actor}({result['tickets_removed']}场)")
-                else:
-                    not_found.append(actor)
             
-            txt = ""
-            if removed:
-                txt += f"✅ 已取消关注以下演员：{' '.join(removed)}\n"
-                if tickets_removed_summary:
-                    txt += f"🎫 同时移除了因关注演员而关注的场次：\n{chr(10).join(tickets_removed_summary)}\n"
-                    txt += "💡 提示：仅移除了因关注这些演员而自动关注的场次，手动关注的场次保留。"
-                else:
-                    txt += "💡 提示：未移除任何场次（可能这些演员的场次是手动关注的，或与其他演员共享）。"
-            if not_found:
-                txt += f"\n❌ 以下演员未关注：{' '.join(not_found)}"
-            await msg.reply_text(txt.strip())
+            await msg.reply_text(f"✅ 已请求取消关注以下演员（如有）：{' '.join(removed)}")
             return
         
-        # 1. 按场次ID取消关注
+        # 1. 按场次ID取消关注 (-t 模式)
         if "-t" in mode_args:
             ticket_id_list = args["text_args"]
-            ticket_id_list, denial = Hlq.verify_ticket_id(ticket_id_list)
-            txt = ""
-            if denial:
-                txt += f"未找到以下场次id：{' '.join(denial)}\n"
             removed = []
-            not_found = []
-            tickets = User.subscribe_tickets(user_id)
-            tickets_ids = {str(t['id']) for t in tickets} if tickets else set()
-            for tid in ticket_id_list:
-                if str(tid) in tickets_ids:
-                    User.remove_ticket_subscribe(user_id, str(tid))
+            async with self.hlq_service as service:
+                for tid in ticket_id_list:
+                    await service.manage_subscription(user_id, str(tid), "ticket", mode=0)
                     removed.append(str(tid))
-                else:
-                    not_found.append(str(tid))
-            if removed:
-                txt += f"已取消关注以下场次：{' '.join(removed)}\n"
-            if not_found:
-                txt += f"以下场次未关注：{' '.join(not_found)}\n"
-            await msg.reply_text(txt.strip())
+            await msg.reply_text(f"✅ 已请求取消关注以下场次（如有）：{' '.join(removed)}")
             return
-        # 2. 按剧目名取消关注（-E 或默认）
+
+        # 2. 按剧目名取消关注（默认或 -e）
         event_names = args["text_args"]
-        no_response = []
         removed_events = []
-        not_found_events = []
-        events = User.subscribe_events(user_id)
-        events_ids = {str(e['id']) for e in events} if events else set()
-        for e in event_names:
-            result = await self.get_event_id_by_name(e)
-            if not result:
-                no_response.append(e)
-                continue
-            eid = str(result[0])
-            if eid in events_ids:
-                User.remove_event_subscribe(user_id, eid)
-                removed_events.append(e)
-            else:
-                not_found_events.append(e)
-        txt = "" if not no_response else f"未找到以下剧目：\n{chr(10).join(no_response)}\n\n"
+        async with self.hlq_service as service:
+            for e in event_names:
+                result = await service.get_event_id_by_name(e)
+                if result:
+                    eid, _ = result
+                    await service.manage_subscription(user_id, eid, "event", mode=0)
+                    removed_events.append(e)
+        
         if removed_events:
-            txt += f"已取消关注以下剧目：\n{chr(10).join(removed_events)}\n"
-        if not_found_events:
-            txt += f"以下剧目未关注：\n{chr(10).join(not_found_events)}\n"
-        await msg.reply_text(txt.strip())
+            await msg.reply_text(f"✅ 已请求取消关注以下剧目（如有）：\n{chr(10).join(removed_events)}")
+        else:
+            await msg.reply_text("未找到匹配的剧目或未处理任何取消关注。")
     
     @user_command_wrapper("debug_announcer")
     async def on_debug_announcer(self, msg: BaseMessage):
