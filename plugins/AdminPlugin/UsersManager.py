@@ -430,7 +430,7 @@ class UsersManager(BaseDataManager):
                     if str(a).strip().lower() != actor_name_lower
                 ]
                 
-                # 如果还有其他演员，更新列表并保留场次
+                # 如果还有其TA演员，更新列表并保留场次
                 if updated_actors:
                     ticket['related_to_actors'] = updated_actors
                     tickets_to_keep.append(ticket)
