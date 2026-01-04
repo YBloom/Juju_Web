@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import aiohttp
+from services.utils.timezone import now as timezone_now
 
 log = logging.getLogger(__name__)
 
@@ -165,8 +166,8 @@ class SaojuService:
         ARTIST_LOOKBACK_DAYS = 180
         ARTIST_LOOKAHEAD_DAYS = 365
         
-        begin_date = (datetime.now() - timedelta(days=ARTIST_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
-        end_date = (datetime.now() + timedelta(days=ARTIST_LOOKAHEAD_DAYS)).strftime("%Y-%m-%d")
+        begin_date = (timezone_now() - timedelta(days=ARTIST_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        end_date = (timezone_now() + timedelta(days=ARTIST_LOOKAHEAD_DAYS)).strftime("%Y-%m-%d")
         
         events: List[Dict] = []
         seen_keys = set()
@@ -384,7 +385,7 @@ class SaojuService:
         if last_update:
             from services.hulaquan.utils import parse_datetime
             dt = parse_datetime(last_update)
-            if dt and (datetime.now() - dt) < timedelta(hours=24):
+            if dt and (timezone_now() - dt) < timedelta(hours=24):
                 return cache.get(s_mid, [])
         
         # 缓存无效，需要同步
@@ -394,7 +395,7 @@ class SaojuService:
         if shows:
             cache[s_mid] = shows
             from services.hulaquan.utils import dateTimeToStr
-            updated[s_mid] = dateTimeToStr(datetime.now())
+            updated[s_mid] = dateTimeToStr(timezone_now())
             self.save_data()
         
         return shows or []
@@ -558,7 +559,7 @@ class SaojuService:
         from services.hulaquan.utils import dateTimeToStr
         result = {
             "artist_musicals": normalized,
-            "updated_at": dateTimeToStr(datetime.now(), with_second=True),
+            "updated_at": dateTimeToStr(timezone_now(), with_second=True),
         }
         self.save_data()
         return result
@@ -671,7 +672,7 @@ class SaojuService:
                 
                 # Filter shows by date BEFORE fetching casts to save massive time
                 valid_shows = []
-                recent_cutoff = datetime.now() - timedelta(days=90)
+                recent_cutoff = timezone_now() - timedelta(days=90)
                 
                 for show in shows:
                      show_time_str = show.get("fields", {}).get("time") # 2023-10-02T11:30:00Z

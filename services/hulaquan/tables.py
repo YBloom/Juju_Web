@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
+from services.utils.timezone import now as timezone_now
 
 class TicketCastAssociation(SQLModel, table=True):
     ticket_id: str = Field(foreign_key="hulaquanticket.id", primary_key=True)
@@ -18,8 +19,8 @@ class HulaquanEvent(SQLModel, table=True):
     end_time: Optional[datetime] = None
     
     update_time: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=timezone_now)
+    updated_at: datetime = Field(default_factory=timezone_now)
     
     # Saoju Mapping
     saoju_musical_id: Optional[str] = Field(default=None, index=True)
@@ -62,7 +63,7 @@ class HulaquanSubscription(SQLModel, table=True):
     target_type: str = "event" # "event", "cast", "ticket", "global"
     mode: int = 1 # 1: basic, 2: return, 3: back/sold
     # 1: 基础, 2: 回流, 3: 票增/售罄
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=timezone_now)
 
 class HulaquanAlias(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

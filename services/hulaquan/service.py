@@ -27,6 +27,7 @@ from services.hulaquan.models import (
 from services.hulaquan.utils import standardize_datetime, extract_title_info, extract_text_in_brackets, detect_city_in_text
 from services.saoju.service import SaojuService
 from services.hulaquan.city_resolver import CityResolver
+from services.utils.timezone import now as timezone_now
 
 log = logging.getLogger(__name__)
 
@@ -194,7 +195,7 @@ class HulaquanService:
             event.location = b_info.get("location", event.location)
             event.start_time = self._parse_api_date(b_info.get("start_time"))
             event.end_time = self._parse_api_date(b_info.get("end_time"))
-            event.updated_at = datetime.now()
+            event.updated_at = timezone_now()
             
             # 2. Sync Tickets
             # 2. 同步票据
@@ -307,7 +308,7 @@ class HulaquanService:
                         musical_id = call_async(self._saoju.get_musical_id_by_name(search_name))
                         if musical_id:
                             event.saoju_musical_id = musical_id
-                            event.last_synced_at = datetime.now()
+                            event.last_synced_at = timezone_now()
                             session.add(event)
                             log.info(f"Auto-linked {event.title} to Saoju ID: {musical_id}")
                     except Exception as e:
@@ -827,7 +828,7 @@ class HulaquanService:
                 # Date Formatting
                 dt = t.session_time
                 date_str = "-"
-                year = datetime.now().year
+                year = timezone_now().year
                 if dt:
                     year = dt.year
                     weekday_str = ['一', '二', '三', '四', '五', '六', '日'][dt.weekday()]

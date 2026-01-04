@@ -3,6 +3,7 @@ import unicodedata
 import traceback
 import random
 import re
+from services.utils.timezone import now as timezone_now
 
 def dateToStr(date):
     if isinstance(date, datetime):
@@ -66,7 +67,7 @@ def standardize_datetime_for_saoju(dateAndTime: str, return_str=False, latest_st
         time_str = match.group(3)
         
         # 智能年份判断
-        now = datetime.now()
+        now = timezone_now()
         current_year = now.year
         
         # 先尝试当前年
@@ -103,7 +104,7 @@ def standardize_datetime_for_saoju(dateAndTime: str, return_str=False, latest_st
             day = int(match_latest.group(2))
             weekday = match_latest.group(3) or ""
             time_str = match_time.group(1)
-            current_year = datetime.now().year
+            current_year = timezone_now().year
             dt_str = f"{current_year}-{month:02d}-{day:02d} {time_str}"
             try:
                 dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
@@ -120,7 +121,7 @@ def standardize_datetime_for_saoju(dateAndTime: str, return_str=False, latest_st
 
 
 def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
-    current_year = datetime.now().year
+    current_year = timezone_now().year
     dateAndTime = dateAndTime.replace("：", ':').replace("/", "-").strip()
     
     # 先尝试 ISO 8601 格式（Saoju API 返回的格式）
@@ -326,7 +327,7 @@ def extract_title_info(text):
     return result
     
 def now_time_str():
-    return datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
+    return datetime.strftime(timezone_now(), "%Y-%m-%d %H:%M:%S")
 
 def parse_text_to_dict(text, with_prefix=True):
     text = text.replace("：", ":")
