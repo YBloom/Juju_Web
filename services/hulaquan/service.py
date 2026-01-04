@@ -24,7 +24,7 @@ from services.hulaquan.models import (
     TicketUpdate,
     SearchResult
 )
-from services.hulaquan.utils import standardize_datetime, extract_title_info, extract_text_in_brackets
+from services.hulaquan.utils import standardize_datetime, extract_title_info, extract_text_in_brackets, detect_city_in_text
 from services.saoju.service import SaojuService
 
 log = logging.getLogger(__name__)
@@ -444,15 +444,48 @@ class HulaquanService:
         """Get all known events."""
         with session_scope() as session:
             events = session.exec(select(HulaquanEvent)).all()
-            return [
-                EventInfo(
+            results = []
+            for e in events:
+                # 1. City Extraction Fallback Logic
+                city = extract_title_info(e.title).get("city")
+                if not city and e.location:
+                    city = detect_city_in_text(e.location)
+                if not city:
+                    # Fallback to tickets (expensive if many, but safer)
+                    for t in e.tickets:
+                        if t.city:
+                            city = t.city
+                            break
+                
+                # 2. Stock and Price Calculation
+                total_stock = 0
+                prices = []
+                for t in e.tickets:
+                    total_stock += t.stock
+                    if t.price > 0:
+                        prices.append(t.price)
+                
+                if prices:
+                    min_p = min(prices)
+                    max_p = max(prices)
+                    if min_p == max_p:
+                        price_range = f"¥{min_p}"
+                    else:
+                        price_range = f"¥{min_p}-{max_p}"
+                else:
+                    price_range = "待定"
+
+                results.append(EventInfo(
                     id=e.id,
                     title=e.title,
                     location=e.location,
+                    city=city,
                     update_time=e.updated_at,
+                    total_stock=total_stock,
+                    price_range=price_range,
                     tickets=[]
-                ) for e in events
-            ]
+                ))
+            return results
 
     async def get_aliases(self) -> List[HulaquanAlias]:
         """Get all theater aliases.

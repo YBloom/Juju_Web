@@ -22,8 +22,11 @@ class EventInfo(BaseModel):
     id: str
     title: str
     location: Optional[str]
+    city: Optional[str] = None
     tickets: List[TicketInfo] = []
     update_time: Optional[datetime]
+    total_stock: int = 0
+    price_range: str = "待定"
 
 class TicketUpdate(BaseModel):
     ticket_id: str

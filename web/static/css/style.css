@@ -217,12 +217,15 @@ main {
 
 /* Wrapper to apply the inline-block style naturally since TD can't be inline blocks easily without breaking table */
 /* Actually, let's keep it simple text color for now, or use a span in JS. But CSS targeting text is safer */
-.city-cell {
+/* Remove conflicting rule that forces display: table-cell */
+/* The previous rule was causing misalignment because TDs are already table-cell, 
+   but overriding padding to 0 breaks the table padding consistency. */
+/* .city-cell {
     color: var(--primary-color);
     background: transparent;
     padding: 0 !important;
     display: table-cell;
-}
+} */
 
 .title-cell {
     color: var(--text-primary);

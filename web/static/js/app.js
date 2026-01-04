@@ -83,6 +83,7 @@ function sortEvents(events) {
 }
 
 function getCityScore(city) {
+    if (!city || typeof city !== 'string') return 100;
     if (city.includes('上海')) return 0;
     if (city.includes('北京')) return 1;
     if (city.includes('广州')) return 2;
@@ -116,9 +117,9 @@ function applyFilters() {
     let filtered = state.allEvents;
     if (q) {
         filtered = filtered.filter(e =>
-            e.title.toLowerCase().includes(q) ||
-            e.location.toLowerCase().includes(q) ||
-            e.city.includes(q)
+            (e.title && e.title.toLowerCase().includes(q)) ||
+            (e.location && e.location.toLowerCase().includes(q)) ||
+            (e.city && e.city.includes(q))
         );
     }
 

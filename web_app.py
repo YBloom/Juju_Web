@@ -83,8 +83,11 @@ async def list_all_events():
         results.append({
             "id": e.id,
             "title": e.title,
-            "location": e.location,
+            "location": e.location or "",
+            "city": e.city or "",
             "update_time": e.update_time,
+            "total_stock": e.total_stock,
+            "price_range": e.price_range,
             # "tickets" excluded
         })
         
