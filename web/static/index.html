@@ -6,8 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MusicalBot Web</title>
     <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Material+Icons&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Pinyin Library for Autocomplete -->
     <script src="https://unpkg.com/pinyin-pro@3.18.2/dist/index.js"></script>
 </head>
@@ -16,17 +20,12 @@
 
 
     <div class="nav-ribbon">
-        <img src="/static/img/logo.png" alt="yyj"
-            style="height: 32px; margin-left: 20px; border-radius: 8px; cursor: pointer;"
-            onclick="router.navigate('/')">
-        <div style="flex: 1; display: flex; justify-content: center; margin-right: 52px;">
-            <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')"><i class="material-icons">list</i>
-                呼啦圈剧目</button>
-            <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')"><i
-                    class="material-icons">event</i> 学生票日历</button>
-            <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')"><i
-                    class="material-icons">people</i> 同场演员</button>
-        </div>
+        <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')"><i class="material-icons">list</i>
+            呼啦圈剧目</button>
+        <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')"><i
+                class="material-icons">event</i> 学生票日历</button>
+        <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')"><i
+                class="material-icons">people</i> 同场演员</button>
     </div>
 
     <main>

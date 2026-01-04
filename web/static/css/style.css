@@ -17,16 +17,20 @@
 
     --border-color: #E8E6DE;
     --shadow-soft: 0 4px 20px -2px rgba(99, 126, 96, 0.1);
+
+    /* Typography */
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-number: 'Outfit', 'Inter', sans-serif;
 }
 
 body {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
     background-color: var(--bg-color);
     color: var(--text-primary);
     line-height: 1.6;
-    /* More breathing room */
 }
 
 /* Header */
@@ -88,7 +92,7 @@ header {
 .nav-ribbon {
     background: var(--card-bg);
     display: flex;
-    align-items: center;
+    justify-content: center;
     padding: 0;
     margin: 20px auto 0;
     max-width: 1100px;
@@ -239,21 +243,23 @@ main {
 
 .data-table th {
     padding: 18px 25px;
-    text-align: left;
-    background-color: #F7F9F7;
-    /* Very subtle green tint */
+    text-align: center;
+    /* Changed from left to center */
+    background-color: #FAFAF8;
     color: var(--text-secondary);
     font-weight: 600;
     border-bottom: 1px solid var(--border-color);
-    font-size: 0.85rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    font-family: var(--font-heading);
     white-space: nowrap;
 }
 
 .data-table td {
-    padding: 16px 18px;
-    text-align: left;
+    padding: 16px 12px;
+    text-align: center;
+    /* Changed from left to center */
     border-bottom: 1px solid var(--border-color);
     color: var(--text-primary);
     vertical-align: middle;

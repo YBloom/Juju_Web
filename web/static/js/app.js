@@ -383,12 +383,25 @@ function applyFilters() {
         }
     }
 
-    // City Filter
-    const cityVal = document.getElementById('city-filter') ? document.getElementById('city-filter').value : '';
-    if (cityVal) {
-        filtered = filtered.filter(e => e.city === cityVal);
+    // 城市筛选
+    const townVal = document.getElementById('city-filter') ? document.getElementById('city-filter').value : '';
+    if (townVal) {
+        filtered = filtered.filter(t => t.city === townVal);
     }
 
+    // 时间筛选
+    const timeVal = document.getElementById('date-filter-time') ? document.getElementById('date-filter-time').value : '';
+    if (timeVal) {
+        filtered = filtered.filter(t => {
+            if (!t.session_time) return false;
+            const d = new Date(t.session_time);
+            const tStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            return tStr === timeVal;
+        });
+    }
+
+    // 剧目/卡司搜索
+    const searchVal = document.getElementById('date-filter-search')?.value.trim().toLowerCase() || '';
     // Sort
     state.displayEvents = sortEvents(filtered);
     renderEventTable(state.displayEvents);
@@ -432,8 +445,8 @@ function renderEventTable(events) {
         if (col.city) html += `<td class="city-cell" data-label="城市">${e.city}</td>`;
         if (col.update) html += `<td class="time-cell" data-label="排期">${scheduleRange}</td>`;
         if (col.title) html += `<td class="title-cell" data-label="剧目">${e.title}</td>`;
-        if (col.stock) html += `<td data-label="总余票">${e.total_stock}</td>`;
-        if (col.price) html += `<td data-label="票价范围">${e.price_range}</td>`;
+        if (col.stock) html += `<td class="stock-cell" data-label="总余票">${e.total_stock}</td>`;
+        if (col.price) html += `<td class="price-cell" data-label="票价范围">${e.price_range}</td>`;
         if (col.location) html += `<td data-label="场馆">${e.location || '-'}</td>`;
         html += `</tr>`;
     });
@@ -609,9 +622,9 @@ function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
                 onclick="window.open('https://clubz.cloudsation.com/event/${eventId}.html', '_blank')" 
                 style="cursor:pointer">
                 <td class="time-cell" data-label="演出时间">${timeStr}</td>
-                <td data-label="库存">${t.stock}/${t.total_ticket}</td>
+                <td class="stock-cell" data-label="库存">${t.stock}/${t.total_ticket}</td>
                 ${hasCast ? `<td class="cast-cell" data-label="卡司" onclick="event.stopPropagation()">${castStr}</td>` : ''}
-                <td data-label="价格">${priceStr}</td>
+                <td class="price-cell" data-label="价格">${priceStr}</td>
             </tr>
         `;
     });
@@ -1362,6 +1375,13 @@ function renderDateResults(tickets, date) {
     // 提取唯一城市
     const cities = [...new Set(allTickets.map(t => t.city).filter(c => c))].sort();
 
+    // 提取唯一时间
+    const times = [...new Set(allTickets.map(t => {
+        if (!t.session_time) return null;
+        const d = new Date(t.session_time);
+        return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }).filter(v => v))].sort();
+
     let html = `
         <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)">
             <div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">
@@ -1387,6 +1407,16 @@ function renderDateResults(tickets, date) {
                         ${cities.map(city => `<option value="${city}">${city}</option>`).join('')}
                     </select>
                 </div>
+
+                <!-- 时间筛选 -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.9em; font-weight:600; color:#666;">时间：</span>
+                    <select id="date-filter-time" onchange="applyDateFilters('${date}')" 
+                            style="padding:6px 12px; border:1px solid #ddd; border-radius:6px; font-size:0.85em;">
+                        <option value="">全部</option>
+                        ${times.map(time => `<option value="${time}">${time}</option>`).join('')}
+                    </select>
+                </div>
                 
                 <!-- 剧目/卡司搜索 -->
                 <div style="display:flex; align-items:center; gap:8px;">
@@ -1406,12 +1436,13 @@ function renderDateResults(tickets, date) {
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th width="40">序号</th>
                         <th width="60">时间</th>
                         <th width="60">城市</th>
                         <th>剧目</th>
                         <th width="80">余票</th>
                         <th width="180">卡司</th>
-                        <th width="100">价格</th>
+                        <th width="120">价格</th>
                     </tr>
                 </thead>
                 <tbody id="date-table-body">
@@ -1435,34 +1466,54 @@ function renderDateTableRows(tickets) {
     const tbody = document.getElementById('date-table-body');
     if (!tbody) return;
 
-    // Grouping Sort: City -> Title -> Price (Asc)
-    // sort inside here affects the display order without mutating the original 'tickets' if we shallow copy, 
-    // but 'tickets' passed here is usually 'allTickets' or a filtered version. 
-    // We should sort it for display purposes.
+    // Pre-calculate city counts for the current filtered list
+    const cityCounts = {};
+    tickets.forEach(t => {
+        if (t.city) {
+            cityCounts[t.city] = (cityCounts[t.city] || 0) + 1;
+        }
+    });
+
+    // Updated Sorting Logic:
+    // 1. Time (Ascending)
+    // 2. City Frequency (Descending) - Users want cities with more shows first
+    // 3. City Name (Ascending) - Standardize order
+    // 4. Show Title (Ascending) - Group shows
+    // 5. Price (Ascending)
     const displayTickets = [...tickets].sort((a, b) => {
-        // 1. City
+        // 1. Time
+        const timeA = a.session_time ? new Date(a.session_time).getTime() : 0;
+        const timeB = b.session_time ? new Date(b.session_time).getTime() : 0;
+        if (timeA !== timeB) return timeA - timeB;
+
+        // 2. City Frequency (Desc)
+        const countA = cityCounts[a.city] || 0;
+        const countB = cityCounts[b.city] || 0;
+        if (countA !== countB) return countB - countA;
+
+        // 3. City Name
         const cityA = a.city || '';
         const cityB = b.city || '';
         if (cityA !== cityB) return cityA.localeCompare(cityB, 'zh');
 
-        // 2. Title
+        // 4. Title
         const titleA = a.title || '';
         const titleB = b.title || '';
         if (titleA !== titleB) return titleA.localeCompare(titleB, 'zh');
 
-        // 3. Price (Ascending)
+        // 5. Price
         return (a.price || 0) - (b.price || 0);
     });
 
     let html = '';
-    let lastCity = '';
-    let lastTitle = '';
+    let lastGroupKey = '';
 
-    displayTickets.forEach(t => {
-        // Grouping Check
-        const currentCity = t.city || '';
-        const currentTitle = t.title || '';
-        const isSameGroup = currentCity === lastCity && currentTitle === lastTitle;
+    displayTickets.forEach((t, index) => {
+        // Grouping Check: Time + City + Title
+        // Note: Sort order ensures they are adjacent
+        const timeKey = t.session_time ? new Date(t.session_time).getTime() : 0;
+        const currentGroupKey = `${timeKey}_${t.city || ''}_${t.title || ''}`;
+        const isSameGroup = currentGroupKey === lastGroupKey;
 
         // 格式化时间，只显示时分
         let timeStr = '待定';
@@ -1491,7 +1542,7 @@ function renderDateTableRows(tickets) {
         const eventId = t.event_id || t.id;
         const sessionId = t.session_id || (t.session_time ? new Date(t.session_time).getTime() : '');
 
-        // 价格显示逻辑 (复用详情页逻辑)
+        // 价格显示逻辑
         let priceStr = '';
         if (t.price_label && t.price_label !== `¥${t.price}`) {
             priceStr = t.price_label;
@@ -1503,6 +1554,7 @@ function renderDateTableRows(tickets) {
 
         html += `
             <tr class="${rowClass}" data-session-id="${sessionId}">
+                <td style="text-align:center; color:#999; font-size:0.85em;">${index + 1}</td>
         `;
 
         // If same group, hide info cells
@@ -1511,7 +1563,7 @@ function renderDateTableRows(tickets) {
                 <td class="time-cell" data-label="时间"></td>
                 <td class="city-cell" data-label="城市"></td>
                 <td class="title-cell" data-label="剧目"></td>
-                <td data-label="余票"></td>
+                <td class="stock-cell" data-label="余票"></td>
                 <td class="cast-cell" data-label="卡司"></td>
             `;
         } else {
@@ -1523,19 +1575,17 @@ function renderDateTableRows(tickets) {
                     onclick="jumpToDetail('${eventId}', '${sessionId}')">
                     ${showTitle}
                 </td>
-                <td data-label="余票">${t.stock}/${t.total_ticket}</td>
+                <td class="stock-cell" data-label="余票">${t.stock}/${t.total_ticket}</td>
                 <td class="cast-cell" data-label="卡司">${castStr}</td>
             `;
         }
 
-        // Price always shown (with new format)
         html += `
-                <td data-label="价格">${priceStr}</td>
+                <td class="price-cell" data-label="价格">${priceStr}</td>
             </tr>
         `;
 
-        lastCity = currentCity;
-        lastTitle = currentTitle;
+        lastGroupKey = currentGroupKey;
     });
 
     tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">没有符合条件的场次</td></tr>';
@@ -1549,6 +1599,7 @@ function applyDateFilters(date) {
     // 获取筛选条件
     const onlyAvailable = document.getElementById('date-filter-available')?.checked || false;
     const selectedCity = document.getElementById('date-filter-city')?.value || '';
+    const selectedTime = document.getElementById('date-filter-time')?.value || '';
     const searchText = document.getElementById('date-filter-search')?.value.trim().toLowerCase() || '';
 
     // 应用筛选
@@ -1561,6 +1612,14 @@ function applyDateFilters(date) {
         // 城市筛选
         if (selectedCity && t.city !== selectedCity) {
             return false;
+        }
+
+        // 时间筛选
+        if (selectedTime) {
+            if (!t.session_time) return false;
+            const d = new Date(t.session_time);
+            const tStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            if (tStr !== selectedTime) return false;
         }
 
         // 剧目/卡司搜索
