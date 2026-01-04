@@ -189,33 +189,65 @@ sudo grep -i "error" /var/log/musicalbot/web_err.log | tail -20
 
 ### 代码更新
 
-#### 方式一：使用自动化脚本 (推荐)
+> [!IMPORTANT]
+> **核心原则**: 本地修改 → Git Push → 服务器 Pull。避免直接在服务器修改Git追踪的文件!
+
+#### 🚀 最简洁的更新流程(推荐)
+
+**在本地完成修改后:**
+
 ```bash
-cd /opt/MusicalBot
-sudo ./scripts/update.sh
+# 1. 本地提交并推送
+git add .
+git commit -m "更新描述"
+git push origin v1
+
+# 2. 服务器拉取(一行命令)
+ssh yyj "cd /opt/MusicalBot && sudo git stash && sudo git pull origin v1 && sudo supervisorctl restart musicalbot_web"
+```
+
+#### 📜 使用自动化脚本
+
+如果服务器有未提交的修改(如Umami配置),使用safe_pull.sh:
+
+```bash
+ssh yyj "sudo bash /opt/MusicalBot/scripts/safe_pull.sh"
 ```
 
 **脚本功能**:
-- 自动 `git pull` 拉取最新代码
-- 检测 `requirements.txt` 变化并更新依赖
+- 自动 stash 本地修改
+- 拉取最新代码
+- 恢复服务器特定配置(如Umami Website ID)
 - 重启 WebApp 服务
-- 显示服务状态
 
-#### 方式二：手动更新
+#### 🔧 手动更新(仅在需要时)
+
 ```bash
-# 1. 拉取代码
 cd /opt/MusicalBot
-sudo git pull
 
-# 2. 更新依赖 (如有变化)
+# 保存本地修改
+sudo git stash
+
+# 拉取代码
+sudo git pull origin v1
+
+# 恢复本地修改(如有)
+sudo git stash pop
+
+# 安装新依赖(如requirements.txt有变化)
 sudo .venv/bin/pip install -r requirements.txt
 
-# 3. 重启服务
+# 重启服务
 sudo supervisorctl restart musicalbot_web
-
-# 4. 查看状态
-sudo supervisorctl status
 ```
+
+#### ⚠️ 避免Git冲突
+
+1. **不要直接编辑服务器上的Git文件**
+2. **动态配置放`.env`**(不在Git中)
+3. **出现冲突时**: `sudo git stash && sudo git pull && sudo git stash pop`
+
+详见: [Git工作流文档](./git_workflow.md)
 
 #### 回滚到之前版本
 ```bash
