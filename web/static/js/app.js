@@ -945,15 +945,17 @@ async function doCoCastSearch() {
 
         const oneYearLater = new Date();
         oneYearLater.setFullYear(new Date().getFullYear() + 1);
-        const nextYearStr = oneYearLater.toISOString().split('T')[0];
+
+        // 修复：使用本地时间构建日期字符串，避免UTC导致少一天
+        const y = oneYearLater.getFullYear();
+        const m = String(oneYearLater.getMonth() + 1).padStart(2, '0');
+        const d = String(oneYearLater.getDate()).padStart(2, '0');
+        const nextYearStr = `${y}-${m}-${d}`;
 
         // 格式化日期显示（例如：2027年01月05日）
         const formatDateDisplay = (dateStr) => {
-            const d = new Date(dateStr);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}年${month}月${day}日`;
+            const arr = dateStr.split('-');
+            return `${arr[0]}年${arr[1]}月${arr[2]}日`;
         };
 
         if (endDate && endDate > nextYearStr) {
