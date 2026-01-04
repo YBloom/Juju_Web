@@ -947,8 +947,17 @@ async function doCoCastSearch() {
         oneYearLater.setFullYear(new Date().getFullYear() + 1);
         const nextYearStr = oneYearLater.toISOString().split('T')[0];
 
+        // 格式化日期显示（例如：2027年01月05日）
+        const formatDateDisplay = (dateStr) => {
+            const d = new Date(dateStr);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}年${month}月${day}日`;
+        };
+
         if (endDate && endDate > nextYearStr) {
-            alert(`结束日期不能晚于 ${nextYearStr}`);
+            alert(`结束日期不能晚于一年后（${formatDateDisplay(nextYearStr)}）`);
             resetSearchButton(btn);
             return;
         }
