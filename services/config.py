@@ -24,6 +24,7 @@ class ServiceConfig(BaseSettings):
     class Config:
         env_file = ".env"
         env_prefix = "HLQ_"
+        extra = "ignore"  # Ignore extra fields from .env (e.g., LEGACY_COMPAT, MAINTENANCE_MODE)
 
 # Global config instance
 # 全局配置实例
