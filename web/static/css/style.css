@@ -704,28 +704,36 @@ main {
 
     .data-table th,
     .data-table td {
-        padding: 6px 4px;
-        /* Tighter padding */
-        font-size: 0.75rem;
+        padding: 4px 2px;
+        /* Extremely tight */
+        font-size: 0.7rem;
     }
 
     .title-cell {
-        max-width: 90px;
-        /* Reduced width */
-        font-size: 0.8rem;
+        max-width: 60px;
+        /* Aggressive width limit */
+        font-size: 0.75rem;
+        line-height: 1.1;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .cast-cell {
-        max-width: 100px;
-        /* Reduced width */
-        font-size: 0.7rem;
+        max-width: 70px;
+        /* Aggressive width limit */
+        font-size: 0.65rem;
+        line-height: 1.1;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .stock-cell {
         white-space: nowrap;
-        font-size: 0.7rem;
-        padding: 6px 2px;
-        /* Very tight for stock */
+        font-size: 0.65rem;
+        padding: 4px 0;
+        text-align: center;
+        max-width: 40px;
+        overflow: hidden;
     }
 
     /* Co-Cast面板 */

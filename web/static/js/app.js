@@ -444,7 +444,19 @@ function renderEventTable(events) {
         html += `<tr onclick="router.navigate('/detail/${e.id}')">`;
         if (col.city) html += `<td class="city-cell" data-label="城市">${e.city}</td>`;
         if (col.update) html += `<td class="time-cell" data-label="排期">${scheduleRange}</td>`;
-        if (col.title) html += `<td class="title-cell" data-label="剧目">${e.title}</td>`;
+        if (col.title) {
+            let showTitle = e.title;
+            const titleMatch = e.title.match(/[《](.*?)[》]/);
+            if (titleMatch && titleMatch[1]) {
+                showTitle = titleMatch[1];
+            }
+            html += `<td class="title-cell" data-label="剧目">
+                <span style="color:var(--primary-color); font-weight:600; cursor:pointer; display:inline-block; padding:6px 0;"
+                      onclick="event.stopPropagation(); router.navigate('/detail/${e.id}')">
+                    《${showTitle}》
+                </span>
+            </td>`;
+        }
         if (col.stock) html += `<td class="stock-cell" data-label="总余票">${e.total_stock}</td>`;
         if (col.price) html += `<td class="price-cell" data-label="票价范围">${e.price_range}</td>`;
         if (col.location) html += `<td data-label="场馆">${e.location || '-'}</td>`;
@@ -1502,8 +1514,16 @@ function renderDateTableRows(tickets) {
         if (titleA !== titleB) return titleA.localeCompare(titleB, 'zh');
 
         // 5. Price (Ascending)
-        const priceA = parseFloat(a.price) || 0;
-        const priceB = parseFloat(b.price) || 0;
+        // Clean price string before parsing (remove currency symbols etc)
+        const getPrice = (p) => {
+            if (typeof p === 'number') return p;
+            if (!p) return 0;
+            const str = String(p).replace(/[^\d.]/g, '');
+            return parseFloat(str) || 0;
+        };
+        const priceA = getPrice(a.price);
+        const priceB = getPrice(b.price);
+        // console.log(`Sorting: ${a.price}(${priceA}) vs ${b.price}(${priceB}) -> ${priceA - priceB}`);
         return priceA - priceB;
     });
 
@@ -1528,7 +1548,7 @@ function renderDateTableRows(tickets) {
 
         // 提取剧名（书名号内部）
         let showTitle = t.title;
-        const titleMatch = t.title.match(/[《【](.*?)[》】]/);
+        const titleMatch = t.title.match(/[《](.*?)[》]/);
         if (titleMatch && titleMatch[1]) {
             showTitle = titleMatch[1];
         }
