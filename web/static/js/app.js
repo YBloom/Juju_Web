@@ -300,7 +300,8 @@ function sortEvents(events) {
         // Extract start date from "2025-12-19 至 2026-01-04"
         const getStartDate = (range) => {
             if (!range) return new Date(0);
-            const part = range.split('至')[0].trim();
+            // Replace dots with dashes for better compatibility (e.g. 2026.01.04 -> 2026-01-04)
+            const part = range.split('至')[0].trim().replace(/\./g, '-');
             const d = new Date(part);
             return isNaN(d.getTime()) ? new Date(0) : d;
         };
@@ -1365,9 +1366,35 @@ function renderDateTableRows(tickets) {
     const tbody = document.getElementById('date-table-body');
     if (!tbody) return;
 
-    let html = '';
+    // Grouping Sort: City -> Title -> Price (Asc)
+    // sort inside here affects the display order without mutating the original 'tickets' if we shallow copy, 
+    // but 'tickets' passed here is usually 'allTickets' or a filtered version. 
+    // We should sort it for display purposes.
+    const displayTickets = [...tickets].sort((a, b) => {
+        // 1. City
+        const cityA = a.city || '';
+        const cityB = b.city || '';
+        if (cityA !== cityB) return cityA.localeCompare(cityB, 'zh');
 
-    tickets.forEach(t => {
+        // 2. Title
+        const titleA = a.title || '';
+        const titleB = b.title || '';
+        if (titleA !== titleB) return titleA.localeCompare(titleB, 'zh');
+
+        // 3. Price (Ascending)
+        return (a.price || 0) - (b.price || 0);
+    });
+
+    let html = '';
+    let lastCity = '';
+    let lastTitle = '';
+
+    displayTickets.forEach(t => {
+        // Grouping Check
+        const currentCity = t.city || '';
+        const currentTitle = t.title || '';
+        const isSameGroup = currentCity === lastCity && currentTitle === lastTitle;
+
         // 格式化时间，只显示时分
         let timeStr = '待定';
         if (t.session_time) {
@@ -1395,8 +1422,31 @@ function renderDateTableRows(tickets) {
         const eventId = t.event_id || t.id;
         const sessionId = t.session_id || (t.session_time ? new Date(t.session_time).getTime() : '');
 
+        // 价格显示逻辑 (复用详情页逻辑)
+        let priceStr = '';
+        if (t.price_label && t.price_label !== `¥${t.price}`) {
+            priceStr = t.price_label;
+        } else if (t.original_price && t.original_price !== t.price) {
+            priceStr = `${t.price}（原价${t.original_price}）`;
+        } else {
+            priceStr = `¥${t.price}`;
+        }
+
         html += `
             <tr class="${rowClass}" data-session-id="${sessionId}">
+        `;
+
+        // If same group, hide info cells
+        if (isSameGroup) {
+            html += `
+                <td class="time-cell" data-label="时间"></td>
+                <td class="city-cell" data-label="城市"></td>
+                <td class="title-cell" data-label="剧目"></td>
+                <td data-label="余票"></td>
+                <td class="cast-cell" data-label="卡司"></td>
+            `;
+        } else {
+            html += `
                 <td class="time-cell" data-label="时间">${timeStr}</td>
                 <td class="city-cell" data-label="城市">${t.city || '-'}</td>
                 <td class="title-cell" data-label="剧目" 
@@ -1406,9 +1456,19 @@ function renderDateTableRows(tickets) {
                 </td>
                 <td data-label="余票">${t.stock}/${t.total_ticket}</td>
                 <td class="cast-cell" data-label="卡司">${castStr}</td>
-                <td data-label="价格">¥${t.price}</td>
+            `;
+        }
+
+        // Price always shown (with new format)
+        html += `
+                <td data-label="价格">${priceStr}</td>
             </tr>
         `;
+
+        lastCity = currentCity;
+        lastTitle = currentTitle;
+    });
+    `;
     });
 
     tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">没有符合条件的场次</td></tr>';
