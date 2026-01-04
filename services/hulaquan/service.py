@@ -174,6 +174,12 @@ class HulaquanService:
             if not data:
                 return []
 
+        # Offload the blocking DB operations to a separate thread
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync_db_update_thread, event_id, data, loop)
+
+    def _sync_db_update_thread(self, event_id: str, data: dict, loop: asyncio.AbstractEventLoop) -> List[TicketUpdate]:
+        """Synchronous version of update logic to run in a thread."""
         updates = []
         with session_scope() as session:
             # 1. Sync Event
@@ -288,12 +294,17 @@ class HulaquanService:
                     info = extract_title_info(title)
                     ticket.city = info.get("city")
                 
+                # Helper for async calls from thread
+                def call_async(coro):
+                     future = asyncio.run_coroutine_threadsafe(coro, loop)
+                     return future.result()
+
                 # Auto-Link Logic: Try to find persistent Saoju ID (Before city/cast sync)
                 # 自动关联逻辑：尝试查找持久的扫剧 ID（在城市/卡司同步之前）
                 if not event.saoju_musical_id:
                     try:
                         search_name = extract_text_in_brackets(event.title, keep_brackets=False)
-                        musical_id = await self._saoju.get_musical_id_by_name(search_name)
+                        musical_id = call_async(self._saoju.get_musical_id_by_name(search_name))
                         if musical_id:
                             event.saoju_musical_id = musical_id
                             event.last_synced_at = datetime.now()
@@ -311,13 +322,13 @@ class HulaquanService:
                         time_str = ticket.session_time.strftime("%H:%M")
                         
                         # Use ID if available for precision
-                        saoju_match = await self._saoju.search_for_musical_by_date(
+                        saoju_match = call_async(self._saoju.search_for_musical_by_date(
                             search_name, 
                             date_str, 
                             time_str, 
                             city=None,
                             musical_id=event.saoju_musical_id
-                        )
+                        ))
                         if saoju_match and saoju_match.get("city"):
                             ticket.city = saoju_match.get("city")
                             log.info(f"Filled missing city for {title} via Saoju: {ticket.city}")
@@ -327,38 +338,41 @@ class HulaquanService:
                 # 3. Sync Casts (Enrichment)
                 # 3. 同步演员阵容（丰富数据）
                 if not ticket.cast_members and ticket.session_time:
-                    # Search name from title brackets
-                    # 从标题括号中搜索名称
-                    search_name = extract_text_in_brackets(event.title, keep_brackets=False)
-                    cast_data = await self._saoju.get_cast_for_show(
-                        search_name, 
-                        ticket.session_time, 
-                        ticket.city,
-                        musical_id=event.saoju_musical_id
-                    )
-                    
-                    for c_item in cast_data:
-                        artist_name = c_item.get("artist")
-                        role_name = c_item.get("role")
-                        if not artist_name: continue
+                    try:
+                        # Search name from title brackets
+                        # 从标题括号中搜索名称
+                        search_name = extract_text_in_brackets(event.title, keep_brackets=False)
+                        cast_data = call_async(self._saoju.get_cast_for_show(
+                            search_name, 
+                            ticket.session_time, 
+                            ticket.city,
+                            musical_id=event.saoju_musical_id
+                        ))
                         
-                        # Get or create Cast
-                        # 获取或创建演员
-                        stmt = select(HulaquanCast).where(HulaquanCast.name == artist_name)
-                        cast_obj = session.exec(stmt).first()
-                        if not cast_obj:
-                            cast_obj = HulaquanCast(name=artist_name)
-                            session.add(cast_obj)
-                            session.flush()
-                        
-                        # Link with role
-                        # 与角色关联
-                        assoc = TicketCastAssociation(
-                            ticket_id=tid,
-                            cast_id=cast_obj.id,
-                            role=role_name
-                        )
-                        session.add(assoc)
+                        for c_item in cast_data:
+                            artist_name = c_item.get("artist")
+                            role_name = c_item.get("role")
+                            if not artist_name: continue
+                            
+                            # Get or create Cast
+                            # 获取或创建演员
+                            stmt = select(HulaquanCast).where(HulaquanCast.name == artist_name)
+                            cast_obj = session.exec(stmt).first()
+                            if not cast_obj:
+                                cast_obj = HulaquanCast(name=artist_name)
+                                session.add(cast_obj)
+                                session.flush()
+                            
+                            # Link with role
+                            # 与角色关联
+                            assoc = TicketCastAssociation(
+                                ticket_id=tid,
+                                cast_id=cast_obj.id,
+                                role=role_name
+                            )
+                            session.add(assoc)
+                    except Exception as e:
+                        log.warning(f"Failed to sync cast for {title}: {e}")
             
             session.commit()
         return updates

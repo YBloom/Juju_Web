@@ -49,9 +49,18 @@ if [ ! -d "$PROJECT_DIR" ]; then
     echo "创建并复制文件到 ${PROJECT_DIR}..."
     mkdir -p $PROJECT_DIR
     cp -r . $PROJECT_DIR
+    # Ensure .env is copied if present
+    if [ -f ".env" ]; then
+        cp .env $PROJECT_DIR/
+        echo "已同步 .env 配置"
+    fi
 else
     echo "目录已存在，执行同步..."
     rsync -av --exclude '.venv' --exclude '__pycache__' --exclude '.git' . $PROJECT_DIR/
+    if [ -f ".env" ]; then
+        cp .env $PROJECT_DIR/
+        echo "已同步 .env 配置"
+    fi
 fi
 
 # 修复权限

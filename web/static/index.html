@@ -11,13 +11,14 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Material+Icons&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/grouping.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260104">
+    <link rel="stylesheet" href="/static/css/grouping.css?v=20260104">
     <!-- Pinyin Library for Autocomplete -->
     <script src="https://unpkg.com/pinyin-pro@3.18.2/dist/index.js"></script>
 </head>
 
 <body>
+    <div id="app"></div>
 
 
     <div class="nav-ribbon">
@@ -135,13 +136,14 @@
     </main>
     <footer style="margin-top: -20px; margin-bottom: 20px;">
         <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
-            数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
-                style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈
+            <div>数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
+                    style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈</div>
+            <div id="update-status" style="margin-top: 8px; font-size: 0.75rem;">正在加载更新状态...</div>
         </div>
     </footer>
 
-    <script src="/static/js/router.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/router.js?v=20260104"></script>
+    <script src="/static/js/app.js?v=20260104"></script>
 </body>
 
 </html>

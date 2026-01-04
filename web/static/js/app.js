@@ -44,7 +44,53 @@ initRouter();
 
 document.addEventListener('DOMContentLoaded', () => {
     renderColumnToggles();
+    fetchUpdateStatus();
 });
+
+// Fetch and display update status
+async function fetchUpdateStatus() {
+    const statusEl = document.getElementById('update-status');
+    if (!statusEl) return;
+
+    try {
+        const res = await fetch('/api/meta/status');
+        const data = await res.json();
+
+        let html = '';
+
+        // Hulaquan status
+        if (data.hulaquan && data.hulaquan.last_updated) {
+            const lastUpdate = new Date(data.hulaquan.last_updated);
+            const now = new Date();
+            const diffMs = now - lastUpdate;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 60) {
+                html += `呼啦圈数据: ${diffMins}分钟前更新`;
+            } else if (diffMins < 1440) {
+                const hours = Math.floor(diffMins / 60);
+                html += `呼啦圈数据: ${hours}小时前更新`;
+            } else {
+                const days = Math.floor(diffMins / 1440);
+                html += `呼啦圈数据: ${days}天前更新`;
+            }
+
+            if (!data.hulaquan.active) {
+                html += ' (自动更新未启用)';
+            }
+        } else {
+            html += '呼啦圈数据: 尚未同步';
+        }
+
+        html += ' | Saoju.net缓存: 24小时内有效';
+
+        statusEl.innerHTML = html;
+    } catch (e) {
+        console.error('Failed to fetch update status:', e);
+        statusEl.innerHTML = '无法获取更新状态';
+    }
+}
+
 
 // --- Routing ---
 
@@ -1486,12 +1532,27 @@ function renderDateTableRows(tickets) {
         }
     });
 
+    // Helper to get normalized title (strip brackets)
+    const getNormalizedTitle = (t) => {
+        if (!t.title) return '';
+        const match = t.title.match(/[《](.*?)[》]/);
+        return match && match[1] ? match[1].trim() : t.title.trim();
+    };
+
+    // Helper to get numeric price
+    const getPrice = (p) => {
+        if (typeof p === 'number') return p;
+        if (!p) return 0;
+        const str = String(p).replace(/[^\d.]/g, '');
+        return parseFloat(str) || 0;
+    };
+
     // Updated Sorting Logic:
     // 1. Time (Ascending)
-    // 2. City Frequency (Descending) - Users want cities with more shows first
-    // 3. City Name (Ascending) - Standardize order
-    // 4. Show Title (Ascending) - Group shows
-    // 5. Price (Ascending)
+    // 2. City Frequency (Descending)
+    // 3. City Name (Ascending)
+    // 4. Title (Normalized, Ascending)
+    // 5. Price (Numeric, Ascending)
     const displayTickets = [...tickets].sort((a, b) => {
         // 1. Time
         const timeA = a.session_time ? new Date(a.session_time).getTime() : 0;
@@ -1509,21 +1570,13 @@ function renderDateTableRows(tickets) {
         if (cityA !== cityB) return cityA.localeCompare(cityB, 'zh');
 
         // 4. Title
-        const titleA = a.title || '';
-        const titleB = b.title || '';
+        const titleA = getNormalizedTitle(a);
+        const titleB = getNormalizedTitle(b);
         if (titleA !== titleB) return titleA.localeCompare(titleB, 'zh');
 
         // 5. Price (Ascending)
-        // Clean price string before parsing (remove currency symbols etc)
-        const getPrice = (p) => {
-            if (typeof p === 'number') return p;
-            if (!p) return 0;
-            const str = String(p).replace(/[^\d.]/g, '');
-            return parseFloat(str) || 0;
-        };
         const priceA = getPrice(a.price);
         const priceB = getPrice(b.price);
-        // console.log(`Sorting: ${a.price}(${priceA}) vs ${b.price}(${priceB}) -> ${priceA - priceB}`);
         return priceA - priceB;
     });
 
@@ -1531,10 +1584,12 @@ function renderDateTableRows(tickets) {
     let lastGroupKey = '';
 
     displayTickets.forEach((t, index) => {
-        // Grouping Check: Time + City + Title
-        // Note: Sort order ensures they are adjacent
+        // Normalize title for consistent grouping
+        const showTitle = getNormalizedTitle(t);
+
+        // Grouping Check: Time + City + NormalizedTitle
         const timeKey = t.session_time ? new Date(t.session_time).getTime() : 0;
-        const currentGroupKey = `${timeKey}_${t.city || ''}_${t.title || ''}`;
+        const currentGroupKey = `${timeKey}_${t.city || ''}_${showTitle}`;
         const isSameGroup = currentGroupKey === lastGroupKey;
 
         // 格式化时间，只显示时分
@@ -1544,13 +1599,6 @@ function renderDateTableRows(tickets) {
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             timeStr = `${hours}:${minutes}`;
-        }
-
-        // 提取剧名（书名号内部）
-        let showTitle = t.title;
-        const titleMatch = t.title.match(/[《](.*?)[》]/);
-        if (titleMatch && titleMatch[1]) {
-            showTitle = titleMatch[1];
         }
 
         const castStr = t.cast && t.cast.length > 0 ? t.cast.map(c => c.name).join(' | ') : '-';
@@ -1582,13 +1630,13 @@ function renderDateTableRows(tickets) {
                 <td style="text-align:center; color:#999; font-size:0.85em;">${index + 1}</td>
         `;
 
-        // If same group, hide info cells
+        // If same group, hide info cells but keep stock
         if (isSameGroup) {
             html += `
                 <td class="time-cell" data-label="时间"></td>
                 <td class="city-cell" data-label="城市"></td>
                 <td class="title-cell" data-label="剧目"></td>
-                <td class="stock-cell" data-label="余票"></td>
+                <td class="stock-cell" data-label="余票">${t.stock}/${t.total_ticket}</td>
                 <td class="cast-cell" data-label="卡司"></td>
             `;
         } else {
@@ -1606,10 +1654,11 @@ function renderDateTableRows(tickets) {
         }
 
         html += `
-                <td class="price-cell" data-label="价格">${priceStr}</td>
+                <td class="price-cell" data-label="价格" style="color:#e67e22; font-weight:bold;">${priceStr}</td>
             </tr>
         `;
 
+        // Update last group key
         lastGroupKey = currentGroupKey;
     });
 

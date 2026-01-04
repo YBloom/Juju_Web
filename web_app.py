@@ -91,11 +91,37 @@ async def lifespan(app: FastAPI):
     # Crawler migration is planned for full separation.
     # 计划完全分离爬虫迁移。
     
+    
+    # Background Scheduler Logic
+    scheduler_task = None
+    if config.ENABLE_CRAWLER:
+        logger.info("Crawler ENABLED. Starting background scheduler...")
+        
+        async def _run_scheduler():
+            while True:
+                try:
+                    logger.info("Scheduler: Starting data sync...")
+                    await service.sync_all_data()
+                    logger.info("Scheduler: Sync complete. Sleeping for 300s.")
+                except Exception as e:
+                    logger.error(f"Scheduler Error: {e}", exc_info=True)
+                
+                await asyncio.sleep(300)
+
+        scheduler_task = asyncio.create_task(_run_scheduler())
+    else:
+        logger.info("Crawler DISABLED. (Set HLQ_ENABLE_CRAWLER=True to enable)")
+
     logger.info("Service is ready.")
     yield
     # Shutdown logic
-    # 关闭逻辑
     logger.info("Shutting down...")
+    if scheduler_task:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(lifespan=lifespan)
 
@@ -267,7 +293,43 @@ async def get_all_artists():
     await saoju_service._ensure_artist_map()
     artists = list(saoju_service.data.get("artists_map", {}).keys())
     return {"artists": artists}
+    return {"artists": artists}
 
+@app.get("/api/meta/status")
+async def get_service_status():
+    """Get status and last update times for services."""
+    # Find latest Hulaquan update from DB (approximate by checking a recent event)
+    # Since we don't store a global "last update" timestamp, we can query the latest event updated_at or use a memory var.
+    # Ideally HulaquanService should track last sync time.
+    # For now, let's assume if we are running the scheduler, we are "Active".
+    # But user wants "Last Updated: X mins ago".
+    # Efficient way: HulaquanService adds a `last_sync_time` property.
+    
+    # For Saoju: "24小时内有效" is static policy, but we can return the cache update time if available.
+    saoju_updated = saoju_service.data.get("updated_at")
+    
+    # For Hulaquan, let's query the latest updated_at from DB for now as a robust fallback
+    from services.hulaquan.tables import HulaquanEvent
+    from services.db.connection import session_scope
+    from sqlmodel import select, col
+    
+    hlq_time = None
+    with session_scope() as session:
+        # Get one event with max updated_at
+        stmt = select(HulaquanEvent.updated_at).order_by(col(HulaquanEvent.updated_at).desc()).limit(1)
+        res = session.exec(stmt).first()
+        if res:
+            hlq_time = res
+            
+    return {
+        "hulaquan": {
+            "active": config.ENABLE_CRAWLER,
+            "last_updated": hlq_time.isoformat() if hlq_time else None
+        },
+        "saoju": {
+            "last_updated": saoju_updated
+        }
+    }
 @app.get("/api/events/{event_id}")
 async def get_event_detail(event_id: str):
     """Get full details for a specific event.
