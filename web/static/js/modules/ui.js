@@ -71,6 +71,12 @@ export async function fetchUpdateStatus() {
         }
 
         html += ' | Saoju.net缓存: 24小时内有效';
+
+        // Add Service Info
+        if (data.service_info) {
+            html += `<div style="margin-top:4px; opacity:0.8;">v${data.service_info.version || '1.0'} | 启动于: ${data.service_info.start_time || '未知'}</div>`;
+        }
+
         statusEl.innerHTML = html;
     } catch (e) {
         statusEl.innerHTML = '无法获取更新状态';
@@ -738,7 +744,7 @@ function calculateCoCastStats(results, casts) {
     });
 
     let html = `
-        <div class="cocast-summary-card">
+        <div class="cocast-summary-minimal">
             <div class="cocast-display-header">
                 ${headerText}
             </div>

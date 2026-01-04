@@ -2,6 +2,11 @@ import asyncio
 import logging
 import uuid
 import time
+from datetime import datetime
+
+# Global Service Info
+START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -366,6 +371,10 @@ async def get_service_status():
         },
         "saoju": {
             "last_updated": saoju_updated
+        },
+        "service_info": {
+            "version": "v1.1",
+            "start_time": START_TIME
         }
     }
 @app.get("/api/events/{event_id}")
