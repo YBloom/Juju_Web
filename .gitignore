@@ -244,3 +244,5 @@ update_data_cache/
 # NapCat 相关
 napcat.sh
 NcatBot/
+
+dev.sh
