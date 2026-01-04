@@ -223,10 +223,18 @@ main {
 }
 
 /* Table Styles - Clean & Airy */
+.data-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.95rem;
+    table-layout: auto;
+    /* Allow content to define width */
 }
 
 .data-table th {
@@ -240,6 +248,7 @@ main {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    white-space: nowrap;
 }
 
 .data-table td {
@@ -261,56 +270,48 @@ main {
 }
 
 /* Columns */
-color: var(--accent-color);
-font-weight: 600;
-font-size: 0.9rem;
-padding: 20px 25px;
-/* Match td padding */
+.city-cell {
+    width: 60px;
+    white-space: nowrap;
 }
 
-/* Wrapper to apply the inline-block style naturally since TD can't be inline blocks easily without breaking table */
-/* Actually, let's keep it simple text color for now, or use a span in JS. But CSS targeting text is safer */
-/* Remove conflicting rule that forces display: table-cell */
-/* The previous rule was causing misalignment because TDs are already table-cell, 
-   but overriding padding to 0 breaks the table padding consistency. */
-/* .city-cell {
-    color: var(--primary-color);
-    background: transparent;
-    padding: 0 !important;
-    display: table-cell;
-} */
-
 .title-cell {
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 1.05rem;
+    min-width: 250px;
+    /* Make musical title wider */
 }
 
 .time-cell {
     font-family: 'SF Mono', Consolas, monospace;
     color: var(--text-secondary);
     font-size: 0.9em;
+    white-space: nowrap;
+    /* Prevent date wrapping */
 }
 
 .dt-container {
     display: flex;
     gap: 8px;
     align-items: center;
+    white-space: nowrap;
+    /* Prevent items inside from wrapping */
 }
 
 .dt-year {
-    width: 48px;
-    flex-shrink: 0;
+    display: inline-block;
 }
 
 .dt-date {
-    width: 52px;
-    flex-shrink: 0;
+    display: inline-block;
 }
 
 .dt-time {
-    width: 48px;
-    flex-shrink: 0;
+    display: inline-block;
+}
+
+/* Specific for Co-Cast "Other Casts" which should stretch */
+.cast-cell {
+    min-width: 200px;
+    white-space: nowrap;
 }
 
 /* Detail View */
@@ -695,4 +696,94 @@ padding: 20px 25px;
         padding: 16px 20px;
         font-size: 0.9rem;
     }
+}
+
+/* --- Search Button Animations --- */
+
+/* 1. 点击瞬间闪烁 */
+@keyframes button-flash {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+        filter: brightness(1.5);
+        box-shadow: 0 0 20px var(--primary-color);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+}
+
+.btn-flash {
+    animation: button-flash 0.4s ease-out;
+}
+
+/* 2. 周期性跷跷板摇晃 (每2s动一下) */
+@keyframes seesaw-burst {
+
+    0%,
+    80%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    85% {
+        transform: rotate(3deg);
+    }
+
+    90% {
+        transform: rotate(-3deg);
+    }
+
+    95% {
+        transform: rotate(1.5deg);
+    }
+}
+
+.btn-searching {
+    background-color: #f1c40f !important;
+    /* 亮黄色 */
+    color: #333 !important;
+    box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4) !important;
+    animation: seesaw-burst 2s infinite ease-in-out;
+}
+
+.btn-searching .material-icons {
+    animation: spin 1s linear infinite;
+}
+
+.cancel-text {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 2px;
+    font-weight: normal;
+}
+
+/* 3. 成功/结束后的回弹 */
+@keyframes bounce-in {
+    0% {
+        transform: scale(0.9);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    70% {
+        transform: scale(0.98);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.btn-success-back {
+    animation: bounce-in 0.5s ease-out;
 }

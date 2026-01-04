@@ -1,4 +1,19 @@
 // App State
+// 快捷跳转同场查询
+function searchInCoCast(castName) {
+    router.navigate('/cocast');
+    // 等待路由切换完成
+    setTimeout(() => {
+        const inputs = document.querySelectorAll('.cast-name-input');
+        if (inputs.length > 0) {
+            inputs[0].value = castName || '';
+            // 清空后续输入框
+            for (let i = 1; i < inputs.length; i++) inputs[i].value = '';
+            doCoCastSearch();
+        }
+    }, 100);
+}
+
 const state = {
     allEvents: [],
     displayEvents: [], // Filtered/Sorted list
@@ -82,6 +97,49 @@ function showTabContent(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => {
         if (c.id === tabId) c.classList.remove('hidden');
     });
+
+    // 初始化同场演员日期
+    if (tabId === 'tab-cocast') {
+        initCoCastDates();
+    }
+}
+
+// 初始化同场演员日期范围（今天至一年后）
+function initCoCastDates() {
+    const startInput = document.getElementById('cocast-start-date');
+    const endInput = document.getElementById('cocast-end-date');
+    if (!startInput || !endInput) return;
+
+    const now = new Date();
+    const oneYearLater = new Date();
+    oneYearLater.setFullYear(now.getFullYear() + 1);
+
+    const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    const todayStr = formatDate(now);
+    const nextYearStr = formatDate(oneYearLater);
+
+    // 始终确保限制生效
+    startInput.min = "2023-01-01";
+    endInput.min = "2023-01-01";
+    endInput.max = nextYearStr;
+
+    // 仅当为空时填充默认值
+    if (!startInput.value) startInput.value = todayStr;
+    if (!endInput.value) endInput.value = nextYearStr;
+}
+
+// 快捷设置同场演员日期范围
+function setCoCastRange(type) {
+    if (type === 'earliest') {
+        const startInput = document.getElementById('cocast-start-date');
+        if (startInput) startInput.value = "2023-01-01";
+    }
 }
 
 async function showDetailView(eventId) {
@@ -185,40 +243,59 @@ function changeSort(field) {
 }
 
 function sortEvents(events) {
+    if (!events || events.length === 0) return events;
+
+    // Calculate city frequency for the current set of events
+    const cityCounts = {};
+    events.forEach(e => {
+        if (e.city) {
+            cityCounts[e.city] = (cityCounts[e.city] || 0) + 1;
+        }
+    });
+
     return events.sort((a, b) => {
-        // Priority 1: Selected Sort Field
-        let valA = a[state.sortField];
-        let valB = b[state.sortField];
+        // Priority 1: User-selected sort field if NOT default (city)
+        if (state.sortField !== 'city') {
+            let valA = a[state.sortField];
+            let valB = b[state.sortField];
 
-        // Special handling for stock (numeric)
-        if (state.sortField === 'stock') {
-            valA = a.total_stock || 0;
-            valB = b.total_stock || 0;
-            return state.sortAsc ? valA - valB : valB - valA;
-        }
-
-        // Special handling for city (custom score)
-        if (state.sortField === 'city') {
-            const scoreA = getCityScore(valA);
-            const scoreB = getCityScore(valB);
-            if (scoreA !== scoreB) {
-                // Always adhere to priority order if different groups? 
-                // User wants sorting capability. If they click city, they probably want grouping.
-                // Let's keep the custom group logic as primary for 'city' sort.
-                // If asc, standard group order. If desc, reverse?
-                return state.sortAsc ? scoreA - scoreB : scoreB - scoreA;
+            if (state.sortField === 'stock') {
+                valA = a.total_stock || 0;
+                valB = b.total_stock || 0;
+                return state.sortAsc ? valA - valB : valB - valA;
             }
+
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+
+            if (valA < valB) return state.sortAsc ? -1 : 1;
+            if (valA > valB) return state.sortAsc ? 1 : -1;
         }
 
-        // Standard string comparison for Title/City(same group)
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
+        // Priority 2: City Frequency (Count) - User request: cities with more shows first
+        const countA = cityCounts[a.city] || 0;
+        const countB = cityCounts[b.city] || 0;
+        if (countA !== countB) {
+            return countB - countA; // More shows first
+        }
 
-        if (valA < valB) return state.sortAsc ? -1 : 1;
-        if (valA > valB) return state.sortAsc ? 1 : -1;
+        // Priority 3: City name (Grouping cities together)
+        if (a.city !== b.city) {
+            return a.city.localeCompare(b.city, 'zh');
+        }
 
-        // Fallback: Date Descending
-        return new Date(b.update_time) - new Date(a.update_time);
+        // Priority 4: Schedule start date - User request: latest start date first (Descending)
+        // Extract start date from "2025-12-19 至 2026-01-04"
+        const getStartDate = (range) => {
+            if (!range) return new Date(0);
+            const part = range.split('至')[0].trim();
+            const d = new Date(part);
+            return isNaN(d.getTime()) ? new Date(0) : d;
+        };
+
+        const dateA = getStartDate(a.schedule_range);
+        const dateB = getStartDate(b.schedule_range);
+        return dateB - dateA; // Latest date first
     });
 }
 
@@ -252,10 +329,10 @@ function renderCityFilterOptions() {
         const div = document.createElement('div');
         div.style.marginRight = '15px';
         div.innerHTML = `
-            <select id="city-filter" onchange="applyFilters()" style="padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd;">
-                <option value="">所有城市</option>
+    <select id="city-filter" onchange="applyFilters()" style="padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd;">
+        <option value="">所有城市</option>
             </select>
-        `;
+    `;
         // Insert before column config or at end
         const colConfig = toolbar.querySelector('.column-config');
         if (colConfig) {
@@ -320,10 +397,11 @@ function renderEventTable(events) {
     const col = state.visibleColumns;
 
     let html = `
+    <div class="data-table-container">
         <table class="data-table">
             <thead>
                 <tr>
-                    ${col.city ? '<th width="80" onclick="changeSort(\'city\')" class="sortable">城市</th>' : ''}
+                    ${col.city ? '<th width="60" onclick="changeSort(\'city\')" class="sortable">城市</th>' : ''}
                     ${col.update ? '<th width="180">排期</th>' : ''}
                     ${col.title ? '<th onclick="changeSort(\'title\')" class="sortable">剧目</th>' : ''}
                     ${col.stock ? '<th width="100" onclick="changeSort(\'stock\')" class="sortable">总余票</th>' : ''}
@@ -347,7 +425,7 @@ function renderEventTable(events) {
         html += `</tr>`;
     });
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
 }
 
@@ -490,7 +568,9 @@ function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
             }
         }
 
-        const castStr = t.cast && t.cast.length > 0 ? t.cast.map(c => c.name).join(' | ') : '';
+        const castStr = hasCast && t.cast && t.cast.length > 0
+            ? t.cast.map(c => `<span class="cast-link" onclick="event.stopPropagation(); searchInCoCast('${c.name}')" style="color:var(--primary-color); cursor:pointer; text-decoration:underline;">${c.name}</span>`).join(' | ')
+            : '-';
         const stockVal = t.stock !== undefined ? t.stock : 0;
 
         // 格式化价格：显示完整的呼啦圈价格格式
@@ -517,7 +597,7 @@ function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
                 style="cursor:pointer">
                 <td class="time-cell" data-label="演出时间">${timeStr}</td>
                 <td data-label="库存">${t.stock}/${t.total_ticket}</td>
-                ${hasCast ? `<td class="cast-cell" data-label="卡司">${castStr}</td>` : ''}
+                ${hasCast ? `<td class="cast-cell" data-label="卡司" onclick="event.stopPropagation()">${castStr}</td>` : ''}
                 <td data-label="价格">${priceStr}</td>
             </tr>
         `;
@@ -567,504 +647,618 @@ function applyDetailFilters(eventId) {
 
 // --- Co-Cast (Updated) ---
 
-// Inject UI elements on load
-document.addEventListener('DOMContentLoaded', () => {
-    const btnContainer = document.querySelector('#tab-cocast button[onclick="doCoCastSearch()"]').parentNode;
-
-    // 1. Student Toggle
-    if (btnContainer && !document.getElementById('student-only-toggle')) {
-        const toggleLabel = document.createElement('label');
-        toggleLabel.style.marginLeft = '15px';
-        toggleLabel.style.fontSize = '0.9em';
-        toggleLabel.style.cursor = 'pointer';
-        toggleLabel.innerHTML = '<input type="checkbox" id="student-only-toggle"> 只看学生票 (Hulaquan)';
-        btnContainer.appendChild(toggleLabel);
-    }
-
-    // 2. Date Pickers
-    const inputsContainer = document.getElementById('cocast-inputs');
-    if (inputsContainer && !document.getElementById('cocast-date-container')) {
-        const dateDiv = document.createElement('div');
-        dateDiv.id = 'cocast-date-container';
-        dateDiv.style.marginTop = '10px';
-        dateDiv.style.padding = '10px';
-        dateDiv.style.background = '#f9f9f9';
-        dateDiv.style.borderRadius = '4px';
-        dateDiv.style.display = 'flex';
-        dateDiv.style.gap = '15px';
-        dateDiv.style.alignItems = 'center';
-        dateDiv.innerHTML = `
-            <span style="font-size:0.9em;font-weight:bold;">📅 日期范围:</span>
-            <input type="date" id="cocast-start-date" style="padding:4px;" title="开始日期">
-            <span>至</span>
-            <input type="date" id="cocast-end-date" style="padding:4px;" title="结束日期">
-            <span style="font-size:0.8em;color:#666;">(默认查询一年)</span>
-        `;
-        inputsContainer.parentNode.insertBefore(dateDiv, inputsContainer.nextSibling);
-
-        // Set constraints and defaults
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayStr = `${yyyy}-${mm}-${dd}`;
-
-        const nextYear = new Date(today);
-        nextYear.setFullYear(today.getFullYear() + 1);
-        const nextYearStr = nextYear.toISOString().split('T')[0];
-
-        const maxDate = new Date(today);
-        maxDate.setFullYear(today.getFullYear() + 2);
-        const maxDateStr = maxDate.toISOString().split('T')[0];
-
-        const minDateStr = "2021-01-01";
-
-        const startInput = document.getElementById('cocast-start-date');
-        const endInput = document.getElementById('cocast-end-date');
-
-        startInput.value = todayStr;
-        startInput.min = minDateStr;
-        startInput.max = maxDateStr;
-
-        endInput.value = nextYearStr;
-        endInput.min = minDateStr;
-        endInput.max = maxDateStr;
-    }
-});
-
+// 演员 A & B 查询辅助逻辑
 function addCastInput() {
     const container = document.getElementById('cocast-inputs');
     const div = document.createElement('div');
     div.className = 'input-row';
-    div.innerHTML = '<input type="text" class="cast-name-input" placeholder="输入演员姓名">';
+    // Remove list attribute from HTML, will be added dynamically by JS
+    div.innerHTML = '<input type="text" class="cast-name-input" placeholder="输入演员姓名" oninput="handleActorInput(this)">';
     container.appendChild(div);
 }
 
+// 动态处理演员输入联想
+function handleActorInput(input) {
+    if (input.value.trim().length > 0) {
+        input.setAttribute('list', 'all-actor-list');
+    } else {
+        input.removeAttribute('list');
+    }
+}
+
+// 初始化演员自动补全功能
+async function initActorAutocomplete() {
+    try {
+        console.log("正在加载演员索引...");
+        const res = await fetch('/api/meta/artists');
+        if (!res.ok) throw new Error('Failed to fetch artists');
+        const data = await res.json();
+        const artists = data.artists || [];
+
+        if (artists.length === 0) return;
+
+        // Create datalist
+        const datalist = document.createElement('datalist');
+        datalist.id = 'all-actor-list';
+
+        // Use document fragment for performance
+        const fragment = document.createDocumentFragment();
+        artists.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            fragment.appendChild(option);
+        });
+        datalist.appendChild(fragment);
+        document.body.appendChild(datalist);
+
+        // Handle existing inputs and add event listener
+        document.querySelectorAll('.cast-name-input').forEach(input => {
+            input.removeAttribute('list'); // Default no list
+            input.addEventListener('input', () => handleActorInput(input));
+        });
+
+        console.log(`已加载 ${artists.length} 名演员索引`);
+    } catch (e) {
+        console.error("加载演员自动补全失败:", e);
+    }
+}
+
+// Start initialization
+initActorAutocomplete();
+
 async function doCoCastSearch() {
+    const btn = document.querySelector('.search-btn');
+    if (!btn) return;
+
+    // 如果已经在查询中，再次点击则取消
+    if (btn.classList.contains('btn-searching')) {
+        if (window.coCastPollInterval) {
+            clearInterval(window.coCastPollInterval);
+            window.coCastPollInterval = null;
+        }
+        resetSearchButton(btn);
+        const resultsContainer = document.getElementById('cast-results');
+        if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:40px;text-align:center;color:#999">查询已取消</div>';
+        return;
+    }
+
     const inputs = document.querySelectorAll('.cast-name-input');
     const casts = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
     if (casts.length === 0) return alert('请输入演员姓名');
 
+    // 1. 瞬间闪亮动画
+    btn.classList.add('btn-flash');
+    setTimeout(() => btn.classList.remove('btn-flash'), 400);
+
+    // 2. 变为“查询中”状态
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<div>查询中</div><div class="cancel-text">点击取消</div>`;
+    btn.classList.add('btn-searching');
+
+    const onlyStudent = document.getElementById('student-only-toggle')?.checked || false;
     const resultsContainer = document.getElementById('cast-results');
     resultsContainer.innerHTML = `
-        <div style="padding:60px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:15px; background:rgba(99, 126, 96, 0.02); border-radius:24px; margin-top:20px;">
-            <div class="spinner"></div>
-            <div style="color:var(--primary-color); font-weight:500;">正在穿梭后台匹配同场次...</div>
-            <div style="color:var(--text-secondary); font-size:0.85rem;">这可能需要几秒钟，请稍候</div>
+        <div style="padding:40px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:20px; background:rgba(99, 126, 96, 0.02); border-radius:24px; margin-top:20px; border:1px solid rgba(99, 126, 96, 0.05);">
+            <div style="display:flex; align-items:center; gap:15px">
+                <div class="spinner"></div>
+                <div style="color:var(--primary-color); font-weight:600; font-size:1.1rem;" id="search-status-text">正在初始化查询...</div>
+            </div>
+            <div style="width:100%; max-width:400px;">
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; font-size:0.85rem; color:var(--text-secondary);">
+                    <span>数据同步进度</span>
+                    <span id="search-progress-text">0%</span>
+                </div>
+                <div style="background: rgba(0,0,0,0.05); border-radius: 50px; height: 10px; overflow: hidden; border:1px solid rgba(0,0,0,0.02);">
+                    <div id="search-progress-bar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.1, 0.7, 0.1, 1); box-shadow: 0 0 10px rgba(99, 126, 96, 0.2);"></div>
+                </div>
+            </div>
+            <div style="color:var(--text-secondary); font-size:0.85rem;">正在查询 ${casts.join(' & ')} 的同台场次，请稍候...</div>
         </div>
     `;
 
     try {
-        // Date Logic
         const startInput = document.getElementById('cocast-start-date');
         const endInput = document.getElementById('cocast-end-date');
-
         const startDate = startInput ? startInput.value : "";
         const endDate = endInput ? endInput.value : "";
 
-        // Validation
-        const minDateStr = "2021-01-01";
-        // Check ranges if needed, but HTML min/max attributes handle basic UI constraints.
-        // Let's do a quick sane check
-        if (startDate < minDateStr) {
+        if (startDate && startDate < "2023-01-01") {
             alert("开始日期不能早于 2023-01-01");
+            resetSearchButton(btn);
             return;
         }
-        if (endDate < startDate) {
+
+        const oneYearLater = new Date();
+        oneYearLater.setFullYear(new Date().getFullYear() + 1);
+        const nextYearStr = oneYearLater.toISOString().split('T')[0];
+
+        if (endDate && endDate > nextYearStr) {
+            alert(`结束日期不能晚于 ${nextYearStr}`);
+            resetSearchButton(btn);
+            return;
+        }
+
+        if (startDate && endDate && endDate < startDate) {
             alert("结束日期不能早于开始日期");
+            resetSearchButton(btn);
             return;
         }
 
-        const container = document.getElementById('cast-results');
+        const startRes = await fetch('/api/tasks/co-cast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                casts: casts.join(','),
+                only_student: onlyStudent,
+                start_date: startDate,
+                end_date: endDate
+            })
+        });
 
-        // 初始化进度条 UI
-        container.innerHTML = `
-        <div style="padding: 20px; max-width: 600px; margin: 0 auto;">
-            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; font-weight: 500;">
-                <span id="search-status-text">准备搜索...</span>
-                <span id="search-progress-text">0%</span>
-            </div>
-            <div style="background: #eee; border-radius: 6px; height: 12px; overflow: hidden;">
-                <div id="search-progress-bar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
-            </div>
-        </div>
-    `;
+        if (!startRes.ok) throw new Error("启动搜索任务失败");
+        const { task_id } = await startRes.json();
 
-        try {
-            // 1. 启动任务
-            const startRes = await fetch('/api/tasks/co-cast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    casts: names.join(','),
-                    only_student: onlyStudent,
-                    start_date: startDate,
-                    end_date: endDate
-                })
-            });
-
-            if (!startRes.ok) throw new Error("启动搜索任务失败");
-            const { task_id } = await startRes.json();
-
-            // 2. 轮询状态
-            const pollInterval = setInterval(async () => {
-                try {
-                    const statusRes = await fetch(`/api/tasks/${task_id}`);
-                    if (!statusRes.ok) {
-                        clearInterval(pollInterval);
-                        container.innerHTML = `<div style='color:red;padding:20px;text-align:center'>查询状态出错</div>`;
-                        return;
-                    }
-
-                    const job = await statusRes.json();
-
-                    // 更新 UI
-                    const pBar = document.getElementById('search-progress-bar');
-                    const pText = document.getElementById('search-progress-text');
-                    const sText = document.getElementById('search-status-text');
-
-                    if (pBar) pBar.style.width = `${job.progress}%`;
-                    if (pText) pText.innerText = `${job.progress}%`;
-                    if (sText) sText.innerText = job.message || "处理中...";
-
-                    if (job.status === 'completed') {
-                        clearInterval(pollInterval);
-                        // 稍微延迟一下让用看到100%
-                        setTimeout(() => {
-                            renderCoCastResults(job.result.results, job.result.source);
-                        }, 500);
-                    } else if (job.status === 'failed') {
-                        clearInterval(pollInterval);
-                        container.innerHTML = `<div style='color:red;padding:20px;text-align:center'>❌ 查询失败: ${job.error || "未知错误"}</div>`;
-                    }
-                } catch (pollErr) {
-                    console.error("Poll error:", pollErr);
+        window.coCastPollInterval = setInterval(async () => {
+            try {
+                const statusRes = await fetch(`/api/tasks/${task_id}`);
+                if (!statusRes.ok) {
+                    clearInterval(window.coCastPollInterval);
+                    resetSearchButton(btn);
+                    resultsContainer.innerHTML = `<div style='color:red;padding:20px;text-align:center'>查询状态出错</div>`;
+                    return;
                 }
-            }, 500);
 
-        } catch (e) {
-            container.innerHTML = `<div style='color:red;padding:20px;text-align:center'>❌ 发起查询失败: ${e.message}</div>`;
-        }
+                const job = await statusRes.json();
+                const pBar = document.getElementById('search-progress-bar');
+                const pText = document.getElementById('search-progress-text');
+                const sText = document.getElementById('search-status-text');
+
+                if (pBar) pBar.style.width = `${job.progress}%`;
+                if (pText) pText.innerText = `${job.progress}%`;
+                if (sText) sText.innerText = job.message || "正匹配场次...";
+
+                if (job.status === 'completed') {
+                    clearInterval(window.coCastPollInterval);
+                    finishSearchButton(btn);
+                    setTimeout(() => {
+                        renderCoCastResults(job.result.results, job.result.source, casts);
+                    }, 400);
+                } else if (job.status === 'failed') {
+                    clearInterval(window.coCastPollInterval);
+                    resetSearchButton(btn);
+                    resultsContainer.innerHTML = `<div style='color:#d9534f;padding:40px;text-align:center;background:rgba(217,83,79,0.05);border-radius:24px;border:1px solid rgba(217,83,79,0.1);'>
+                        <i class="material-icons" style="font-size:3rem;display:block;margin-bottom:10px">error_outline</i>
+                        <div style="font-weight:600">查询失败</div>
+                        <div style="font-size:0.85rem;margin-top:5px">${job.error || "未知错误"}</div>
+                    </div>`;
+                }
+            } catch (pollErr) {
+                console.error("Poll error:", pollErr);
+            }
+        }, 600);
+
+    } catch (e) {
+        resetSearchButton(btn);
+        resultsContainer.innerHTML = `<div style='color:#d9534f;padding:40px;text-align:center'>❌ 发起查询失败: ${e.message}</div>`;
+    }
+}
+
+// 辅助函数：恢复按钮原状
+function resetSearchButton(btn) {
+    btn.classList.remove('btn-searching');
+    btn.innerHTML = `<i class="material-icons" style="margin-right: 8px; vertical-align: middle;">search</i> 查询`;
+}
+
+// 辅助函数：完成查询（带回弹动效）
+function finishSearchButton(btn) {
+    btn.classList.remove('btn-searching');
+    btn.innerHTML = `<i class="material-icons" style="margin-right: 8px; vertical-align: middle;">search</i> 查询`;
+    btn.classList.add('btn-success-back');
+    setTimeout(() => btn.classList.remove('btn-success-back'), 600);
+}
+
+function renderCoCastResults(results, source, casts) {
+    const container = document.getElementById('cast-results');
+    if (!results || results.length === 0) {
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:#999">未找到同场演出</div>';
+        return;
     }
 
-function renderCoCastResults(results, source) {
-        const container = document.getElementById('cast-results');
-        if (!results || results.length === 0) {
-            container.innerHTML = '<div style="padding:40px;text-align:center;color:#999">未找到同场演出</div>';
-            return;
-        }
+    const isSaoju = source === 'saoju';
+    const col = state.coCastCols || { index: true, others: true, location: true };
+    state.lastCoCastResults = results;
+    state.lastCoCastSource = source;
+    state.lastCoCastCasts = casts; // Store casts for re-rendering
 
-        const isSaoju = source === 'saoju';
-        const col = state.coCastCols || { index: true, others: true, location: true };
-        state.lastCoCastResults = results;
-        state.lastCoCastSource = source;
-
-        // Extract year properly from _raw_time
-        const resultsWithYear = results.map(r => {
-            let year = r.year;
-            if (!year || isNaN(year)) {
-                if (r._raw_time) {
-                    year = new Date(r._raw_time).getFullYear();
-                }
-                if (!year || isNaN(year)) {
-                    year = new Date().getFullYear();
-                }
+    // Extract year properly from _raw_time
+    const resultsWithYear = results.map(r => {
+        let year = r.year;
+        if (!year || isNaN(year)) {
+            if (r._raw_time) {
+                year = new Date(r._raw_time).getFullYear();
             }
-            return { ...r, year };
-        });
+            if (!year || isNaN(year)) {
+                year = new Date().getFullYear();
+            }
+        }
+        return { ...r, year };
+    });
 
-        const years = [...new Set(resultsWithYear.map(r => r.year))].filter(y => !isNaN(y)).sort((a, b) => b - a);
-        const selectedYear = state.coCastYearFilter || '';
-        const sortAsc = state.coCastDateSort !== false;
-        let filtered = selectedYear ? resultsWithYear.filter(r => r.year == selectedYear) : resultsWithYear;
-        filtered.sort((a, b) => {
-            const timeA = a._raw_time || a.date;
-            const timeB = b._raw_time || b.date;
-            const diff = new Date(timeA) - new Date(timeB);
-            return sortAsc ? diff : -diff;
-        });
+    const years = [...new Set(resultsWithYear.map(r => r.year))].filter(y => !isNaN(y)).sort((a, b) => b - a);
+    const selectedYear = state.coCastYearFilter || '';
+    const sortAsc = state.coCastDateSort !== false;
+    let filtered = selectedYear ? resultsWithYear.filter(r => r.year == selectedYear) : resultsWithYear;
+    filtered.sort((a, b) => {
+        const timeA = a._raw_time || a.date;
+        const timeB = b._raw_time || b.date;
+        const diff = new Date(timeA) - new Date(timeB);
+        return sortAsc ? diff : -diff;
+    });
 
-        let html = `
+    const summaryHtml = calculateCoCastStats(filtered, casts);
+
+    let html = `
+        <div style="margin-bottom:20px;padding:15px;background:#f0f7ff;border-radius:12px;border-left:5px solid var(--primary-color)">
+            ${summaryHtml}
+
+        </div>
         <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
                 <div>
                     <div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">🎭 查询到 ${results.length} 场同台演出</div>
-                    <div style="font-size:0.85em;color:#666">数据来源: ${isSaoju ? '扫剧网' : '呼啦圈'}</div>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;font-size:0.9em;flex-wrap:wrap">
-                    <label style="cursor:pointer"><input type="checkbox" ${col.index ? 'checked' : ''} onchange="state.coCastCols.index = this.checked; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource)"> 序号</label>
-                    <label style="cursor:pointer"><input type="checkbox" ${col.others ? 'checked' : ''} onchange="state.coCastCols.others = this.checked; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource)"> 其他卡司</label>
-                    <label style="cursor:pointer"><input type="checkbox" ${col.location ? 'checked' : ''} onchange="state.coCastCols.location = this.checked; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource)"> 剧场</label>
+                    <label style="cursor:pointer"><input type="checkbox" ${col.index ? 'checked' : ''} onchange="state.coCastCols.index = this.checked; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource, state.lastCoCastCasts)"> 序号</label>
+                    <label style="cursor:pointer"><input type="checkbox" ${col.others ? 'checked' : ''} onchange="state.coCastCols.others = this.checked; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource, state.lastCoCastCasts)"> 其TA卡司</label>
+                    <label style="cursor:pointer"><input type="checkbox" ${col.location ? 'checked' : ''} onchange="state.coCastCols.location = this.checked; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource, state.lastCoCastCasts)"> 剧场</label>
                     <span>|</span>
-                    <select onchange="state.coCastYearFilter = this.value; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource)" style="padding:3px 8px;border-radius:4px">
+                    <select onchange="state.coCastYearFilter = this.value; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource, state.lastCoCastCasts)" style="padding:3px 8px;border-radius:4px">
                         <option value="">全部年份</option>
                         ${years.map(y => `<option value="${y}" ${selectedYear == y ? 'selected' : ''}>${y}年</option>`).join('')}
                     </select>
-                    <button onclick="state.coCastDateSort = !state.coCastDateSort; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource)" 
+                    <button onclick="state.coCastDateSort = !state.coCastDateSort; renderCoCastResults(state.lastCoCastResults, state.lastCoCastSource, state.lastCoCastCasts)" 
                             style="padding:3px 10px;border-radius:4px;border:1px solid #ddd;background:white;cursor:pointer">
                         日期 ${sortAsc ? '↓' : '↑'}
                     </button>
                 </div>
             </div>
         </div>
+        <div class="data-table-container">
         <table class="data-table">
             <thead>
                 <tr>
                     ${col.index ? '<th width="50">#</th>' : ''}
                     <th width="200">日期/时间</th>
-                    <th width="80">城市</th>
+                    <th width="60">城市</th>
                     <th>剧目</th>
                     <th width="120">角色</th>
-                    ${col.others ? '<th>其他卡司</th>' : ''}
                     ${col.location ? '<th>剧场</th>' : ''}
+                    ${col.others ? '<th>其TA卡司</th>' : ''}
                 </tr>
             </thead>
             <tbody>
     `;
 
-        // 判断是否只有一个年份
-        const uniqueYears = [...new Set(filtered.map(r => r.year))].filter(y => !isNaN(y));
-        const showYearInTable = uniqueYears.length > 1;
+    // 判断是否只有一个年份
+    const uniqueYears = [...new Set(filtered.map(r => r.year))].filter(y => !isNaN(y));
+    const showYearInTable = uniqueYears.length > 1;
 
-        let lastYear = null, lastDate = null;
-        filtered.forEach((r, idx) => {
-            const currentYear = r.year;
-            const parts = r.date ? r.date.trim().split(/\s+/) : [];
-            const datePart = parts[0] || '';
-            const timePart = parts[1] || '';
+    let lastYear = null, lastDate = null;
+    filtered.forEach((r, idx) => {
+        const currentYear = r.year;
+        const parts = r.date ? r.date.trim().split(/\s+/) : [];
+        const datePart = parts[0] || '';
+        const timePart = parts[1] || '';
 
-            let yearShow = true;
-            let dateShow = true;
+        let yearShow = true;
+        let dateShow = true;
 
-            if (currentYear === lastYear) {
-                yearShow = false;
-                if (datePart === lastDate) {
-                    dateShow = false;
-                }
+        if (currentYear === lastYear) {
+            yearShow = false;
+            if (datePart === lastDate) {
+                dateShow = false;
             }
+        }
 
-            // 如果只有一个年份，完全不显示年份
-            if (!showYearInTable) {
-                yearShow = false;
-            }
+        // 如果只有一个年份，完全不显示年份
+        if (!showYearInTable) {
+            yearShow = false;
+        }
 
-            const yearHTML = showYearInTable ? `<span class="dt-year" style="${yearShow ? '' : 'visibility:hidden'}">${currentYear}年</span>` : '';
-            const dateHTML = `<span class="dt-date" style="${dateShow ? '' : 'visibility:hidden'}">${datePart}</span>`;
-            const timeHTML = `<span class="dt-time">${timePart}</span>`;
+        const yearHTML = showYearInTable ? `<span class="dt-year" style="${yearShow ? '' : 'visibility:hidden'}">${currentYear}年</span>` : '';
+        const dateHTML = `<span class="dt-date" style="${dateShow ? '' : 'visibility:hidden'}">${datePart}</span>`;
+        const timeHTML = `<span class="dt-time">${timePart}</span>`;
 
-            const dateDisplay = `<div class="dt-container">${yearHTML}${dateHTML}${timeHTML}</div>`;
+        const dateDisplay = `<div class="dt-container">${yearHTML}${dateHTML}${timeHTML}</div>`;
 
-            lastYear = currentYear;
-            lastDate = datePart;
-            const othersStr = r.others && r.others.length > 0 ? r.others.join(', ') : '-';
-            html += `
+        lastYear = currentYear;
+        lastDate = datePart;
+        const othersStr = r.others && r.others.length > 0 ? r.others.join(', ') : '-';
+        const titleDisplay = (!isSaoju && r.event_id)
+            ? `<span onclick="jumpToDetail('${r.event_id}', '${r.session_id || ''}')" style="cursor:pointer; color:var(--primary-color); font-weight:600; text-decoration:underline;">${r.title}</span>`
+            : r.title;
+
+        html += `
             <tr>
                 ${col.index ? `<td data-label="#">${idx + 1}</td>` : ''}
                 <td class="time-cell" data-label="日期/时间">${dateDisplay}</td>
                 <td class="city-cell" data-label="城市">${r.city || '-'}</td>
-                <td class="title-cell" data-label="剧目">${r.title}</td>
+                <td class="title-cell" data-label="剧目">${titleDisplay}</td>
                 <td data-label="角色">${r.role || '-'}</td>
-                ${col.others ? `<td class="cast-cell" data-label="其他卡司">${othersStr}</td>` : ''}
                 ${col.location ? `<td data-label="剧场">${r.location || '-'}</td>` : ''}
+                ${col.others ? `<td class="cast-cell" data-label="其TA卡司">${othersStr}</td>` : ''}
             </tr>
         `;
-        });
-        container.innerHTML = html + '</tbody></table>';
-    }
+    });
+    container.innerHTML = html + '</tbody></table></div>';
+}
 
-    // Add column filtering functionality
-    document.querySelectorAll('.cocast-table th[data-column]').forEach(header => {
-        header.style.cursor = 'pointer';
-        header.style.position = 'relative';
-        header.innerHTML += '<span class="filter-icon" style="margin-left: 5px; opacity: 0.5;">▼</span>'; // Add a filter icon
+// 计算同场统计摘要
+function calculateCoCastStats(results, casts) {
+    if (!results || results.length === 0) return '';
 
-        header.addEventListener('click', (e) => {
-            const column = header.dataset.column;
-            const table = header.closest('table');
-            const columnIndex = Array.from(header.parentNode.children).indexOf(header);
-            const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const total = results.length;
+    const castNamesHeader = casts.join(' & ');
 
-            // Create or toggle filter dropdown
-            let filterDropdown = header.querySelector('.filter-dropdown');
-            if (!filterDropdown) {
-                filterDropdown = document.createElement('div');
-                filterDropdown.className = 'filter-dropdown';
-                filterDropdown.style.position = 'absolute';
-                filterDropdown.style.backgroundColor = '#fff';
-                filterDropdown.style.border = '1px solid #ddd';
-                filterDropdown.style.padding = '10px';
-                filterDropdown.style.zIndex = '100';
-                filterDropdown.style.maxHeight = '200px';
-                filterDropdown.style.overflowY = 'auto';
-                filterDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-                filterDropdown.style.left = '0';
-                filterDropdown.style.top = '100%';
-                header.appendChild(filterDropdown);
-            }
-            filterDropdown.style.display = filterDropdown.style.display === 'block' ? 'none' : 'block';
+    // 分组统计：剧目 -> 角色组合 -> 场次
+    const groupMap = {};
+    results.forEach(r => {
+        const title = r.title || '未知剧目';
+        const role = r.role || '未知角色';
 
-            if (filterDropdown.style.display === 'block' && filterDropdown.children.length === 0) {
-                const uniqueValues = new Set();
-                rows.forEach(row => {
-                    const cellText = row.children[columnIndex].textContent.trim();
-                    if (cellText) uniqueValues.add(cellText);
-                });
-
-                const sortedValues = Array.from(uniqueValues).sort();
-
-                // "Select All" option
-                const selectAllDiv = document.createElement('div');
-                selectAllDiv.innerHTML = `<label><input type="checkbox" class="filter-checkbox" value="all" checked> (全选)</label>`;
-                filterDropdown.appendChild(selectAllDiv);
-
-                sortedValues.forEach(value => {
-                    const div = document.createElement('div');
-                    div.innerHTML = `<label><input type="checkbox" class="filter-checkbox" value="${value}" checked> ${value}</label>`;
-                    filterDropdown.appendChild(div);
-                });
-
-                filterDropdown.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', (event) => {
-                        if (event.target.value === 'all') {
-                            const isChecked = event.target.checked;
-                            filterDropdown.querySelectorAll('.filter-checkbox').forEach(cb => {
-                                cb.checked = isChecked;
-                            });
-                        } else {
-                            // If any specific item is unchecked, uncheck "Select All"
-                            if (!event.target.checked) {
-                                filterDropdown.querySelector('.filter-checkbox[value="all"]').checked = false;
-                            } else {
-                                // If all specific items are checked, check "Select All"
-                                const allChecked = Array.from(filterDropdown.querySelectorAll('.filter-checkbox:not([value="all"])')).every(cb => cb.checked);
-                                if (allChecked) {
-                                    filterDropdown.querySelector('.filter-checkbox[value="all"]').checked = true;
-                                }
-                            }
-                        }
-                        applyColumnFilter(table, columnIndex, filterDropdown);
-                    });
-                });
-            }
-
-            // Close other dropdowns
-            document.querySelectorAll('.filter-dropdown').forEach(dd => {
-                if (dd !== filterDropdown) {
-                    dd.style.display = 'none';
-                }
-            });
-            e.stopPropagation(); // Prevent document click from closing immediately
-        });
+        if (!groupMap[title]) {
+            groupMap[title] = {
+                total: 0,
+                roles: {}
+            };
+        }
+        groupMap[title].total++;
+        groupMap[title].roles[role] = (groupMap[title].roles[role] || 0) + 1;
     });
 
-    // Close filter dropdowns when clicking outside
-    document.addEventListener('click', (e) => {
+    let html = `
+        <div style="margin-bottom:12px; font-weight:600; font-size:1.1rem; color:var(--primary-color);">
+            ${castNamesHeader} 已经同台了 <span style="font-size:1.4rem; margin:0 4px;">${total}</span> 场
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+    `;
+
+    // 遍历剧目
+    Object.keys(groupMap).sort((a, b) => groupMap[b].total - groupMap[a].total).forEach(title => {
+        const group = groupMap[title];
+        html += `
+            <div style="display:flex; flex-direction:column; padding:8px 12px; background:rgba(99, 126, 96, 0.04); border-radius:10px;">
+                <div style="font-weight:600; color:var(--text-primary); margin-bottom:4px;">
+                    《${title}》 <span style="color:var(--primary-color); margin-left:8px;">${group.total}场</span>
+                </div>
+        `;
+
+        // 遍历角色组合
+        Object.keys(group.roles).sort((a, b) => group.roles[b] - group.roles[a]).forEach(role => {
+            const count = group.roles[role];
+            html += `
+                <div style="font-size:0.85rem; color:var(--text-secondary); padding-left:12px; margin-top:2px;">
+                    ${role}  <span style="opacity:0.8; margin-left:10px;">${count}场</span>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+    });
+
+    html += `</div>`;
+    return html;
+}
+
+// Add column filtering functionality
+document.querySelectorAll('.cocast-table th[data-column]').forEach(header => {
+    header.style.cursor = 'pointer';
+    header.innerHTML += '<span class="filter-icon" style="margin-left: 5px; opacity: 0.5;">▼</span>'; // Add a filter icon
+
+    header.addEventListener('click', (e) => {
+        const column = header.dataset.column;
+        const table = header.closest('table');
+        const columnIndex = Array.from(header.parentNode.children).indexOf(header);
+        const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+        // Create or toggle filter dropdown
+        let filterDropdown = header.querySelector('.filter-dropdown');
+        if (!filterDropdown) {
+            filterDropdown = document.createElement('div');
+            filterDropdown.className = 'filter-dropdown';
+            filterDropdown.style.position = 'absolute';
+            filterDropdown.style.backgroundColor = '#fff';
+            filterDropdown.style.border = '1px solid #ddd';
+            filterDropdown.style.padding = '10px';
+            filterDropdown.style.zIndex = '100';
+            filterDropdown.style.maxHeight = '200px';
+            filterDropdown.style.overflowY = 'auto';
+            filterDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            filterDropdown.style.left = '0';
+            filterDropdown.style.top = '100%';
+            header.appendChild(filterDropdown);
+        }
+        filterDropdown.style.display = filterDropdown.style.display === 'block' ? 'none' : 'block';
+
+        if (filterDropdown.style.display === 'block' && filterDropdown.children.length === 0) {
+            const uniqueValues = new Set();
+            rows.forEach(row => {
+                const cellText = row.children[columnIndex].textContent.trim();
+                if (cellText) uniqueValues.add(cellText);
+            });
+
+            const sortedValues = Array.from(uniqueValues).sort();
+
+            // "Select All" option
+            const selectAllDiv = document.createElement('div');
+            selectAllDiv.innerHTML = `<label><input type="checkbox" class="filter-checkbox" value="all" checked> (全选)</label>`;
+            filterDropdown.appendChild(selectAllDiv);
+
+            sortedValues.forEach(value => {
+                const div = document.createElement('div');
+                div.innerHTML = `<label><input type="checkbox" class="filter-checkbox" value="${value}" checked> ${value}</label>`;
+                filterDropdown.appendChild(div);
+            });
+
+            filterDropdown.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (event) => {
+                    if (event.target.value === 'all') {
+                        const isChecked = event.target.checked;
+                        filterDropdown.querySelectorAll('.filter-checkbox').forEach(cb => {
+                            cb.checked = isChecked;
+                        });
+                    } else {
+                        // If any specific item is unchecked, uncheck "Select All"
+                        if (!event.target.checked) {
+                            filterDropdown.querySelector('.filter-checkbox[value="all"]').checked = false;
+                        } else {
+                            // If all specific items are checked, check "Select All"
+                            const allChecked = Array.from(filterDropdown.querySelectorAll('.filter-checkbox:not([value="all"])')).every(cb => cb.checked);
+                            if (allChecked) {
+                                filterDropdown.querySelector('.filter-checkbox[value="all"]').checked = true;
+                            }
+                        }
+                    }
+                    applyColumnFilter(table, columnIndex, filterDropdown);
+                });
+            });
+        }
+
+        // Close other dropdowns
         document.querySelectorAll('.filter-dropdown').forEach(dd => {
-            if (!dd.contains(e.target) && !dd.parentNode.contains(e.target)) {
+            if (dd !== filterDropdown) {
                 dd.style.display = 'none';
             }
         });
+        e.stopPropagation(); // Prevent document click from closing immediately
     });
+});
 
-
-    function applyColumnFilter(table, columnIndex, filterDropdown) {
-        const selectedValues = Array.from(filterDropdown.querySelectorAll('.filter-checkbox:checked'))
-            .filter(cb => cb.value !== 'all')
-            .map(cb => cb.value);
-        const rows = Array.from(table.querySelectorAll('tbody tr'));
-
-        rows.forEach(row => {
-            const cellText = row.children[columnIndex].textContent.trim();
-            if (selectedValues.length === 0 || selectedValues.includes(cellText)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-
-    // Date search function
-    // 快捷设置日期并搜索
-    function setQuickDate(type) {
-        const input = document.getElementById('date-input');
-        const now = new Date();
-        let target = new Date();
-
-        if (type === 'today') {
-            target = now;
-        } else if (type === 'weekend') {
-            const day = now.getDay();
-            const diff = (day === 0 ? 0 : 6 - day); // 如果是周日则选今天，否则选周六
-            target.setDate(now.getDate() + diff);
-        } else if (type === 'next_weekend') {
-            const day = now.getDay();
-            const diff = (day === 0 ? 6 : 6 - day) + 7; // 下周六
-            target.setDate(now.getDate() + diff);
+// Close filter dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+    document.querySelectorAll('.filter-dropdown').forEach(dd => {
+        if (!dd.contains(e.target) && !dd.parentNode.contains(e.target)) {
+            dd.style.display = 'none';
         }
+    });
+});
 
-        const yyyy = target.getFullYear();
-        const mm = String(target.getMonth() + 1).padStart(2, '0');
-        const dd = String(target.getDate()).padStart(2, '0');
 
-        input.value = `${yyyy}-${mm}-${dd}`;
-        doDateSearch();
+function applyColumnFilter(table, columnIndex, filterDropdown) {
+    const selectedValues = Array.from(filterDropdown.querySelectorAll('.filter-checkbox:checked'))
+        .filter(cb => cb.value !== 'all')
+        .map(cb => cb.value);
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+    rows.forEach(row => {
+        const cellText = row.children[columnIndex].textContent.trim();
+        if (selectedValues.length === 0 || selectedValues.includes(cellText)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+
+// Date search function
+// 快捷设置日期范围
+function setCoCastRange(type) {
+    const startInput = document.getElementById('cocast-start-date');
+    const endInput = document.getElementById('cocast-end-date');
+    if (!startInput || !endInput) return;
+
+    if (type === 'earliest') {
+        startInput.value = '2023-01-01';
+    } else if (type === 'today') {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        startInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+}
+
+// 快捷设置日期并搜索
+function setQuickDate(type) {
+    const input = document.getElementById('date-input');
+    const now = new Date();
+    let target = new Date();
+
+    if (type === 'today') {
+        target = now;
+    } else if (type === 'weekend') {
+        const day = now.getDay();
+        const diff = (day === 0 ? 0 : 6 - day); // 如果是周日则选今天，否则选周六
+        target.setDate(now.getDate() + diff);
+    } else if (type === 'next_weekend') {
+        const day = now.getDay();
+        const diff = (day === 0 ? 6 : 6 - day) + 7; // 下周六
+        target.setDate(now.getDate() + diff);
     }
 
-    async function doDateSearch() {
-        const dateInput = document.getElementById('date-input');
-        const resultsContainer = document.getElementById('date-results');
+    const yyyy = target.getFullYear();
+    const mm = String(target.getMonth() + 1).padStart(2, '0');
+    const dd = String(target.getDate()).padStart(2, '0');
 
-        const selectedDate = dateInput.value;
+    input.value = `${yyyy}-${mm}-${dd}`;
+    doDateSearch();
+}
 
-        if (!selectedDate) {
-            resultsContainer.innerHTML = '<div style="padding:40px;text-align:center;color:#999">请选择日期</div>';
+async function doDateSearch() {
+    const dateInput = document.getElementById('date-input');
+    const resultsContainer = document.getElementById('date-results');
+
+    const selectedDate = dateInput.value;
+
+    if (!selectedDate) {
+        resultsContainer.innerHTML = '<div style="padding:40px;text-align:center;color:#999">请选择日期</div>';
+        return;
+    }
+
+    // 更新路由但不触发渲染（因为我们已经在这里处理了）
+    const currentPath = router.getCurrentPath();
+    if (!currentPath.includes(`d=${selectedDate}`)) {
+        window.history.replaceState(null, '', `#/date?d=${selectedDate}`);
+    }
+
+    resultsContainer.innerHTML = '<div style="padding:40px;text-align:center">正在查询中...</div>';
+
+    try {
+        const res = await fetch(`/api/events/date?date=${selectedDate}`);
+        const data = await res.json();
+
+        if (data.error) {
+            resultsContainer.innerHTML = `<div style="color:red;padding:20px;text-align:center">❌ ${data.error}</div>`;
             return;
         }
 
-        // 更新路由但不触发渲染（因为我们已经在这里处理了）
-        const currentPath = router.getCurrentPath();
-        if (!currentPath.includes(`d=${selectedDate}`)) {
-            window.history.replaceState(null, '', `#/date?d=${selectedDate}`);
-        }
-
-        resultsContainer.innerHTML = '<div style="padding:40px;text-align:center">正在查询中...</div>';
-
-        try {
-            const res = await fetch(`/api/events/date?date=${selectedDate}`);
-            const data = await res.json();
-
-            if (data.error) {
-                resultsContainer.innerHTML = `<div style="color:red;padding:20px;text-align:center">❌ ${data.error}</div>`;
-                return;
-            }
-
-            renderDateResults(data.results, selectedDate);
-        } catch (e) {
-            resultsContainer.innerHTML = `<div style="color:red;padding:20px;text-align:center">❌ 查询失败: ${e.message}</div>`;
-        }
+        renderDateResults(data.results, selectedDate);
+    } catch (e) {
+        resultsContainer.innerHTML = `<div style="color:red;padding:20px;text-align:center">❌ 查询失败: ${e.message}</div>`;
     }
+}
 
-    function renderDateResults(tickets, date) {
-        const container = document.getElementById('date-results');
+function renderDateResults(tickets, date) {
+    const container = document.getElementById('date-results');
 
-        if (!tickets || tickets.length === 0) {
-            container.innerHTML = `
+    if (!tickets || tickets.length === 0) {
+        container.innerHTML = `
             <div style="padding:40px;text-align:center;color:#999">
                 📅 ${date}<br><br>
                 😴 该日期暂无学生票演出安排
             </div>
         `;
-            return;
-        }
+        return;
+    }
 
-        // 排序
-        const allTickets = tickets.sort((a, b) => new Date(a.session_time) - new Date(b.session_time));
+    // 排序
+    const allTickets = tickets.sort((a, b) => new Date(a.session_time) - new Date(b.session_time));
 
-        // 提取唯一城市
-        const cities = [...new Set(allTickets.map(t => t.city).filter(c => c))].sort();
+    // 提取唯一城市
+    const cities = [...new Set(allTickets.map(t => t.city).filter(c => c))].sort();
 
-        let html = `
+    let html = `
         <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)">
             <div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">
                 📅 ${date} - 查询到 ${tickets.length} 个场次
@@ -1112,8 +1306,8 @@ function renderCoCastResults(results, source) {
                         <th width="60">城市</th>
                         <th>剧目</th>
                         <th width="80">余票</th>
-                        <th width="100">价格</th>
                         <th width="180">卡司</th>
+                        <th width="100">价格</th>
                     </tr>
                 </thead>
                 <tbody id="date-table-body">
@@ -1122,52 +1316,52 @@ function renderCoCastResults(results, source) {
         </div>
     `;
 
-        container.innerHTML = html;
+    container.innerHTML = html;
 
-        // 保存数据到全局
-        window.currentDateTickets = allTickets;
-        window.currentDate = date;
+    // 保存数据到全局
+    window.currentDateTickets = allTickets;
+    window.currentDate = date;
 
-        // 初始渲染
-        renderDateTableRows(allTickets);
-    }
+    // 初始渲染
+    renderDateTableRows(allTickets);
+}
 
-    // 渲染日期查询表格行
-    function renderDateTableRows(tickets) {
-        const tbody = document.getElementById('date-table-body');
-        if (!tbody) return;
+// 渲染日期查询表格行
+function renderDateTableRows(tickets) {
+    const tbody = document.getElementById('date-table-body');
+    if (!tbody) return;
 
-        let html = '';
+    let html = '';
 
-        tickets.forEach(t => {
-            // 格式化时间，只显示时分
-            let timeStr = '待定';
-            if (t.session_time) {
-                const date = new Date(t.session_time);
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                timeStr = `${hours}:${minutes}`;
-            }
+    tickets.forEach(t => {
+        // 格式化时间，只显示时分
+        let timeStr = '待定';
+        if (t.session_time) {
+            const date = new Date(t.session_time);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            timeStr = `${hours}:${minutes}`;
+        }
 
-            // 提取剧名（书名号内部）
-            let showTitle = t.title;
-            const titleMatch = t.title.match(/[《【](.*?)[》】]/);
-            if (titleMatch && titleMatch[1]) {
-                showTitle = titleMatch[1];
-            }
+        // 提取剧名（书名号内部）
+        let showTitle = t.title;
+        const titleMatch = t.title.match(/[《【](.*?)[》】]/);
+        if (titleMatch && titleMatch[1]) {
+            showTitle = titleMatch[1];
+        }
 
-            const castStr = t.cast && t.cast.length > 0 ? t.cast.map(c => c.name).join(' | ') : '-';
-            const stockVal = t.stock !== undefined ? t.stock : 0;
+        const castStr = t.cast && t.cast.length > 0 ? t.cast.map(c => c.name).join(' | ') : '-';
+        const stockVal = t.stock !== undefined ? t.stock : 0;
 
-            // 判断是否售罄
-            const isSoldOut = stockVal === 0 || t.status === 'sold_out';
-            const rowClass = isSoldOut ? 'sold-out' : '';
+        // 判断是否售罄
+        const isSoldOut = stockVal === 0 || t.status === 'sold_out';
+        const rowClass = isSoldOut ? 'sold-out' : '';
 
-            // 使用id或event_id字段
-            const eventId = t.event_id || t.id;
-            const sessionId = t.session_id || (t.session_time ? new Date(t.session_time).getTime() : '');
+        // 使用id或event_id字段
+        const eventId = t.event_id || t.id;
+        const sessionId = t.session_id || (t.session_time ? new Date(t.session_time).getTime() : '');
 
-            html += `
+        html += `
             <tr class="${rowClass}" data-session-id="${sessionId}">
                 <td class="time-cell" data-label="时间">${timeStr}</td>
                 <td class="city-cell" data-label="城市">${t.city || '-'}</td>
@@ -1177,96 +1371,96 @@ function renderCoCastResults(results, source) {
                     ${showTitle}
                 </td>
                 <td data-label="余票">${t.stock}/${t.total_ticket}</td>
-                <td data-label="价格">¥${t.price}</td>
                 <td class="cast-cell" data-label="卡司">${castStr}</td>
+                <td data-label="价格">¥${t.price}</td>
             </tr>
         `;
-        });
+    });
 
-        tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">没有符合条件的场次</td></tr>';
-    }
+    tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">没有符合条件的场次</td></tr>';
+}
 
-    // 应用日期查询筛选
-    function applyDateFilters(date) {
-        const allTickets = window.currentDateTickets;
-        if (!allTickets) return;
+// 应用日期查询筛选
+function applyDateFilters(date) {
+    const allTickets = window.currentDateTickets;
+    if (!allTickets) return;
 
-        // 获取筛选条件
-        const onlyAvailable = document.getElementById('date-filter-available')?.checked || false;
-        const selectedCity = document.getElementById('date-filter-city')?.value || '';
-        const searchText = document.getElementById('date-filter-search')?.value.trim().toLowerCase() || '';
+    // 获取筛选条件
+    const onlyAvailable = document.getElementById('date-filter-available')?.checked || false;
+    const selectedCity = document.getElementById('date-filter-city')?.value || '';
+    const searchText = document.getElementById('date-filter-search')?.value.trim().toLowerCase() || '';
 
-        // 应用筛选
-        let filtered = allTickets.filter(t => {
-            // 只看有票
-            if (onlyAvailable && (t.stock === 0 || t.status === 'sold_out')) {
-                return false;
-            }
-
-            // 城市筛选
-            if (selectedCity && t.city !== selectedCity) {
-                return false;
-            }
-
-            // 剧目/卡司搜索
-            if (searchText) {
-                const titleLower = t.title ? t.title.toLowerCase() : '';
-                const castNames = t.cast ? t.cast.map(c => c.name.toLowerCase()).join(' ') : '';
-                if (!titleLower.includes(searchText) && !castNames.includes(searchText)) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        renderDateTableRows(filtered);
-    }
-
-    // 跳转到详情页并高亮场次
-    function jumpToDetail(eventId, sessionId) {
-        // 加载详情页
-        loadEventDetail(eventId);
-
-        // 等待详情页渲染完成后滚动并高亮
-        setTimeout(() => {
-            highlightSession(sessionId);
-        }, 500);
-    }
-
-    // 高亮指定场次
-    function highlightSession(sessionId) {
-        if (!sessionId) return;
-
-        // 查找对应的行
-        const rows = document.querySelectorAll('#detail-table-body tr');
-        let targetRow = null;
-
-        // 尝试通过session_time匹配（需要后端支持）
-        // 这里简化处理，可以通过其他方式定位
-        rows.forEach((row, index) => {
-            // 如果能找到包含sessionId的行
-            if (row.getAttribute('data-session-id') === sessionId) {
-                targetRow = row;
-            }
-        });
-
-        if (targetRow) {
-            // 滚动到目标行
-            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            // 添加高亮类
-            targetRow.classList.add('highlight-row');
-
-            // 动画结束后移除类
-            setTimeout(() => {
-                targetRow.classList.remove('highlight-row');
-            }, 2500);
+    // 应用筛选
+    let filtered = allTickets.filter(t => {
+        // 只看有票
+        if (onlyAvailable && (t.stock === 0 || t.status === 'sold_out')) {
+            return false;
         }
-    }
 
-    // Global search function mainly for header call, mapped to live filter now
-    async function doGlobalSearch() {
-        // Just trigger filter
-        applyFilters();
+        // 城市筛选
+        if (selectedCity && t.city !== selectedCity) {
+            return false;
+        }
+
+        // 剧目/卡司搜索
+        if (searchText) {
+            const titleLower = t.title ? t.title.toLowerCase() : '';
+            const castNames = t.cast ? t.cast.map(c => c.name.toLowerCase()).join(' ') : '';
+            if (!titleLower.includes(searchText) && !castNames.includes(searchText)) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    renderDateTableRows(filtered);
+}
+
+// 跳转到详情页并高亮场次
+function jumpToDetail(eventId, sessionId) {
+    // 加载详情页
+    router.navigate('/detail/' + eventId);
+
+    // 等待详情页渲染完成后滚动并高亮
+    setTimeout(() => {
+        highlightSession(sessionId);
+    }, 500);
+}
+
+// 高亮指定场次
+function highlightSession(sessionId) {
+    if (!sessionId) return;
+
+    // 查找对应的行
+    const rows = document.querySelectorAll('#detail-table-body tr');
+    let targetRow = null;
+
+    // 尝试通过session_time匹配（需要后端支持）
+    // 这里简化处理，可以通过其他方式定位
+    rows.forEach((row, index) => {
+        // 如果能找到包含sessionId的行
+        if (row.getAttribute('data-session-id') === sessionId) {
+            targetRow = row;
+        }
+    });
+
+    if (targetRow) {
+        // 滚动到目标行
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // 添加高亮类
+        targetRow.classList.add('highlight-row');
+
+        // 动画结束后移除类
+        setTimeout(() => {
+            targetRow.classList.remove('highlight-row');
+        }, 2500);
     }
+}
+
+// Global search function mainly for header call, mapped to live filter now
+async function doGlobalSearch() {
+    // Just trigger filter
+    applyFilters();
+}
