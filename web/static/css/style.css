@@ -204,15 +204,11 @@ main {
 }
 
 /* Columns */
-.city-cell {
-    color: var(--accent-color);
-    /* Orange accent for location */
-    font-weight: 600;
-    background: #FFF4F0;
-    padding: 4px 10px !important;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    display: inline-block;
+color: var(--accent-color);
+font-weight: 600;
+font-size: 0.9rem;
+padding: 20px 25px;
+/* Match td padding */
 }
 
 /* Wrapper to apply the inline-block style naturally since TD can't be inline blocks easily without breaking table */
@@ -345,33 +341,7 @@ main {
     background: rgba(99, 126, 96, 0.05);
 }
 
-/* Status Badges - Softer colors */
-.badge {
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.badge.pending {
-    background: #FFF4E5;
-    color: #B56D3B;
-    border: 1px solid #FFE4CC;
-}
-
-/* Warm Orange */
-.badge.active {
-    background: #E9F5E9;
-    color: #4F664C;
-    border: 1px solid #D6E8D6;
-}
-
-/* Sage Green */
-.badge.sold_out {
-    background: #F5F5F5;
-    color: #999;
-    border: 1px solid #EAEAEA;
-}
+/* Removed Badge Styles per request */
 
 /* Input Panel Date */
 .input-panel {
