@@ -207,7 +207,39 @@ data/
 ubuntu_code.txt
 NcatBot/
 testment.py
-*.md
+# ========== MusicalBot 项目特定忽略 ==========
+
+# Legacy 代码 (保留本地作为 AI 参考，不提交到远程)
+legacy/
+
+# 开发测试文件
+web/responsive_test.html
+test_connection.py
+peek_db.py
+verify_id_mapping.py
+
+# 历史文档 (已归档)
+architecture_proposal.md
+docs/progress_diagnosis.rst
+docs/saoju_api.txt
+
+# 一次性迁移脚本 (已完成使命)
+scripts/import_v0_json.py
+scripts/migrate_json_to_db.py
+scripts/migrate_v2.py
+
+# 临时文件
 replace.txt
+ubuntu_code.txt
+testment.py
+
+# 缓存目录
 error_announcement_cache/
 update_data_cache/
+
+# 部署相关的临时文件 (保留 deployment_plan.md)
+!deployment_plan.md
+
+# NapCat 相关
+napcat.sh
+NcatBot/
