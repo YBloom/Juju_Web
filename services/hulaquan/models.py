@@ -8,6 +8,7 @@ class CastInfo(BaseModel):
 
 class TicketInfo(BaseModel):
     id: str
+    event_id: Optional[str] = None  # 添加event_id字段用于跳转
     title: str
     session_time: Optional[datetime] = None
     price: float = 0

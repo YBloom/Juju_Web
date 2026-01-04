@@ -571,6 +571,7 @@ class HulaquanService:
                 
                 result.append(TicketInfo(
                     id=t.id,
+                    event_id=t.event_id,  # 添加event_id用于前端跳转
                     title=t.title,
                     session_time=t.session_time,
                     price=t.price,

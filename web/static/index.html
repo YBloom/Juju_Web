@@ -13,11 +13,11 @@
 
 
     <div class="nav-ribbon">
-        <button class="nav-btn active" data-target="tab-hlq" onclick="switchTab('tab-hlq')"><i
-                class="material-icons">confirmation_number</i> 呼啦圈学生票</button>
-        <button class="nav-btn" data-target="tab-date" onclick="switchTab('tab-date')"><i
-                class="material-icons">calendar_today</i> 日期查询</button>
-        <button class="nav-btn" data-target="tab-cocast" onclick="switchTab('tab-cocast')"><i
+        <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')"><i class="material-icons">list</i>
+            全部剧目</button>
+        <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')"><i
+                class="material-icons">event</i> 学生票日历</button>
+        <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')"><i
                 class="material-icons">people</i> 同场演员</button>
     </div>
 
@@ -38,15 +38,32 @@
         <!-- Detail View (Hidden by default, overlays list) -->
         <!-- 详情视图（默认隐藏，覆盖在列表上方） -->
         <div id="detail-view" class="hidden">
-            <button class="back-btn" onclick="closeDetail()"><i class="material-icons">arrow_back</i> 返回列表</button>
+            <button class="back-btn" onclick="router.back()"><i class="material-icons">arrow_back</i> 返回</button>
             <div id="detail-content"></div>
         </div>
 
         <!-- Date Tab -->
         <div id="tab-date" class="tab-content">
-            <div class="input-panel">
-                <label>选择日期：</label>
-                <input type="date" id="date-input" onchange="doDateSearch()">
+            <div class="date-search-header" style="text-align: center; padding: 40px 20px 20px;">
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">学生票日历</h3>
+                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">查看呼啦圈近期在售的学生票演出安排</p>
+            </div>
+            <div class="input-panel" style="padding: 20px 20px 20px; text-align: center;">
+                <div
+                    style="display: inline-flex; align-items: center; background: #fff; padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 15px;">
+                    <i class="material-icons"
+                        style="color: var(--primary-color); margin-right: 10px; font-size: 1.2rem;">calendar_today</i>
+                    <input type="date" id="date-input" onchange="doDateSearch()"
+                        style="border: none; outline: none; font-size: 1rem; color: var(--text-primary); cursor: pointer; background: transparent;">
+                </div>
+                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <button class="back-btn" style="margin-bottom: 0; padding: 6px 15px; font-size: 0.85rem;"
+                        onclick="setQuickDate('today')">今天</button>
+                    <button class="back-btn" style="margin-bottom: 0; padding: 6px 15px; font-size: 0.85rem;"
+                        onclick="setQuickDate('weekend')">本周末</button>
+                    <button class="back-btn" style="margin-bottom: 0; padding: 6px 15px; font-size: 0.85rem;"
+                        onclick="setQuickDate('next_weekend')">下周末</button>
+                </div>
             </div>
             <div id="date-results"></div>
         </div>
@@ -54,13 +71,15 @@
         <!-- Co-Cast Tab -->
         <div id="tab-cocast" class="tab-content">
             <div class="cocast-panel">
-                <h3>同场卡司查询</h3>
+                <h3><small
+                        style="font-size: 0.5em; text-decoration: line-through; color: #999; margin-right: 5px; font-weight: normal;">家产</small>同场演员查询
+                </h3>
                 <div id="cocast-inputs">
                     <div class="input-row">
-                        <input type="text" class="cast-name-input" placeholder="输入演员姓名 (如: 郑棋元)">
+                        <input type="text" class="cast-name-input" placeholder="输入演员A姓名">
                     </div>
                     <div class="input-row">
-                        <input type="text" class="cast-name-input" placeholder="输入演员姓名 (如: 徐均朔)">
+                        <input type="text" class="cast-name-input" placeholder="输入演员B姓名（可选）">
                     </div>
                 </div>
                 <div class="cocast-actions">
@@ -73,6 +92,7 @@
         </div>
     </main>
 
+    <script src="/static/js/router.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 
