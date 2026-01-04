@@ -601,6 +601,298 @@ cd /opt/MusicalBot && sudo .venv/bin/python -c "import asyncio; from services.hu
 
 ---
 
+## 📊 访问统计系统 (Umami Analytics)
+
+### 系统概述
+
+Umami 是一个开源、轻量级、隐私友好的网站统计工具,用于分析网站访问数据。
+
+**组件**:
+- **Umami 应用**: Node.js 应用,运行在 Docker 容器中
+- **PostgreSQL 数据库**: 存储统计数据
+- **追踪脚本**: 前端页面加载的轻量脚本(<2KB)
+
+**资源占用**:
+- 内存: ~500MB
+- 磁盘: ~5GB (随数据增长)
+
+---
+
+### 访问统计仪表板
+
+#### 访问地址
+
+**服务器上**:
+```
+https://yyj.yaobii.com/umami
+```
+
+#### 默认账号
+
+- **用户名**: `admin`
+- **密码**: `umami`
+
+> [!IMPORTANT]
+> **必须立即修改密码**: 首次登录后请立即修改为强密码!
+
+---
+
+### 首次配置步骤
+
+#### 1. 登录后台
+
+访问 `https://yyj.yaobii.com/umami`,使用默认账号登录。
+
+#### 2. 修改密码
+
+1. 点击右上角头像图标
+2. 选择 **Settings** → **Profile**
+3. 在 "Change password" 区域输入新密码
+4. 建议使用 12 位以上强密码(包含大小写字母、数字、特殊字符)
+
+#### 3. 创建网站
+
+1. 在左侧菜单选择 **Settings** → **Websites**
+2. 点击 **Add website** 按钮
+3. 填写信息:
+   - **Domain**: `yyj.yaobii.com`
+   - **Name**: `MusicalBot`
+4. 点击 **Save**
+
+#### 4. 获取追踪代码
+
+1. 在网站列表中点击刚创建的网站
+2. 点击 **Tracking code** 标签
+3. 复制显示的 **Website ID** (类似 `abc123def-456g-789h-ijkl-mnopqrst`)
+4. 编辑 `/opt/MusicalBot/web/static/index.html`
+5. 将 `YOUR_WEBSITE_ID` 替换为实际的 Website ID:
+   ```html
+   <script defer src="/umami/script.js" data-website-id="abc123def-456g-789h-ijkl-mnopqrst"></script>
+   ```
+6. 保存文件并重启 WebApp:
+   ```bash
+   sudo supervisorctl restart musicalbot_web
+   ```
+
+---
+
+### 查看统计数据
+
+#### 仪表板功能
+
+登录后可以查看:
+
+1. **总览 (Overview)**:
+   - 总访问量 (Page Views)
+   - 独立访客 (Unique Visitors)
+   - 跳出率 (Bounce Rate)
+   - 平均访问时长
+
+2. **实时数据 (Realtime)**:
+   - 当前在线人数
+   - 实时访问流
+
+3. **页面排行**:
+   - 最受欢迎的页面
+   - 各 API 端点访问量
+
+4. **访客来源**:
+   - 地理位置分布(国家、城市)
+   - 流量来源(直接访问、搜索引擎等)
+
+5. **设备统计**:
+   - 桌面 vs 移动端
+   - 浏览器分布
+   - 操作系统分布
+
+#### 时间范围筛选
+
+仪表板右上角可以选择时间范围:
+- 最近 24 小时
+- 最近 7 天
+- 最近 30 天
+- 自定义范围
+
+---
+
+### 服务管理
+
+#### 查看 Umami 容器状态
+
+```bash
+cd /opt/MusicalBot
+sudo docker-compose -f docker-compose.umami.yml ps
+```
+
+#### 查看日志
+
+```bash
+# 查看所有日志
+sudo docker-compose -f docker-compose.umami.yml logs
+
+# 实时查看日志
+sudo docker-compose -f docker-compose.umami.yml logs -f
+
+# 仅查看 Umami 应用日志
+sudo docker-compose -f docker-compose.umami.yml logs -f umami
+
+# 仅查看数据库日志
+sudo docker-compose -f docker-compose.umami.yml logs -f db
+```
+
+#### 重启 Umami
+
+```bash
+cd /opt/MusicalBot
+sudo docker-compose -f docker-compose.umami.yml restart
+```
+
+#### 停止 Umami
+
+```bash
+cd /opt/MusicalBot
+sudo docker-compose -f docker-compose.umami.yml down
+```
+
+#### 启动 Umami
+
+```bash
+cd /opt/MusicalBot
+sudo docker-compose -f docker-compose.umami.yml up -d
+```
+
+---
+
+### 数据备份
+
+#### 备份 PostgreSQL 数据库
+
+```bash
+# 进入数据库容器
+sudo docker exec -it musicalbot-umami-db-1 /bin/sh
+
+# 备份数据库
+pg_dump -U umami umami > /tmp/umami_backup.sql
+
+# 退出容器
+exit
+
+# 复制备份到宿主机
+sudo docker cp musicalbot-umami-db-1:/tmp/umami_backup.sql ~/umami_backup_$(date +%Y%m%d).sql
+```
+
+#### 恢复数据库
+
+```bash
+# 复制备份到容器
+sudo docker cp ~/umami_backup.sql musicalbot-umami-db-1:/tmp/
+
+# 进入容器
+sudo docker exec -it musicalbot-umami-db-1 /bin/sh
+
+# 恢复数据库
+psql -U umami umami < /tmp/umami_backup.sql
+
+# 退出
+exit
+```
+
+---
+
+### 故障排查
+
+#### 问题 1: 无法访问 Umami 仪表板
+
+**症状**: 访问 `https://yyj.yaobii.com/umami` 显示 502 错误
+
+**排查步骤**:
+```bash
+# 1. 检查容器状态
+sudo docker-compose -f docker-compose.umami.yml ps
+
+# 2. 查看日志
+sudo docker-compose -f docker-compose.umami.yml logs --tail=50
+
+# 3. 检查端口占用
+sudo netstat -tulnp | grep 3000
+```
+
+**解决方案**:
+```bash
+# 重启容器
+sudo docker-compose -f docker-compose.umami.yml restart
+```
+
+---
+
+#### 问题 2: 追踪脚本加载失败
+
+**症状**: 浏览器控制台显示 `/umami/script.js` 404 错误
+
+**原因**: Nginx 配置未正确代理
+
+**解决方案**:
+```bash
+# 1. 检查 Nginx 配置
+sudo nginx -t
+
+# 2. 确认配置包含 Umami 代理规则
+sudo cat /etc/nginx/sites-available/musicalbot | grep umami
+
+# 3. 重启 Nginx
+sudo systemctl restart nginx
+```
+
+---
+
+#### 问题 3: 统计数据不显示
+
+**症状**: 已访问网站但仪表板没有数据
+
+**可能原因**:
+1. Website ID 未正确替换
+2. 浏览器广告拦截插件拦截了追踪脚本
+
+**排查步骤**:
+```bash
+# 1. 检查 index.html 中的 Website ID
+sudo grep "data-website-id" /opt/MusicalBot/web/static/index.html
+
+# 2. 在浏览器中打开开发者工具(F12)
+# 3. 切换到 Network 标签
+# 4. 刷新页面
+# 5. 查找 script.js 请求是否成功
+```
+
+**解决方案**:
+- 确认 Website ID 正确
+- 暂时禁用广告拦截插件测试
+- 检查浏览器控制台是否有错误
+
+---
+
+### 安全建议
+
+1. **强密码**: 使用 12 位以上复杂密码
+2. **定期备份**: 建议每周备份一次数据库
+3. **仅 HTTPS 访问**: 确保通过 HTTPS 访问仪表板
+4. **(可选) IP 白名单**: 在 Nginx 中限制只有特定 IP 能访问 `/umami/` 管理后台
+
+**Nginx IP 白名单示例**:
+```nginx
+location /umami/ {
+    # 仅允许您的 IP 访问
+    allow 1.2.3.4;     # 替换为您的家庭 IP
+    allow 5.6.7.8;     # 替换为您的办公室 IP
+    deny all;
+    
+    proxy_pass http://localhost:3000/;
+    # ... 其他配置
+}
+```
+
+---
+
 **文档版本**: v1.0  
 **最后更新**: 2026-01-04  
 **维护者**: YBloom
