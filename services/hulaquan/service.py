@@ -26,6 +26,7 @@ from services.hulaquan.models import (
 )
 from services.hulaquan.utils import standardize_datetime, extract_title_info, extract_text_in_brackets, detect_city_in_text
 from services.saoju.service import SaojuService
+from services.hulaquan.city_resolver import CityResolver
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,30 @@ class HulaquanService:
         self._semaphore = asyncio.Semaphore(1)  # Sequential sync to avoid SQLite locking
         self._session: Optional[aiohttp.ClientSession] = None
         self._saoju = SaojuService()
+        self._city_resolver = CityResolver()
+        
+        # Load venue rules
+        self.venue_rules = {}
+        try:
+            import json
+            from pathlib import Path
+            rule_path = Path(__file__).parent / "venue_rules.json"
+            if rule_path.exists():
+                with open(rule_path, 'r', encoding='utf-8') as f:
+                    self.venue_rules = json.load(f).get("rules", {})
+        except Exception as e:
+            log.error(f"Failed to load venue rules: {e}")
+
+    def _apply_city_rules(self, city: Optional[str], venue: Optional[str]) -> Optional[str]:
+        if city:
+            return city
+        if not venue:
+            return None
+        
+        for key, val in self.venue_rules.items():
+            if key in venue:
+                return val
+        return None
 
     async def __aenter__(self):
         await self._ensure_session()
@@ -404,6 +429,10 @@ class HulaquanService:
                     city = t.city
                     break
         
+        # Fallback: Inference from Venue Rules
+        if not city:
+            city = self._apply_city_rules(city, event.location)
+        
         # 2. Stock and Price Calculation
         total_stock = sum(t.stock for t in tickets)
         prices = [t.price for t in tickets if t.price > 0]
@@ -451,6 +480,46 @@ class HulaquanService:
             schedule_range=schedule_range,
             tickets=tickets
         )
+        
+    def _enrich_ticket_city(self, ticket: HulaquanTicket, event: HulaquanEvent) -> Optional[str]:
+        """Resolve city for a ticket using multiple fallback strategies.
+        Order:
+        1. Config Rules (Venue)
+        2. Config Rules (Title)
+        3. DB City
+        4. Ticket Title Extraction
+        5. Event Title Extraction
+        6. Event Location Extraction
+        """
+        # 1. Config Rules (Venue)
+        if event.location:
+            city = self._city_resolver.from_venue(event.location)
+            if city: return city
+
+        # 2. Config Rules (Title) - Check ticket title then event title
+        city = self._city_resolver.from_title(ticket.title)
+        if city: return city
+        
+        city = self._city_resolver.from_title(event.title)
+        if city: return city
+
+        # 3. Existing DB City
+        if ticket.city:
+            return ticket.city
+
+        # 4 & 5. Text Extraction (Title)
+        info = extract_title_info(ticket.title)
+        if info.get("city"): return info.get("city")
+        
+        info = extract_title_info(event.title)
+        if info.get("city"): return info.get("city")
+
+        # 6. Text Extraction (Location)
+        if event.location:
+            city = detect_city_in_text(event.location)
+            if city: return city
+            
+        return None
 
     async def get_events_by_date(self, check_date: datetime, city: Optional[str] = None) -> List[TicketInfo]:
         """Get tickets performing on a specific date.
@@ -469,8 +538,24 @@ class HulaquanService:
             
             tickets = session.exec(statement).all()
             result = []
+            
+            # Helper to get event for rules
+            # We need to fetch associated events to use location/title rules
+            # Optimized: fetch needed events in one go or lazy load
+            # Since SqlModel lazy loads relationships by default if not detached, we can access t.event
+            
             for t in tickets:
                 if t.status == "expired": continue
+                
+                # Ensure event is loaded for location/rules
+                # t.event might be sync or async depending on setup, but typically sync access in session context
+                event = t.event
+                # Fallback if lazy load fails or not set (shouldn't happen with foreign key)
+                if not event:
+                    event = session.get(HulaquanEvent, t.event_id)
+                
+                # Enrich City
+                final_city = self._enrich_ticket_city(t, event) if event else t.city
                 
                 # Fetch cast info
                 # 获取演员信息
@@ -491,7 +576,7 @@ class HulaquanService:
                     price=t.price,
                     stock=t.stock,
                     total_ticket=t.total_ticket,
-                    city=t.city,
+                    city=final_city,
                     status=t.status,
                     valid_from=t.valid_from,
                     cast=cast_infos
@@ -531,6 +616,8 @@ class HulaquanService:
         """
         with session_scope() as session:
             stmt = select(HulaquanSubscription).where(HulaquanSubscription.user_id == user_id)
+            return session.exec(stmt).all()
+
             return session.exec(stmt).all()
 
     async def get_all_events(self) -> List[EventInfo]:

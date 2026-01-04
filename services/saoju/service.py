@@ -215,9 +215,14 @@ class SaojuService:
         events.sort(key=lambda entry: standardize_datetime_for_saoju(entry["date"]))
         return events
 
-    async def match_co_casts(self, co_casts: List[str], show_others=True, progress_callback=None) -> List[Dict]:
-        """查找指定演员共同演出的场次。
-        优化策略：先找共同剧目 ID，再同步详细数据，避免全量查询。
+    async def match_co_casts(self, co_casts: List[str], show_others: bool = True, progress_callback=None, start_date: str = None, end_date: str = None) -> List[Dict]:
+        """
+        Find shows where all artists in `co_casts` performed together.
+        Optimized to use ID intersection and search_musical_show API.
+        
+        Args:
+           start_date: YYYY-MM-DD string. Default check logic below if None.
+           end_date: YYYY-MM-DD string. Default check logic below if None.
         """
         from services.hulaquan.utils import standardize_datetime_for_saoju, parse_datetime
         
@@ -266,10 +271,22 @@ class SaojuService:
         completed_count = 0
         results = []
         
-        # Define date range for efficient search (e.g., -180 days to +365 days)
+        # Define date range for efficient search
         now = datetime.now()
-        begin_date = (now - timedelta(days=180)).strftime("%Y-%m-%d")
-        end_date = (now + timedelta(days=365)).strftime("%Y-%m-%d")
+        if not start_date:
+            start_date = now.strftime("%Y-%m-%d")
+        if not end_date:
+            end_date = (now + timedelta(days=365)).strftime("%Y-%m-%d")
+            
+        # Parse for local comparison if needed
+        from services.hulaquan.utils import parse_datetime
+        try:
+            dt_start = parse_datetime(start_date) or datetime(2023, 1, 1)
+            dt_end = parse_datetime(end_date) or (now + timedelta(days=730))
+        except:
+            dt_start = datetime(2023, 1, 1)
+            dt_end = now + timedelta(days=365)
+
         
         # 定义处理单个剧目的函数 (Using search_musical_show API)
         async def process_musical(mid):
@@ -283,8 +300,8 @@ class SaojuService:
                 return []
 
             # 使用 _get_musical_shows (search_musical_show API)
-            # 这个接口速度快，且支持服务器端日期过滤
-            shows = await self._get_musical_shows(musical_name, begin_date, end_date)
+            # 传递指定的日期范围
+            shows = await self._get_musical_shows(musical_name, start_date, end_date)
             
             local_results = []
             for show in shows:
@@ -301,8 +318,9 @@ class SaojuService:
                     if not dt:
                         continue
                     
-                    # 再次进行本地日期过滤 (Double check)
-                    if (now - dt).days > 90:
+                    # 本地日期精确过滤 (Double check range)
+                    # Because API might return slightly wider range if cached broadly
+                    if not (dt_start <= dt <= dt_end + timedelta(days=1)): # inclusive
                         continue
                     
                     # 提取其他演员
@@ -314,6 +332,7 @@ class SaojuService:
                     
                     local_results.append({
                         "date": formatted_date,
+                        "year": dt.year,  # Add year for frontend grouping
                         "title": musical_name,
                         "role": " / ".join([c.get('role') for c in show_cast_list if c.get('artist') in co_casts]),
                         "others": others,

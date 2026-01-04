@@ -211,6 +211,8 @@ async def start_cocast_search(request: Request):
     data = await request.json()
     casts = data.get("casts", "")
     only_student = data.get("only_student", False)
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
     
     if not casts:
         return {"error": "Missing casts"}
@@ -219,22 +221,28 @@ async def start_cocast_search(request: Request):
     
     job_id = job_manager.create_job()
     
-    async def run_task(jid, c_list, is_student):
+    async def run_task(jid, c_list, is_student, s_date, e_date):
         try:
             if is_student:
-                # Student tickets usually fast enough, but let's simulate progress or just return
+                # Student tickets logic (unchanged for now)
                 job_manager.update_progress(jid, 10, "正在搜索本地数据库...")
-                await asyncio.sleep(0.5) # Simulate slight delay for UX
+                await asyncio.sleep(0.5) 
                 tickets = await service.search_co_casts(c_list)
                 res = {"results": [t.dict() for t in tickets], "source": "hulaquan"}
                 job_manager.complete_job(jid, res)
             else:
-                # Saoju search with progress
+                # Saoju search with progress and date range
                 async with saoju_service as s:
                     async def progress_cb(p, msg):
                         job_manager.update_progress(jid, p, msg)
                         
-                    results = await s.match_co_casts(c_list, show_others=True, progress_callback=progress_cb)
+                    results = await s.match_co_casts(
+                        c_list, 
+                        show_others=True, 
+                        progress_callback=progress_cb,
+                        start_date=s_date,
+                        end_date=e_date
+                    )
                     res = {"results": results, "source": "saoju"}
                     job_manager.complete_job(jid, res)
         except Exception as e:
@@ -242,7 +250,7 @@ async def start_cocast_search(request: Request):
             job_manager.fail_job(jid, str(e))
 
     # Start background task
-    asyncio.create_task(run_task(job_id, cast_list, only_student))
+    asyncio.create_task(run_task(job_id, cast_list, only_student, start_date, end_date))
     
     return {"task_id": job_id}
 

@@ -885,7 +885,12 @@ class Hulaquan(BasePlugin):
         date = args["text_args"][0]
         city = args["text_args"][1] if len(args["text_args"])>1 else None
         mode_args = args["mode_args"]
-        date_obj = standardize_datetime(date, False)
+        try:
+            date_obj = standardize_datetime(date, False)
+        except ValueError:
+            await msg.reply_text("【日期格式有误】以下是/date的用法\n"+HLQ_DATE_USAGE)
+            return
+
         if not date_obj:
             await msg.reply_text("【日期格式有误】以下是/date的用法\n"+HLQ_DATE_USAGE)
             return
