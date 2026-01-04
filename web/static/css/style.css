@@ -704,18 +704,28 @@ main {
 
     .data-table th,
     .data-table td {
-        padding: 8px 10px;
+        padding: 6px 4px;
+        /* Tighter padding */
         font-size: 0.75rem;
     }
 
     .title-cell {
-        max-width: 120px;
+        max-width: 90px;
+        /* Reduced width */
         font-size: 0.8rem;
     }
 
     .cast-cell {
-        max-width: 150px;
+        max-width: 100px;
+        /* Reduced width */
         font-size: 0.7rem;
+    }
+
+    .stock-cell {
+        white-space: nowrap;
+        font-size: 0.7rem;
+        padding: 6px 2px;
+        /* Very tight for stock */
     }
 
     /* Co-Cast面板 */

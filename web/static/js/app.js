@@ -1501,8 +1501,10 @@ function renderDateTableRows(tickets) {
         const titleB = b.title || '';
         if (titleA !== titleB) return titleA.localeCompare(titleB, 'zh');
 
-        // 5. Price
-        return (a.price || 0) - (b.price || 0);
+        // 5. Price (Ascending)
+        const priceA = parseFloat(a.price) || 0;
+        const priceB = parseFloat(b.price) || 0;
+        return priceA - priceB;
     });
 
     let html = '';
@@ -1552,8 +1554,11 @@ function renderDateTableRows(tickets) {
             priceStr = `¥${t.price}`;
         }
 
+        // Create grouping class
+        const groupClass = isSameGroup ? 'group-continue' : 'group-start';
+
         html += `
-            <tr class="${rowClass}" data-session-id="${sessionId}">
+            <tr class="${rowClass} ${groupClass}" data-session-id="${sessionId}">
                 <td style="text-align:center; color:#999; font-size:0.85em;">${index + 1}</td>
         `;
 
