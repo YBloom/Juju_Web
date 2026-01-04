@@ -390,6 +390,10 @@ class HulaquanService:
         """Search events by title query (case-insensitive).
         按标题查询搜索事件（不区分大小写）。
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._search_events_sync, query)
+
+    def _search_events_sync(self, query: str) -> List[EventInfo]:
         with session_scope() as session:
             statement = select(HulaquanEvent).where(HulaquanEvent.title.contains(query))
             events = session.exec(statement).all()
@@ -540,6 +544,10 @@ class HulaquanService:
         """Get tickets performing on a specific date.
         获取特定日期演出的票据。
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_events_by_date_sync, check_date, city)
+
+    def _get_events_by_date_sync(self, check_date: datetime, city: Optional[str] = None) -> List[TicketInfo]:
         start_of_day = check_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
         
@@ -603,6 +611,10 @@ class HulaquanService:
         """Add or update a user subscription. mode=0 means unsubscribe.
         添加或更新用户订阅。mode=0 表示取消订阅。
         """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._manage_subscription_sync, user_id, target_id, target_type, mode)
+
+    def _manage_subscription_sync(self, user_id: str, target_id: str, target_type: str, mode: int):
         with session_scope() as session:
             statement = select(HulaquanSubscription).where(
                 HulaquanSubscription.user_id == user_id,
@@ -630,14 +642,20 @@ class HulaquanService:
         """Get all subscriptions for a user.
         获取用户的所有订阅。
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_user_subscriptions_sync, user_id)
+
+    def _get_user_subscriptions_sync(self, user_id: str) -> List[HulaquanSubscription]:
         with session_scope() as session:
             stmt = select(HulaquanSubscription).where(HulaquanSubscription.user_id == user_id)
             return session.exec(stmt).all()
 
-            return session.exec(stmt).all()
-
     async def get_all_events(self) -> List[EventInfo]:
         """Get all known events."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_all_events_sync)
+
+    def _get_all_events_sync(self) -> List[EventInfo]:
         with session_scope() as session:
             events = session.exec(select(HulaquanEvent)).all()
             results = []
@@ -676,6 +694,10 @@ class HulaquanService:
         """Get all theater aliases.
         获取所有剧院别名。
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_aliases_sync)
+
+    def _get_aliases_sync(self) -> List[HulaquanAlias]:
         with session_scope() as session:
             return session.exec(select(HulaquanAlias)).all()
 
@@ -683,6 +705,10 @@ class HulaquanService:
         """Add or update an alias for an event.
         添加或更新事件的别名。
         """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._add_alias_sync, event_id, alias, search_name)
+
+    def _add_alias_sync(self, event_id: str, alias: str, search_name: Optional[str] = None):
         with session_scope() as session:
             stmt = select(HulaquanAlias).where(HulaquanAlias.alias == alias)
             alias_obj = session.exec(stmt).first()
@@ -705,6 +731,10 @@ class HulaquanService:
         Try to find event ID by title or alias.
         Returns (id, title) or None.
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_event_id_by_name_sync, name)
+
+    def _get_event_id_by_name_sync(self, name: str) -> Optional[Tuple[str, str]]:
         with session_scope() as session:
             # 1. Exact title match
             # 1. 精确标题匹配
@@ -735,6 +765,10 @@ class HulaquanService:
         """Get full details for a single event by ID.
         按 ID 获取单个事件的完整详细信息。
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_event_details_by_id_sync, event_id)
+
+    def _get_event_details_by_id_sync(self, event_id: str) -> List[EventInfo]:
         with session_scope() as session:
             event = session.get(HulaquanEvent, event_id)
             if not event:
@@ -777,6 +811,10 @@ class HulaquanService:
         Find tickets where ALL specified casts are performing together.
         查找所有指定演员共同演出的票据，返回扁平化数据以适配前端统计。
         """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._search_co_casts_sync, cast_names)
+
+    def _search_co_casts_sync(self, cast_names: List[str]) -> List[Dict]:
         if not cast_names:
             return []
             
