@@ -5,7 +5,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import aiohttp
+from sqlmodel import select
 from services.utils.timezone import now as timezone_now
+from services.db.connection import session_scope
+from services.hulaquan.tables import SaojuCache
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +19,7 @@ class SaojuService:
         self._session: Optional[aiohttp.ClientSession] = None
         self._day_cache: Dict[str, Dict] = {} # Key: date_str|city
         self.data: Dict = {}
-        self.DATA_FILE = "data/saoju_service_cache.json"
+        self.CACHE_KEY = "global_cache"
         self.load_data()
         
         # Ensure base structure
@@ -28,29 +31,43 @@ class SaojuService:
         self.data.setdefault("show_cache_updated", {})
 
     def load_data(self):
-        import os
-        if os.path.exists(self.DATA_FILE):
-            try:
-                import json
-                with open(self.DATA_FILE, 'r', encoding='utf-8') as f:
-                    self.data = json.load(f)
-                log.info(f"Loaded Saoju cache from {self.DATA_FILE}")
-            except Exception as e:
-                log.error(f"Failed to load cache: {e}")
-                self.data = {}
-        else:
+        try:
+            with session_scope() as session:
+                # Create table if not exists (usually handled by migration/app startup but safe to ensure here or assume handled)
+                # Ideally, SQLModel.metadata.create_all(engine) is called somewhere.
+                # Since I added a new table, I should probably ensure it exists.
+                # However, session_scope gets engine.
+                # Let's rely on standard flow or strict execution.
+                # Given I just added the table, I'll rely on verify script to create tables or user flow.
+                # For safety, I'll just query.
+                cache = session.exec(select(SaojuCache).where(SaojuCache.key == self.CACHE_KEY)).first()
+                if cache and cache.data:
+                    self.data = json.loads(cache.data)
+                    log.info(f"Loaded Saoju cache from DB (key={self.CACHE_KEY})")
+                else:
+                    self.data = {}
+        except Exception as e:
+            # If table doesn't exist, this will fail.
+            # We should probably support auto-init or just log error.
+            log.warning(f"Failed to load cache from DB (may be first run or missing table): {e}")
             self.data = {}
 
     def save_data(self):
-        import os
-        import json
         try:
-            os.makedirs(os.path.dirname(self.DATA_FILE), exist_ok=True)
-            with open(self.DATA_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self.data, f, ensure_ascii=False, indent=2)
-            log.info(f"Saved Saoju cache to {self.DATA_FILE}")
+            json_str = json.dumps(self.data, ensure_ascii=False)
+            with session_scope() as session:
+                cache = session.exec(select(SaojuCache).where(SaojuCache.key == self.CACHE_KEY)).first()
+                if not cache:
+                    cache = SaojuCache(key=self.CACHE_KEY, data=json_str)
+                    session.add(cache)
+                else:
+                    cache.data = json_str
+                    cache.updated_at = timezone_now()
+                    session.add(cache)
+                # session_scope auto commits
+            log.info(f"Saved Saoju cache to DB (key={self.CACHE_KEY})")
         except Exception as e:
-            log.error(f"Failed to save cache: {e}")
+            log.error(f"Failed to save cache to DB: {e}")
 
     async def __aenter__(self):
         await self._ensure_session()

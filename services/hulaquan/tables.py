@@ -72,3 +72,9 @@ class HulaquanAlias(SQLModel, table=True):
     search_names: Optional[str] = None # Comma separated
     # 逗号分隔
     no_response_times: int = 0
+
+class SaojuCache(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    data: str # Stores JSON string
+    updated_at: datetime = Field(default_factory=timezone_now)
+
