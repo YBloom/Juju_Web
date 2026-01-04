@@ -15,6 +15,7 @@ import pandas as pd
 
 from plugins.Hulaquan import BaseDataManager
 from plugins.Hulaquan.utils import *
+from services.saoju.service import SaojuService
 
 class SaojuDataManager(BaseDataManager):
     """Manage Saoju data with the latest JSON APIs instead of HTML scraping.
@@ -41,7 +42,10 @@ class SaojuDataManager(BaseDataManager):
         update_dict = self.data.setdefault("update_time_dict", {})
         update_dict.setdefault("date_dict", {})
         update_dict.setdefault("musical_show_cache", {})
+        self.data.setdefault("show_cache", {}) # New structured ID-based cache
+        self.data.setdefault("show_cache_updated", {})
         self.refresh_expired_data()
+        self.service = SaojuService()
 
     async def search_day_async(self, date: str, city: Optional[str] = None) -> Optional[Dict]:
         params = {"date": date}
@@ -237,38 +241,102 @@ class SaojuDataManager(BaseDataManager):
         return events
     
     async def match_co_casts(self, co_casts: list, show_others=True, return_data=False):
-        search_name = co_casts[0]
-        _co_casts = co_casts[1:]
-        events = await self.get_artist_events_data(search_name)
-        result = []
-        latest = ""
-        for event in events:
-            others_field = event.get('others') or []
-            if isinstance(others_field, str):
-                others = [name for name in others_field.split() if name]
+        """
+        New ID-based implementation.
+        1. Identify common musicals for the artists.
+        2. Sync exact cast data for those musicals.
+        3. Filter for shows containing all artists.
+        """
+        if not co_casts:
+            return []
+            
+        await self._ensure_artist_map()
+        indexes = await self._ensure_artist_indexes()
+        
+        # 1. Map names to IDs
+        artist_ids = []
+        for name in co_casts:
+            aid = self.data["artists_map"].get(name)
+            if not aid:
+                # If any artist not found, no co-cast possible
+                print(f"Artist {name} not found in Saoju index.")
+                return []
+            artist_ids.append(str(aid))
+            
+        # 2. Find common musical IDs
+        # artist_musicals structure: {artist_id: {musical_id: {...}}}
+        common_musicals = None
+        for aid in artist_ids:
+            musicals = set(indexes["artist_musicals"].get(aid, {}).keys())
+            if common_musicals is None:
+                common_musicals = musicals
             else:
-                others = list(others_field)
-            if all(cast in others for cast in _co_casts): 
-                remaining = [item for item in others if item not in _co_casts]
-                dt = event['date']
-                event['date'] = standardize_datetime_for_saoju(dt, return_str=True, latest_str=latest)
-                latest = dt
-                event['others'] = remaining
-                result.append(event)
-        if return_data:
-            return result
-        else:
-            return self.generate_co_casts_message(co_casts, show_others, result)
+                common_musicals &= musicals
+                
+        if not common_musicals:
+            return [] if return_data else ["未找到这些演员共同出演的音乐剧。"]
 
-    def generate_co_casts_message(self, co_casts, show_others, co_casts_data):
-        messages = []
-        messages.append(" ".join(co_casts)+f"同场的音乐剧演出，目前有{len(co_casts_data)}场。")
-        for event in co_casts_data:
-            extra = ""
-            if show_others and event.get('others'):
-                extra = "\n同场其他演员：" + " ".join(event['others'])
-            messages.append(f"{event['date']} {event['city']} {event['title']}{extra}")
-        return messages
+        # 3. Fetch/Sync and Filter
+        results = []
+        
+        for mid in common_musicals:
+            # Get structured show data (cached or synced)
+            shows = await self._get_synced_shows(int(mid))
+            
+            for show in shows:
+                # show['cast'] is list of {'artist': name, 'role': role}
+                # Check if all co_casts are in this show
+                
+                # Extract artist names from show cast
+                current_cast_names = {c['artist'] for c in show['cast']}
+                
+                if all(name in current_cast_names for name in co_casts):
+                    # Match found
+                    # Format entry compatible with frontend/legacy
+                    dt = parse_datetime(show['time'])
+                    if not dt: continue
+                    
+                    others = [c['artist'] for c in show['cast'] if c['artist'] not in co_casts]
+                    
+                    results.append({
+                        "date": self._format_readable_date(dt),
+                        "title": show.get("tour_name") or "未知剧目", # Tour name close enough to Title
+                        "role": " / ".join([c['role'] for c in show['cast'] if c['artist'] in co_casts]), # Joint roles?
+                        "others": others,
+                        "city": show.get("city", ""),
+                        "location": show.get("theatre_name", ""),
+                        # Raw data for good measure
+                        "raw_time": show['time']
+                    })
+        
+        results.sort(key=lambda x: x.get("raw_time", ""))
+
+        if return_data:
+            return results
+        else:
+            return self.generate_co_casts_message(co_casts, show_others, results)
+
+    async def _get_synced_shows(self, musical_id: int):
+        """Get shows from cache or sync from API."""
+        s_mid = str(musical_id)
+        cache = self.data.get("show_cache", {})
+        updated = self.data.get("show_cache_updated", {})
+        
+        last_update = updated.get(s_mid)
+        if last_update:
+            dt = parse_datetime(last_update)
+            # Cache valid for 24 hours? 
+            if dt and (datetime.now() - dt) < timedelta(hours=24):
+                return cache.get(s_mid, [])
+                
+        # Need sync
+        shows = await self.service.sync_musical_data(musical_id)
+        if shows:
+            cache[s_mid] = shows
+            updated[s_mid] = dateTimeToStr(datetime.now())
+            # Save strictly not required if assuming periodic saves, but good for safety
+            # await self.save() 
+        return shows or []
 
     async def request_co_casts_data(self, co_casts: list, show_others=False):
         return await self.match_co_casts(co_casts, show_others, return_data=True)
@@ -287,10 +355,13 @@ class SaojuDataManager(BaseDataManager):
         last_error = None
         for attempt in range(5):
             try:
-                async with aiohttp.ClientSession() as session:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                }
+                async with aiohttp.ClientSession(headers=headers) as session:
                     async with session.get(url, params=params, timeout=10) as response:
                         response.raise_for_status()
-                        return await response.json()
+                        return await response.json(content_type=None)
             except aiohttp.ClientError as exc:
                 last_error = exc
             except Exception as exc:  # noqa: BLE001

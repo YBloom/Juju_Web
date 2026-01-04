@@ -38,7 +38,7 @@ function renderColumnToggles() {
         // Define toggleable columns map
         const cols = [
             { id: 'city', label: '城市' },
-            { id: 'update', label: '更新时间' },
+            { id: 'update', label: '排期' },
             { id: 'title', label: '剧名' },
             { id: 'location', label: '场馆' },
             { id: 'stock', label: '余票' },
@@ -145,7 +145,7 @@ function renderEventTable(events) {
             <thead>
                 <tr>
                     ${col.city ? '<th width="80">城市</th>' : ''}
-                    ${col.update ? '<th width="150">更新</th>' : ''}
+                    ${col.update ? '<th width="180">排期</th>' : ''}
                     ${col.title ? '<th>剧目</th>' : ''}
                     ${col.stock ? '<th width="100">总余票</th>' : ''}
                     ${col.price ? '<th width="120">票价范围</th>' : ''}
@@ -157,11 +157,11 @@ function renderEventTable(events) {
     `;
 
     events.forEach(e => {
-        const updateTime = e.update_time ? new Date(e.update_time).toLocaleDateString() : '-';
+        const scheduleRange = e.schedule_range || '-';
         // HTML construction
         html += `<tr onclick="loadEventDetail('${e.id}')">`;
         if (col.city) html += `<td class="city-cell">${e.city}</td>`;
-        if (col.update) html += `<td class="time-cell">${updateTime}</td>`;
+        if (col.update) html += `<td class="time-cell">${scheduleRange}</td>`;
         if (col.title) html += `<td class="title-cell">${e.title}</td>`;
         if (col.stock) html += `<td>${e.total_stock}</td>`;
         if (col.price) html += `<td>${e.price_range}</td>`;
@@ -227,7 +227,7 @@ function renderDetailView(event) {
             <h2 style="margin-top:0; color:var(--primary-color)">${event.title}</h2>
             <div style="display:flex; gap:20px; color:#666">
                 <span>📍 ${event.location || '未知场馆'}</span>
-                <span>📅 更新于: ${new Date(event.update_time).toLocaleString()}</span>
+                <span>📅 排期: ${event.schedule_range || '待定'}</span>
             </div>
         </div>
         <div>
@@ -267,7 +267,21 @@ function renderDetailView(event) {
     container.innerHTML = html;
 }
 
-// --- Co-Cast (Keep existing) ---
+// --- Co-Cast (Updated) ---
+
+// Inject toggle checkbox on load (simple hack since we don't edit HTML directly)
+document.addEventListener('DOMContentLoaded', () => {
+    const btnContainer = document.querySelector('#tab-cocast button[onclick="doCoCastSearch()"]').parentNode;
+    if (btnContainer && !document.getElementById('student-only-toggle')) {
+        const toggleLabel = document.createElement('label');
+        toggleLabel.style.marginLeft = '15px';
+        toggleLabel.style.fontSize = '0.9em';
+        toggleLabel.style.cursor = 'pointer';
+        toggleLabel.innerHTML = '<input type="checkbox" id="student-only-toggle"> 只看学生票 (Hulaquan)';
+        btnContainer.appendChild(toggleLabel);
+    }
+});
+
 function addCastInput() {
     const container = document.getElementById('cocast-inputs');
     const div = document.createElement('div');
@@ -285,49 +299,133 @@ async function doCoCastSearch() {
         return;
     }
 
+    const onlyStudent = document.getElementById('student-only-toggle')?.checked || false;
     const container = document.getElementById('cast-results');
-    container.innerHTML = '<div style="text-align:center;padding:20px">查询中...</div>';
+
+    // 初始化进度条 UI
+    container.innerHTML = `
+        <div style="padding: 20px; max-width: 600px; margin: 0 auto;">
+            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; font-weight: 500;">
+                <span id="search-status-text">准备搜索...</span>
+                <span id="search-progress-text">0%</span>
+            </div>
+            <div style="background: #eee; border-radius: 6px; height: 12px; overflow: hidden;">
+                <div id="search-progress-bar" style="background: var(--primary-color); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+    `;
 
     try {
-        const res = await fetch(`/api/events/co-cast?casts=${names.join(',')}`);
-        const data = await res.json();
-        renderCoCastResults(data.results);
+        // 1. 启动任务
+        const startRes = await fetch('/api/tasks/co-cast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ casts: names.join(','), only_student: onlyStudent })
+        });
+
+        if (!startRes.ok) throw new Error("启动搜索任务失败");
+        const { task_id } = await startRes.json();
+
+        // 2. 轮询状态
+        const pollInterval = setInterval(async () => {
+            try {
+                const statusRes = await fetch(`/api/tasks/${task_id}`);
+                if (!statusRes.ok) {
+                    clearInterval(pollInterval);
+                    container.innerHTML = `<div style='color:red;padding:20px;text-align:center'>查询状态出错</div>`;
+                    return;
+                }
+
+                const job = await statusRes.json();
+
+                // 更新 UI
+                const pBar = document.getElementById('search-progress-bar');
+                const pText = document.getElementById('search-progress-text');
+                const sText = document.getElementById('search-status-text');
+
+                if (pBar) pBar.style.width = `${job.progress}%`;
+                if (pText) pText.innerText = `${job.progress}%`;
+                if (sText) sText.innerText = job.message || "处理中...";
+
+                if (job.status === 'completed') {
+                    clearInterval(pollInterval);
+                    // 稍微延迟一下让用看到100%
+                    setTimeout(() => {
+                        renderCoCastResults(job.result.results, job.result.source);
+                    }, 500);
+                } else if (job.status === 'failed') {
+                    clearInterval(pollInterval);
+                    container.innerHTML = `<div style='color:red;padding:20px;text-align:center'>❌ 查询失败: ${job.error || "未知错误"}</div>`;
+                }
+            } catch (pollErr) {
+                console.error("Poll error:", pollErr);
+            }
+        }, 500);
+
     } catch (e) {
-        container.innerHTML = 'Error searching.';
+        container.innerHTML = `<div style='color:red;padding:20px;text-align:center'>❌ 发起查询失败: ${e.message}</div>`;
     }
 }
 
-function renderCoCastResults(tickets) {
+function renderCoCastResults(results, source) {
     const container = document.getElementById('cast-results');
-    if (!tickets || tickets.length === 0) {
+    if (!results || results.length === 0) {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:#999">未找到同场演出</div>';
         return;
     }
 
+    const isSaoju = source === 'saoju';
+    // H: Hulaquan (Tickets), S: Saoju (Events)
+
     let html = `
+        <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)">
+            <div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">
+                🎭 查询到 ${results.length} 场同台演出
+            </div>
+            <div style="font-size:0.9em;color:#666">
+                数据来源: ${isSaoju ? '扫剧网 (Saoju) - 排期&所有票务' : '呼啦圈 (Hulaquan) - 仅学生票'}
+            </div>
+        </div>
         <table class="data-table">
             <thead>
                 <tr>
+                    ${isSaoju ? '<th>日期/时间</th>' : '<th>时间</th>'}
+                    <th>城市</th>
                     <th>剧目</th>
-                    <th>时间</th>
-                    <th>卡司</th>
-                    <th>余票</th>
+                    <th>同场卡司</th>
+                    ${isSaoju ? '<th>剧场</th>' : '<th>余票</th>'}
                 </tr>
             </thead>
             <tbody>
     `;
 
-    tickets.forEach(t => {
-        const timeStr = new Date(t.session_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const castStr = t.cast.map(c => c.name).join(' ');
-        html += `
-            <tr>
-                <td>${t.title}</td>
-                <td class="time-cell">${timeStr}</td>
-                <td class="cast-cell">${castStr}</td>
-                <td>${t.stock}</td>
-            </tr>
-        `;
+    results.forEach(item => {
+        if (isSaoju) {
+            // Saoju Item: { date, title, others, city, location, role }
+            const othersStr = (item.others || []).join(' ');
+            html += `
+                <tr>
+                    <td class="time-cell">${item.date}</td>
+                    <td class="city-cell">${item.city}</td>
+                    <td class="title-cell">${item.title}</td>
+                    <td class="cast-cell">${othersStr}</td>
+                    <td>${item.location}</td>
+                </tr>
+            `;
+        } else {
+            // Hulaquan Ticket: { title, session_time, cast: [{name}], stock, city? }
+            const timeStr = new Date(item.session_time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const castStr = item.cast.map(c => c.name).join(' ');
+            html += `
+                <tr>
+                   <td class="time-cell">${timeStr}</td>
+                   <td class="city-cell">${item.city || '-'}</td>
+                   <td class="title-cell">${item.title}</td>
+                   <td class="cast-cell">${castStr}</td>
+                   <td>${item.stock}</td>
+                </tr>
+            `;
+        }
     });
     html += '</tbody></table>';
     container.innerHTML = html;

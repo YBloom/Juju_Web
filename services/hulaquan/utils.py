@@ -64,10 +64,27 @@ def standardize_datetime_for_saoju(dateAndTime: str, return_str=False, latest_st
         month = int(match.group(1))
         day = int(match.group(2))
         time_str = match.group(3)
-        current_year = datetime.now().year
+        
+        # 智能年份判断
+        now = datetime.now()
+        current_year = now.year
+        
+        # 先尝试当前年
         dt_str = f"{current_year}-{month:02d}-{day:02d} {time_str}"
         try:
             dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            
+            # 如果日期在过去超过2个月，认为是去年的数据（已结束的演出）
+            if (now - dt).days > 60:
+                current_year -= 1
+                dt_str = f"{current_year}-{month:02d}-{day:02d} {time_str}"
+                dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            # 如果日期在未来超过11个月，可能是去年的（罕见情况）
+            elif (dt - now).days > 335:
+                current_year -= 1
+                dt_str = f"{current_year}-{month:02d}-{day:02d} {time_str}"
+                dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            
             if return_str:
                 # 返回原始格式（如“8月3日 星期日 14:30”）
                 return dateAndTime
@@ -105,6 +122,24 @@ def standardize_datetime_for_saoju(dateAndTime: str, return_str=False, latest_st
 def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
     current_year = datetime.now().year
     dateAndTime = dateAndTime.replace("：", ':').replace("/", "-").strip()
+    
+    # 先尝试 ISO 8601 格式（Saoju API 返回的格式）
+    # 例如: "2023-10-02T11:30:00Z" 或 "2023-10-02T11:30:00"
+    if 'T' in dateAndTime:
+        # 移除 Z 后缀（UTC 标记）
+        iso_str = dateAndTime.rstrip('Z')
+        try:
+            dt = datetime.fromisoformat(iso_str)
+            if return_str:
+                if with_second:
+                    return dt.strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    return dt.strftime("%Y-%m-%d %H:%M")
+            else:
+                return dt
+        except Exception:
+            pass
+    
     formats = [
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",

@@ -21,6 +21,10 @@ class HulaquanEvent(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     
+    # Saoju Mapping
+    saoju_musical_id: Optional[str] = Field(default=None, index=True)
+    last_synced_at: Optional[datetime] = None
+
     tickets: List["HulaquanTicket"] = Relationship(back_populates="event")
 
 class HulaquanTicket(SQLModel, table=True):

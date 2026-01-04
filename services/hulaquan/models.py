@@ -9,14 +9,14 @@ class CastInfo(BaseModel):
 class TicketInfo(BaseModel):
     id: str
     title: str
-    session_time: Optional[datetime]
-    price: float
-    stock: int
-    total_ticket: int
-    city: Optional[str]
+    session_time: Optional[datetime] = None
+    price: float = 0
+    stock: int = 0
+    total_ticket: int = 0
+    city: Optional[str] = None
     cast: List[CastInfo] = []
-    status: str
-    valid_from: Optional[str]
+    status: str = "active"
+    valid_from: Optional[str] = None
 
 class EventInfo(BaseModel):
     id: str
@@ -27,6 +27,7 @@ class EventInfo(BaseModel):
     update_time: Optional[datetime]
     total_stock: int = 0
     price_range: str = "待定"
+    schedule_range: Optional[str] = None
 
 class TicketUpdate(BaseModel):
     ticket_id: str

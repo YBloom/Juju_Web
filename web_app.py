@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import uuid
+import time
+from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -14,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Import Service
 # 导入服务
 from services.hulaquan.service import HulaquanService
+from services.saoju.service import SaojuService
 from services.config import config
 
 # Initialize Service
@@ -23,6 +27,50 @@ from services.config import config
 # For now, we manually ensure crawler starts if we are running as the main web process
 # 目前，如果是作为主 Web 进程运行，我们需手动确保爬虫启动
 service = HulaquanService()
+saoju_service = SaojuService()
+
+# --- Job System ---
+class JobManager:
+    def __init__(self):
+        self.jobs: Dict[str, Dict[str, Any]] = {}
+    
+    def create_job(self) -> str:
+        job_id = str(uuid.uuid4())
+        self.jobs[job_id] = {
+            "id": job_id,
+            "status": "pending", # pending, running, completed, failed
+            "progress": 0,
+            "message": "等待开始...",
+            "result": None,
+            "error": None,
+            "created_at": time.time()
+        }
+        return job_id
+        
+    def update_progress(self, job_id: str, progress: int, message: str = None):
+        if job_id in self.jobs:
+            self.jobs[job_id]["progress"] = progress
+            self.jobs[job_id]["status"] = "running"
+            if message:
+                self.jobs[job_id]["message"] = message
+                
+    def complete_job(self, job_id: str, result: Any):
+        if job_id in self.jobs:
+            self.jobs[job_id]["status"] = "completed"
+            self.jobs[job_id]["progress"] = 100
+            self.jobs[job_id]["message"] = "完成"
+            self.jobs[job_id]["result"] = result
+            
+    def fail_job(self, job_id: str, error: str):
+        if job_id in self.jobs:
+            self.jobs[job_id]["status"] = "failed"
+            self.jobs[job_id]["error"] = error
+            self.jobs[job_id]["message"] = f"错误: {error}"
+
+    def get_job(self, job_id: str) -> Optional[Dict]:
+        return self.jobs.get(job_id)
+
+job_manager = JobManager()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -88,54 +136,11 @@ async def list_all_events():
             "update_time": e.update_time,
             "total_stock": e.total_stock,
             "price_range": e.price_range,
+            "schedule_range": e.schedule_range,
             # "tickets" excluded
         })
         
     return {"results": results}
-
-@app.get("/api/events/{event_id}")
-async def get_event_detail(event_id: str):
-    """Get full details for a specific event.
-    获取特定事件的完整详细信息。
-    """
-    # We reuse search logic or get direct
-    # 我们重用搜索逻辑或直接获取
-    # Since we don't have direct request by ID in service yet exposed cleanly for "get one event object",
-    # 由于服务尚未清晰地暴露“获取一个事件对象”的直接 ID 请求，
-    # we can use get_event_id_by_name if we knew the name, or iterate list.
-    # 如果知道名称，我们可以使用 get_event_id_by_name，或者遍历列表。
-    # Let's add specific logic or use existing DB session.
-    # 让我们添加特定逻辑或使用现有的 DB 会话。
-    # Service implementation detail:
-    # 服务实现细节：
-    from sqlmodel import select
-    from services.hulaquan.tables import HulaquanEvent
-    from services.db.connection import session_scope
-    
-    with session_scope() as session:
-        event = session.get(HulaquanEvent, event_id)
-        if not event:
-            return {"error": "Event not found"}
-        
-        # Manually construct to include tickets logic same as search_events result
-        # 手动构建以包含与 search_events 结果相同的票务逻辑
-        # Or better: call service.search_events with exact title
-        # 或者更好：使用确切标题调用 service.search_events
-        # But title might be duplicate? ID is safer.
-        # 但是标题可能有重复？ID 更安全。
-        # Let's use the formatting logic from service.search_events but for single ID.
-        # 让我们使用 service.search_events 的格式化逻辑，但是针对单个 ID。
-        pass
-        
-    # Better approach: update Service to have get_event_by_id
-    # 更好的方法：更新 Service 以拥有 get_event_by_id
-    # For now, let's just do search by title from the ID... wait, ID is safer.
-    # 目前，让我们仅通过 ID 进行标题搜索... 等等，ID 更安全。
-    # Let's just return what we can find. Or easier:
-    # 让我们只返回我们能找到的内容。或者更简单：
-    # use service.search_events(event.title)
-    # 使用 service.search_events(event.title)
-    return {"results": await service.get_event_details_by_id(event_id)}
 
 @app.get("/api/events/search")
 async def search_events(q: str):
@@ -178,16 +183,120 @@ async def get_events_by_date(date: str):
         return {"error": "Invalid date format. Use YYYY-MM-DD"}
 
 @app.get("/api/events/co-cast")
-async def get_co_casts(casts: str):
+async def get_co_casts(casts: str, only_student: bool = False):
     """Get tickets with co-performing casts. casts=name1,name2
     获取具有联合演出演员的票务信息。casts=name1,name2
+    (Legacy blocking endpoint)
     """
     if not casts:
         return {"results": []}
     
     cast_list = [c.strip() for c in casts.split(",") if c.strip()]
-    tickets = await service.search_co_casts(cast_list)
-    return {"results": [t.dict() for t in tickets]}
+    if not cast_list:
+        return {"results": []}
+
+    if only_student:
+        # Search local Hulaquan DB for student tickets
+        tickets = await service.search_co_casts(cast_list)
+        return {"results": [t.dict() for t in tickets], "source": "hulaquan"}
+    else:
+        # Legacy: Search Saoju service
+        async with saoju_service as s:
+            results = await s.match_co_casts(cast_list, show_others=True)
+            return {"results": results, "source": "saoju"}
+
+@app.post("/api/tasks/co-cast")
+async def start_cocast_search(request: Request):
+    """Start an async background task for co-cast search."""
+    data = await request.json()
+    casts = data.get("casts", "")
+    only_student = data.get("only_student", False)
+    
+    if not casts:
+        return {"error": "Missing casts"}
+    
+    cast_list = [c.strip() for c in casts.split(",") if c.strip()]
+    
+    job_id = job_manager.create_job()
+    
+    async def run_task(jid, c_list, is_student):
+        try:
+            if is_student:
+                # Student tickets usually fast enough, but let's simulate progress or just return
+                job_manager.update_progress(jid, 10, "正在搜索本地数据库...")
+                await asyncio.sleep(0.5) # Simulate slight delay for UX
+                tickets = await service.search_co_casts(c_list)
+                res = {"results": [t.dict() for t in tickets], "source": "hulaquan"}
+                job_manager.complete_job(jid, res)
+            else:
+                # Saoju search with progress
+                async with saoju_service as s:
+                    async def progress_cb(p, msg):
+                        job_manager.update_progress(jid, p, msg)
+                        
+                    results = await s.match_co_casts(c_list, show_others=True, progress_callback=progress_cb)
+                    res = {"results": results, "source": "saoju"}
+                    job_manager.complete_job(jid, res)
+        except Exception as e:
+            logger.error(f"Task failed: {e}", exc_info=True)
+            job_manager.fail_job(jid, str(e))
+
+    # Start background task
+    asyncio.create_task(run_task(job_id, cast_list, only_student))
+    
+    return {"task_id": job_id}
+
+@app.get("/api/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    job = job_manager.get_job(task_id)
+    if not job:
+        return {"error": "Task not found"}, 404
+    return job
+
+@app.get("/api/events/{event_id}")
+async def get_event_detail(event_id: str):
+    """Get full details for a specific event.
+    获取特定事件的完整详细信息。
+    """
+    # We reuse search logic or get direct
+    # 我们重用搜索逻辑或直接获取
+    # Since we don't have direct request by ID in service yet exposed cleanly for "get one event object",
+    # 由于服务尚未清晰地暴露"获取一个事件对象"的直接 ID 请求，
+    # we can use get_event_id_by_name if we knew the name, or iterate list.
+    # 如果知道名称，我们可以使用 get_event_id_by_name，或者遍历列表。
+    # Let's add specific logic or use existing DB session.
+    # 让我们添加特定逻辑或使用现有的 DB 会话。
+    # Service implementation detail:
+    # 服务实现细节：
+    from sqlmodel import select
+    from services.hulaquan.tables import HulaquanEvent
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        event = session.get(HulaquanEvent, event_id)
+        if not event:
+            return {"error": "Event not found"}
+        
+        # Manually construct to include tickets logic same as search_events result
+        # 手动构建以包含与 search_events 结果相同的票务逻辑
+        # Or better: call service.search_events with exact title
+        # 或者更好：使用确切标题调用 service.search_events
+        # But title might be duplicate? ID is safer.
+        # 但是标题可能有重复？ID 更安全。
+        # Let's use the formatting logic from service.search_events but for single ID.
+        # 让我们使用 service.search_events 的格式化逻辑，但是针对单个 ID。
+        pass
+        
+    # Better approach: update Service to have get_event_by_id
+    # 更好的方法：更新 Service 以拥有 get_event_by_id
+    # For now, let's just do search by title from the ID... wait, ID is safer.
+    # 目前，让我们仅通过 ID 进行标题搜索... 等等，ID 更安全。
+    # Let's just return what we can find. Or easier:
+    # 让我们只返回我们能找到的内容。或者更简单：
+    # use service.search_events(event.title)
+    # 使用 service.search_events(event.title)
+    return {"results": await service.get_event_details_by_id(event_id)}
+
 
 # --- Frontend Routes ---
 # --- 前端路由 ---

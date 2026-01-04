@@ -34,6 +34,8 @@ class HulaquanFormatter:
     @staticmethod
     def format_event_search_result(event: EventInfo, show_id=False) -> str:
         header = f"--- {event.title} ---"
+        if event.schedule_range:
+            header += f"\n排期: {event.schedule_range}"
         lines = [header]
         if event.location:
             lines.append(f"地点: {event.location}")

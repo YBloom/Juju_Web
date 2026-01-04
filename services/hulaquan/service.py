@@ -262,6 +262,42 @@ class HulaquanService:
                 if not ticket.city:
                     info = extract_title_info(title)
                     ticket.city = info.get("city")
+                
+                # Auto-Link Logic: Try to find persistent Saoju ID (Before city/cast sync)
+                # 自动关联逻辑：尝试查找持久的扫剧 ID（在城市/卡司同步之前）
+                if not event.saoju_musical_id:
+                    try:
+                        search_name = extract_text_in_brackets(event.title, keep_brackets=False)
+                        musical_id = await self._saoju.get_musical_id_by_name(search_name)
+                        if musical_id:
+                            event.saoju_musical_id = musical_id
+                            event.last_synced_at = datetime.now()
+                            session.add(event)
+                            log.info(f"Auto-linked {event.title} to Saoju ID: {musical_id}")
+                    except Exception as e:
+                        log.warning(f"Failed to auto-link musical ID for {event.title}: {e}")
+
+                # Fallback: Try to find city via Saoju match if still missing
+                # 回退：如果仍然缺失，尝试通过扫剧匹配查找城市
+                if not ticket.city and ticket.session_time and self._saoju:
+                    try:
+                        search_name = extract_text_in_brackets(event.title, keep_brackets=False)
+                        date_str = ticket.session_time.strftime("%Y-%m-%d")
+                        time_str = ticket.session_time.strftime("%H:%M")
+                        
+                        # Use ID if available for precision
+                        saoju_match = await self._saoju.search_for_musical_by_date(
+                            search_name, 
+                            date_str, 
+                            time_str, 
+                            city=None,
+                            musical_id=event.saoju_musical_id
+                        )
+                        if saoju_match and saoju_match.get("city"):
+                            ticket.city = saoju_match.get("city")
+                            log.info(f"Filled missing city for {title} via Saoju: {ticket.city}")
+                    except Exception as e:
+                        log.warning(f"Saoju fallback city search failed for {title}: {e}")
 
                 # 3. Sync Casts (Enrichment)
                 # 3. 同步演员阵容（丰富数据）
@@ -272,7 +308,8 @@ class HulaquanService:
                     cast_data = await self._saoju.get_cast_for_show(
                         search_name, 
                         ticket.session_time, 
-                        ticket.city
+                        ticket.city,
+                        musical_id=event.saoju_musical_id
                     )
                     
                     for c_item in cast_data:
@@ -350,14 +387,70 @@ class HulaquanService:
                         cast=cast_infos
                     ))
                 
-                result.append(EventInfo(
-                    id=event.id,
-                    title=event.title,
-                    location=event.location,
-                    update_time=event.updated_at,
-                    tickets=tickets
-                ))
+                result.append(self._format_event_info(event, tickets))
             return result
+
+    def _format_event_info(self, event: HulaquanEvent, tickets: List[TicketInfo]) -> EventInfo:
+        """Helper to format HulaquanEvent into EventInfo with calculated fields.
+        将 HulaquanEvent 格式化为带有计算字段的 EventInfo 的帮助程序。
+        """
+        # 1. City Extraction
+        city = extract_title_info(event.title).get("city")
+        if not city and event.location:
+            city = detect_city_in_text(event.location)
+        if not city and tickets:
+            for t in tickets:
+                if t.city:
+                    city = t.city
+                    break
+        
+        # 2. Stock and Price Calculation
+        total_stock = sum(t.stock for t in tickets)
+        prices = [t.price for t in tickets if t.price > 0]
+        
+        if prices:
+            min_p = min(prices)
+            max_p = max(prices)
+            if min_p == max_p:
+                price_range = f"¥{int(min_p) if min_p.is_integer() else min_p}"
+            else:
+                price_range = f"¥{int(min_p) if min_p.is_integer() else min_p}-{int(max_p) if max_p.is_integer() else max_p}"
+        else:
+            price_range = "待定"
+
+        # 3. Schedule Range Calculation
+        start = event.start_time
+        end = event.end_time
+        
+        if not (start and end) and tickets:
+            session_times = [t.session_time for t in tickets if t.session_time]
+            if session_times:
+                if not start: start = min(session_times)
+                if not end: end = max(session_times)
+        
+        if start and end:
+            if start.date() == end.date():
+                schedule_range = start.strftime("%Y.%m.%d")
+            else:
+                if start.year == end.year:
+                    schedule_range = f"{start.strftime('%Y.%m.%d')}-{end.strftime('%m.%d')}"
+                else:
+                    # Different years
+                    schedule_range = f"{start.strftime('%Y.%m.%d')}-{end.strftime('%Y.%m.%d')}"
+        else:
+            schedule_range = "待定"
+
+        return EventInfo(
+            id=event.id,
+            title=event.title,
+            location=event.location,
+            city=city,
+            update_time=event.updated_at,
+            total_stock=total_stock,
+            price_range=price_range,
+            schedule_range=schedule_range,
+            tickets=tickets
+        )
 
     async def get_events_by_date(self, check_date: datetime, city: Optional[str] = None) -> List[TicketInfo]:
         """Get tickets performing on a specific date.
@@ -446,45 +539,34 @@ class HulaquanService:
             events = session.exec(select(HulaquanEvent)).all()
             results = []
             for e in events:
-                # 1. City Extraction Fallback Logic
-                city = extract_title_info(e.title).get("city")
-                if not city and e.location:
-                    city = detect_city_in_text(e.location)
-                if not city:
-                    # Fallback to tickets (expensive if many, but safer)
-                    for t in e.tickets:
-                        if t.city:
-                            city = t.city
-                            break
+                # We need to process tickets to get stock/price for filtering
+                processed_tickets = []
+                # In list view, we don't necessarily need full ticket details for all events, 
+                # but we need them for total_stock calculation if we want precision.
+                # However, for the list view, we can just pass empty tickets to _format_event_info 
+                # if it can handle it, or just fetch them.
+                # Let's fetch them since we need total_stock.
                 
-                # 2. Stock and Price Calculation
-                total_stock = 0
-                prices = []
-                for t in e.tickets:
-                    total_stock += t.stock
-                    if t.price > 0:
-                        prices.append(t.price)
+                # To avoid heavy DB load in get_all_events, we can optimize later.
+                # For now, let's keep it consistent.
                 
-                if prices:
-                    min_p = min(prices)
-                    max_p = max(prices)
-                    if min_p == max_p:
-                        price_range = f"¥{min_p}"
-                    else:
-                        price_range = f"¥{min_p}-{max_p}"
-                else:
-                    price_range = "待定"
-
-                results.append(EventInfo(
-                    id=e.id,
-                    title=e.title,
-                    location=e.location,
-                    city=city,
-                    update_time=e.updated_at,
-                    total_stock=total_stock,
-                    price_range=price_range,
-                    tickets=[]
-                ))
+                # Actually, let's just use the logic from get_all_events but cleaner.
+                
+                # Calculate basic info
+                total_stock = sum(t.stock for t in e.tickets)
+                
+                if total_stock > 0:
+                    # For performance in list, we might not want to hydrate all CastInfo.
+                    # But _format_event_info expects TicketInfo list.
+                    # Let's just do a simplified version here or call _format_event_info with minimal ticket info.
+                    
+                    tickets_minimal = [TicketInfo(
+                        id=t.id, title=t.title, session_time=t.session_time, 
+                        price=t.price, stock=t.stock, total_ticket=t.total_ticket, 
+                        city=t.city, status=t.status
+                    ) for t in e.tickets if t.status != "expired"]
+                    
+                    results.append(self._format_event_info(e, tickets_minimal))
             return results
 
     async def get_aliases(self) -> List[HulaquanAlias]:
@@ -585,13 +667,7 @@ class HulaquanService:
                     cast=cast_infos
                 ))
             
-            return [EventInfo(
-                id=event.id,
-                title=event.title,
-                location=event.location,
-                update_time=event.updated_at,
-                tickets=tickets
-            )]
+            return [self._format_event_info(event, tickets)]
 
     async def search_co_casts(self, cast_names: List[str]) -> List[TicketInfo]:
         """
