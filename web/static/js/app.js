@@ -40,9 +40,9 @@ const state = {
     }
 };
 
+initRouter();
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 延迟初始化以确保 router 已就位
-    initRouter();
     renderColumnToggles();
 });
 
@@ -660,19 +660,28 @@ function applyDetailFilters(eventId) {
 
 // --- Co-Cast (Updated) ---
 
+// 存储所有演员姓名
+let allArtistNames = [];
+
 // 演员 A & B 查询辅助逻辑
 function addCastInput() {
     const container = document.getElementById('cocast-inputs');
     const div = document.createElement('div');
     div.className = 'cocast-row';
+    // 使用 input-wrapper 包裹
     div.innerHTML = `
-        <input type="text" class="cast-name-input" placeholder="输入演员姓名" oninput="handleActorInput(this)">
+        <div class="input-wrapper">
+            <input type="text" class="cast-name-input" placeholder="输入演员姓名" autocomplete="off">
+        </div>
         <button class="circle-btn remove" onclick="removeCastInput(this)" title="移除演员">
             <i class="material-icons">remove</i>
         </button>
     `;
     container.appendChild(div);
     updateCastInputLabels();
+    // 为新输入框绑定事件
+    const input = div.querySelector('.cast-name-input');
+    bindAutocomplete(input);
 }
 
 function removeCastInput(btn) {
@@ -692,49 +701,109 @@ function updateCastInputLabels() {
     });
 }
 
-// 动态处理演员输入联想
-function handleActorInput(input) {
-    if (input.value.trim().length > 0) {
-        input.setAttribute('list', 'all-actor-list');
-    } else {
-        input.removeAttribute('list');
+// 绑定自动联想事件
+function bindAutocomplete(input) {
+    if (!input) return;
+
+    // 创建下拉菜单 DOM
+    let dropdown = input.parentNode.querySelector('.autocomplete-suggestions');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.className = 'autocomplete-suggestions';
+        input.parentNode.appendChild(dropdown);
     }
+
+    // 输入事件
+    input.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (!val) {
+            dropdown.innerHTML = '';
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        // 拼音首字母匹配逻辑
+        // 1. 获取输入值的拼音首字母 (如果输入的是中文，这个库也会尝试转换，但主要是为了匹配拼音输入)
+        // 实际上，用户输入 'dcx'，我们要去 allArtistNames 里找拼音首字母是 dcx 的
+
+        const matches = allArtistNames.filter(name => {
+            // 完全包含 (中文匹配)
+            if (name.includes(val)) return true;
+
+            // 拼音首字母匹配 (仅当输入为字母时)
+            if (/^[a-zA-Z]+$/.test(val)) {
+                // 将姓名转换为拼音首字母 (无音调, 数组形式 -> 字符串)
+                // pinyinPro.pinyin('丁辰西', { pattern: 'first', toneType: 'none', type: 'array' }).join('') => 'dcx'
+                try {
+                    const firstLetters = pinyinPro.pinyin(name, { pattern: 'first', toneType: 'none', type: 'array' }).join('');
+                    return firstLetters.includes(val.toLowerCase());
+                } catch (err) {
+                    return false;
+                }
+            }
+            return false;
+        }).slice(0, 10); // 限制显示 10 条
+
+        renderSuggestions(dropdown, matches, input);
+    });
+
+    // 聚焦事件 (可选：如果为空不显示，如果有值则显示？或者一直不显示由 input 触发)
+    input.addEventListener('focus', () => {
+        if (input.value.trim()) {
+            input.dispatchEvent(new Event('input'));
+        }
+    });
+
+    // 点击外部关闭 - 这里使用全局点击事件处理，防止每个 input 都绑
 }
 
-// 初始化演员自动补全功能
+function renderSuggestions(dropdown, matches, input) {
+    dropdown.innerHTML = '';
+    if (matches.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    matches.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        // 高亮匹配部分 (简单实现：仅高亮名称)
+        item.textContent = name;
+
+        item.addEventListener('click', () => {
+            input.value = name;
+            dropdown.style.display = 'none';
+        });
+        dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+}
+
+// 全局点击关闭下拉菜单
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.input-wrapper')) {
+        document.querySelectorAll('.autocomplete-suggestions').forEach(el => el.style.display = 'none');
+    }
+});
+
+
+// 初始化演员自动补全数据
 async function initActorAutocomplete() {
     try {
         console.log("正在加载演员索引...");
         const res = await fetch('/api/meta/artists');
         if (!res.ok) throw new Error('Failed to fetch artists');
         const data = await res.json();
-        const artists = data.artists || [];
+        allArtistNames = data.artists || [];
+        console.log(`已加载 ${allArtistNames.length} 位演员数据`);
 
-        if (artists.length === 0) return;
-
-        // Create datalist
-        const datalist = document.createElement('datalist');
-        datalist.id = 'all-actor-list';
-
-        // Use document fragment for performance
-        const fragment = document.createDocumentFragment();
-        artists.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            fragment.appendChild(option);
-        });
-        datalist.appendChild(fragment);
-        document.body.appendChild(datalist);
-
-        // Handle existing inputs and add event listener
+        // 为现有的输入框绑定
         document.querySelectorAll('.cast-name-input').forEach(input => {
-            input.removeAttribute('list'); // Default no list
-            input.addEventListener('input', () => handleActorInput(input));
+            bindAutocomplete(input);
         });
 
-        console.log(`已加载 ${artists.length} 名演员索引`);
     } catch (e) {
-        console.error("加载演员自动补全失败:", e);
+        console.error("Failed to init actor autocomplete:", e);
     }
 }
 
@@ -1467,8 +1536,6 @@ function renderDateTableRows(tickets) {
 
         lastCity = currentCity;
         lastTitle = currentTitle;
-    });
-    `;
     });
 
     tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">没有符合条件的场次</td></tr>';
