@@ -8,7 +8,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pathlib import Path
+
+# Rate Limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -123,7 +129,33 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
+# Helper Functions for Rate Limiting
+def key_func_remote(request: Request):
+    """Return key for remote users (applies standard limits)."""
+    ip = get_remote_address(request)
+    if ip in ["127.0.0.1", "localhost", "::1"]:
+        return None # Exempt from remote limits
+    return ip
+
+def key_func_local(request: Request):
+    """Return key for local users (applies relaxed limits)."""
+    ip = get_remote_address(request)
+    if ip in ["127.0.0.1", "localhost", "::1"]:
+        return ip # Apply local limits
+    return None # Exempt from local limits
+
+# Initialize Limiter
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(lifespan=lifespan)
+app.state.limiter = limiter
+
+# Custom Rate Limit Handler
+async def friendly_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"error": "请求过于频繁，请稍后再试 (Rate Limit Exceeded)", "detail": str(exc)},
+    )
+app.add_exception_handler(RateLimitExceeded, friendly_rate_limit_handler)
 
 # CORS
 # 跨域资源共享 (CORS)
@@ -144,7 +176,9 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 # --- API 端点 ---
 
 @app.get("/api/events/list")
-async def list_all_events():
+@limiter.limit("60/minute", key_func=key_func_remote)
+@limiter.limit("1000/minute", key_func=key_func_local)
+async def list_all_events(request: Request):
     """Get all events for the main listing.
     获取主要列表的所有事件。
     """
@@ -169,7 +203,9 @@ async def list_all_events():
     return {"results": results}
 
 @app.get("/api/events/search")
-async def search_events(q: str):
+@limiter.limit("60/minute", key_func=key_func_remote)
+@limiter.limit("1000/minute", key_func=key_func_local)
+async def search_events(request: Request, q: str):
     """Search events by title or alias.
     按标题或别名搜索事件。
     """
@@ -232,6 +268,8 @@ async def get_co_casts(casts: str, only_student: bool = False):
             return {"results": results, "source": "saoju"}
 
 @app.post("/api/tasks/co-cast")
+@limiter.limit("5/minute", key_func=key_func_remote)
+@limiter.limit("200/minute", key_func=key_func_local)
 async def start_cocast_search(request: Request):
     """Start an async background task for co-cast search."""
     data = await request.json()
