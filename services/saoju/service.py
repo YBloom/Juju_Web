@@ -20,6 +20,7 @@ class SaojuService:
         
         # Ensure base structure
         self.data.setdefault("artists_map", {})
+        self.data.setdefault("artists_updated_at", None)
         self.data.setdefault("musical_map", {})
         self.data.setdefault("artist_indexes", {})
         self.data.setdefault("show_cache", {})
@@ -323,18 +324,23 @@ class SaojuService:
                     if not (dt_start <= dt <= dt_end + timedelta(days=1)): # inclusive
                         continue
                     
-                    # 提取其他演员
+                    # 提取其TA演员
                     others = [c.get('artist') for c in show_cast_list if c.get('artist') and c.get('artist') not in co_casts]
                     
                     # 格式化为前端所需格式
                     weekday_str = ['一', '二', '三', '四', '五', '六', '日'][dt.weekday()]
                     formatted_date = f"{dt.month:02d}月{dt.day:02d}日 星期{weekday_str} {dt.strftime('%H:%M')}"
                     
+                    # 确保角色顺序与 co_casts 一致
+                    role_map = {c.get('artist'): c.get('role', '未知角色') for c in show_cast_list if c.get('artist') in co_casts}
+                    ordered_roles = [role_map.get(name, '未知角色') for name in co_casts]
+                    role_str = " & ".join(ordered_roles)
+                    
                     local_results.append({
                         "date": formatted_date,
                         "year": dt.year,  # Add year for frontend grouping
                         "title": musical_name,
-                        "role": " / ".join([c.get('role') for c in show_cast_list if c.get('artist') in co_casts]),
+                        "role": role_str,
                         "others": others,
                         "city": show.get("city", "未知城市"),
                         "location": show.get("theatre", "未知剧院"),
@@ -443,14 +449,53 @@ class SaojuService:
         return show_list
 
     async def _ensure_artist_map(self):
-        if self.data.get('artists_map'): return
+        """Ensure artist map is loaded and not expired (3 days)."""
+        now = datetime.now()
+        updated_at_str = self.data.get('artists_updated_at')
+        is_expired = True
+        
+        if updated_at_str:
+            try:
+                updated_at = datetime.fromisoformat(updated_at_str)
+                if now - updated_at < timedelta(days=3):
+                    is_expired = False
+            except:
+                pass
+        
+        if self.data.get('artists_map') and not is_expired:
+            return
+
+        log.info("Artists map expired or missing, fetching new list...")
         self.data['artists_map'] = await self.fetch_saoju_artist_list()
+        self.data['artists_updated_at'] = now.isoformat()
+        self.save_data()
 
     async def fetch_saoju_artist_list(self):
-        data = await self._fetch_json("artist/")
-        if not data: return {}
-        name_to_pk = {item.get("fields", {}).get("name"): item.get("pk") for item in data if item.get("fields")}
-        return {name: pk for name, pk in name_to_pk.items() if name and pk}
+        """Fetch all artists and filter those who appear in cast lists (musicalcast)."""
+        # 1. Fetch all artists and all musicalcast entries
+        artist_task = self._fetch_json("artist/")
+        cast_task = self._fetch_json("musicalcast/")
+        
+        artist_data, cast_data = await asyncio.gather(artist_task, cast_task)
+        
+        if not artist_data: return {}
+        if not cast_data:
+            # Fallback to all artists if cast_data fails
+            name_to_pk = {item.get("fields", {}).get("name"): item.get("pk") for item in artist_data if item.get("fields")}
+            return {name: pk for name, pk in name_to_pk.items() if name and pk}
+
+        # 2. Extract artist IDs from musicalcast
+        actor_ids = {item.get("fields", {}).get("artist") for item in cast_data if item.get("fields")}
+        
+        # 3. Map filtered artists
+        refined_map = {}
+        for item in artist_data:
+            pk = item.get("pk")
+            name = item.get("fields", {}).get("name")
+            if pk and name and pk in actor_ids:
+                refined_map[name] = pk
+        
+        return refined_map
 
     async def _ensure_artist_indexes(self):
         indexes = self.data.get("artist_indexes") or {}

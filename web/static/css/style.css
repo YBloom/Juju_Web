@@ -343,7 +343,7 @@ main {
     color: var(--primary-color);
 }
 
-/* Co-Cast Panel */
+/* Co-Cast Panel & Rows */
 .cocast-panel {
     max-width: 600px;
     margin: 40px auto;
@@ -352,16 +352,13 @@ main {
     border-radius: 24px;
     border: 1px solid var(--border-color);
     box-shadow: 0 10px 30px rgba(99, 126, 96, 0.08);
-    /* 更柔和的投影 */
 }
 
-.cocast-panel h3 {
-    margin-top: 0;
-    color: var(--primary-color);
-    text-align: center;
-    margin-bottom: 25px;
-    font-weight: 700;
-    letter-spacing: 1px;
+.cocast-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 .cast-name-input {
@@ -371,7 +368,7 @@ main {
     border-radius: 12px;
     outline: none;
     font-size: 1rem;
-    transition: border 0.2s;
+    transition: border 0.3s, box-shadow 0.3s;
     box-sizing: border-box;
     background: #FAFAF8;
 }
@@ -379,28 +376,58 @@ main {
 .cast-name-input:focus {
     border-color: var(--primary-color);
     background: #FFF;
+    box-shadow: 0 0 0 4px rgba(99, 126, 96, 0.1);
 }
 
-.search-btn {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 15px 30px;
+.cocast-row .cast-name-input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.circle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
-    flex: 2;
-    font-weight: 600;
-    border-radius: 12px;
-    font-size: 1rem;
-    transition: background-color 0.2s, transform 0.1s;
-    box-shadow: 0 4px 10px rgba(99, 126, 96, 0.3);
+    border: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: var(--bg-color);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.search-btn:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-1px);
+.circle-btn:hover {
+    transform: scale(1.1);
 }
 
-.add-input-btn {
+.circle-btn.add {
+    background: rgba(99, 126, 96, 0.1);
+    color: var(--primary-color);
+}
+
+.circle-btn.add:hover {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 126, 96, 0.2);
+}
+
+.circle-btn.remove {
+    background: rgba(0, 0, 0, 0.05);
+    color: #999;
+}
+
+.circle-btn.remove:hover {
+    background: #e74c3c;
+    color: white;
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
+}
+
+.add-input-btn-legacy {
+    /* Backup of old style if needed */
     background: transparent;
     border: 1px dashed #CCC;
     color: #888;
@@ -416,10 +443,31 @@ main {
     transition: all 0.2s;
 }
 
-.add-input-btn:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-    background: rgba(99, 126, 96, 0.05);
+.search-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(99, 126, 96, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.search-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 126, 96, 0.3);
+}
+
+.search-btn:active {
+    transform: translateY(0);
 }
 
 /* Removed Badge Styles per request */

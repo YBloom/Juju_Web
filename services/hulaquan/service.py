@@ -757,17 +757,16 @@ class HulaquanService:
             
             return [self._format_event_info(event, tickets)]
 
-    async def search_co_casts(self, cast_names: List[str]) -> List[TicketInfo]:
+    async def search_co_casts(self, cast_names: List[str]) -> List[Dict]:
         """
         Find tickets where ALL specified casts are performing together.
-        查找所有指定演员共同演出的票据。
+        查找所有指定演员共同演出的票据，返回扁平化数据以适配前端统计。
         """
         if not cast_names:
             return []
             
         with session_scope() as session:
             # Find tickets for each cast
-            # 查找每个演员的票据
             ticket_sets = []
             for cast_name in cast_names:
                 stmt = select(TicketCastAssociation.ticket_id).join(HulaquanCast).where(HulaquanCast.name == cast_name)
@@ -778,41 +777,62 @@ class HulaquanService:
                 return []
                 
             # Intersect to find common tickets
-            # 求交集以查找共同票据
             common_tids = set.intersection(*ticket_sets)
             if not common_tids:
                 return []
             
-            # Fetch ticket details
-            # 获取票据详细信息
-            result = []
+            # Fetch ticket details and format
+            results = []
             for tid in sorted(list(common_tids)):
                 t = session.get(HulaquanTicket, tid)
                 if not t: continue
                 
-                # Fetch cast info (can be optimized with eager loading, but this is fine for now)
-                # 获取演员信息（可以使用急切加载进行优化，但目前这样也可以）
-                cast_infos = []
+                # Fetch cast info for this ticket to get roles
                 stmt_c = (
                     select(HulaquanCast, TicketCastAssociation.role)
                     .join(TicketCastAssociation)
                     .where(TicketCastAssociation.ticket_id == t.id)
                 )
                 cast_results = session.exec(stmt_c).all()
-                for c_obj, role in cast_results:
-                    cast_infos.append(CastInfo(name=c_obj.name, role=role))
                 
-                result.append(TicketInfo(
-                    id=t.id,
-                    title=t.title,
-                    session_time=t.session_time,
-                    price=t.price,
-                    stock=t.stock,
-                    total_ticket=t.total_ticket,
-                    city=t.city,
-                    status=t.status,
-                    valid_from=t.valid_from,
-                    cast=cast_infos
-                ))
+                # Map artist name to role
+                role_map = {c_obj.name: role for c_obj, role in cast_results}
+                
+                # Order roles based on cast_names
+                ordered_roles = [role_map.get(name, '未知角色') for name in cast_names]
+                role_str = " & ".join(ordered_roles)
+                
+                # Other casts
+                others = [c_obj.name for c_obj, _ in cast_results if c_obj.name not in cast_names]
+                
+                # Clean Title
+                clean_title = t.title
+                if t.event:
+                    clean_title = extract_text_in_brackets(t.event.title, keep_brackets=False) or t.event.title
+                
+                # Date Formatting
+                dt = t.session_time
+                date_str = "-"
+                year = datetime.now().year
+                if dt:
+                    year = dt.year
+                    weekday_str = ['一', '二', '三', '四', '五', '六', '日'][dt.weekday()]
+                    date_str = f"{dt.month:02d}月{dt.day:02d}日 星期{weekday_str} {dt.strftime('%H:%M')}"
+                
+                # Enrich City using service logic
+                final_city = self._enrich_ticket_city(t, t.event) if t.event else t.city
+
+                results.append({
+                    "date": date_str,
+                    "year": year,
+                    "title": clean_title,
+                    "role": role_str,
+                    "others": others,
+                    "city": final_city or "未知城市",
+                    "location": (t.event.location if t.event else None) or "未知剧场",
+                    "_raw_time": dt.isoformat() if dt else ""
+                })
             
-            return result
+            # Sort by time
+            results.sort(key=lambda x: x.get("_raw_time", ""))
+            return results

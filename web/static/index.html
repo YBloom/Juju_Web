@@ -14,7 +14,7 @@
 
     <div class="nav-ribbon">
         <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')"><i class="material-icons">list</i>
-            全部剧目</button>
+            呼啦圈剧目</button>
         <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')"><i
                 class="material-icons">event</i> 学生票日历</button>
         <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')"><i
@@ -25,10 +25,12 @@
         <!-- Hulaquan List Tab -->
         <!-- 呼啦圈列表标签页 -->
         <div id="tab-hlq" class="tab-content active">
-            <div class="toolbar">
-                <span class="toolbar-title">最新演出</span>
-                <!-- Future: Pagination or filter options -->
-                <!-- 未来功能：分页或筛选选项 -->
+            <div class="header-section" style="text-align: center; padding: 40px 20px 20px;">
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">全部剧目</h3>
+                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">浏览呼啦圈所有在售演出信息</p>
+            </div>
+            <div class="toolbar" style="justify-content: center; padding: 0 20px 20px;">
+                <!-- Existing controls like city filter and column toggles will be injected here -->
             </div>
             <div id="hlq-list-container">
                 <!-- Table will be rendered here -->
@@ -70,27 +72,64 @@
 
         <!-- Co-Cast Tab -->
         <div id="tab-cocast" class="tab-content">
-            <div class="cocast-panel">
-                <h3><small
-                        style="font-size: 0.5em; text-decoration: line-through; color: #999; margin-right: 5px; font-weight: normal;">家产</small>同场演员查询
-                </h3>
+            <div class="header-section" style="text-align: center; padding: 40px 20px 10px;">
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">同场演员查询</h3>
+                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">查询两位演员共同出演的场次（支持历史数据）</p>
+            </div>
+            <div class="cocast-panel" style="margin-top: 0;">
                 <div id="cocast-inputs">
-                    <div class="input-row">
-                        <input type="text" class="cast-name-input" placeholder="输入演员A姓名">
-                    </div>
-                    <div class="input-row">
-                        <input type="text" class="cast-name-input" placeholder="输入演员B姓名（可选）">
+                    <div class="cocast-row">
+                        <input type="text" class="cast-name-input" placeholder="输入演员A姓名"
+                            oninput="handleActorInput(this)">
+                        <button class="circle-btn add" onclick="addCastInput()" title="增加演员">
+                            <i class="material-icons">add</i>
+                        </button>
                     </div>
                 </div>
-                <div class="cocast-actions">
-                    <button class="add-input-btn" onclick="addCastInput()"><i class="material-icons">add</i>
-                        添加演员</button>
-                    <button class="search-btn" onclick="doCoCastSearch()">查询同台场次</button>
+
+                <div
+                    style="display: flex; justify-content: center; align-items: center; gap: 15px; background: rgba(99, 126, 96, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(99, 126, 96, 0.1); flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">查询范围：</span>
+                        <label
+                            style="display: flex; align-items: center; cursor: pointer; font-size: 0.9rem; color: var(--text-primary); font-weight: 500;">
+                            <input type="checkbox" id="student-only-toggle"
+                                style="margin-right: 6px; accent-color: var(--primary-color);"> 仅呼啦圈学生票
+                        </label>
+                    </div>
+                    <div style="width:1px; height:20px; background:var(--border-color); display: none;"></div>
+                    <div
+                        style="display: inline-flex; align-items: center; gap: 10px; background: #fff; padding: 4px 12px; border-radius: 50px; border: 1px solid var(--border-color);">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">从</span>
+                        <input type="date" id="cocast-start-date" min="2023-01-01"
+                            style="border: none; outline: none; font-size: 0.85rem; color: var(--text-primary); cursor: pointer; background: transparent;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">至</span>
+                        <input type="date" id="cocast-end-date" min="2023-01-01"
+                            style="border: none; outline: none; font-size: 0.85rem; color: var(--text-primary); cursor: pointer; background: transparent;">
+                    </div>
+                    <button class="back-btn"
+                        style="margin-bottom: 0; padding: 4px 12px; font-size: 0.75rem; border-style: dashed; opacity: 0.8;"
+                        onclick="setCoCastRange('earliest')">最早 (2023)</button>
+                    <button class="back-btn"
+                        style="margin-bottom: 0; padding: 4px 12px; font-size: 0.75rem; border-style: dashed; opacity: 0.8;"
+                        onclick="setCoCastRange('today')">今日</button>
+                </div>
+                <div class="cocast-actions" style="margin-top: 25px; text-align: center;">
+                    <button class="search-btn" onclick="doCoCastSearch()"
+                        style="width: 100%; max-width: 200px; padding: 12px 24px; font-size: 1.05rem; box-shadow: 0 4px 12px rgba(99, 126, 96, 0.2);"><i
+                            class="material-icons" style="margin-right: 8px; vertical-align: middle;">search</i>
+                        查询</button>
                 </div>
             </div>
             <div id="cast-results"></div>
         </div>
     </main>
+    <footer style="margin-top: -20px; margin-bottom: 20px;">
+        <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
+            数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
+                style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈
+        </div>
+    </footer>
 
     <script src="/static/js/router.js"></script>
     <script src="/static/js/app.js"></script>

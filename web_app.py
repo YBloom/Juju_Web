@@ -261,6 +261,13 @@ async def get_task_status(task_id: str):
         return {"error": "Task not found"}, 404
     return job
 
+@app.get("/api/meta/artists")
+async def get_all_artists():
+    """Get list of all artists for autocomplete."""
+    await saoju_service._ensure_artist_map()
+    artists = list(saoju_service.data.get("artists_map", {}).keys())
+    return {"artists": artists}
+
 @app.get("/api/events/{event_id}")
 async def get_event_detail(event_id: str):
     """Get full details for a specific event.

@@ -81,15 +81,27 @@ function initRouter() {
 function showTabContent(tabId) {
     state.currentTab = tabId;
 
-    // 更新导航按钮状态
-    document.querySelectorAll('.nav-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.tab === tabId);
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    // Show selected
+    const target = document.getElementById(tabId);
+    if (target) {
+        target.classList.add('active');
+    }
+
+    // 更新导航栏激活状态
+    document.querySelectorAll('.nav-btn').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tabId);
     });
 
-    // 切换标签页内容
-    document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.toggle('active', c.id === tabId);
-    });
+    // 默认值设置：如果进入日期 Tab 且日期未选，默认今天
+    if (tabId === 'tab-date') {
+        const dateInput = document.getElementById('date-input'); // Changed from date-picker-input to date-input based on existing code
+        if (dateInput && !dateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+    }
 
     // 隐藏详情页，显示列表容器
     document.getElementById('detail-view').classList.add('hidden');
@@ -651,10 +663,32 @@ function applyDetailFilters(eventId) {
 function addCastInput() {
     const container = document.getElementById('cocast-inputs');
     const div = document.createElement('div');
-    div.className = 'input-row';
-    // Remove list attribute from HTML, will be added dynamically by JS
-    div.innerHTML = '<input type="text" class="cast-name-input" placeholder="输入演员姓名" oninput="handleActorInput(this)">';
+    div.className = 'cocast-row';
+    div.innerHTML = `
+        <input type="text" class="cast-name-input" placeholder="输入演员姓名" oninput="handleActorInput(this)">
+        <button class="circle-btn remove" onclick="removeCastInput(this)" title="移除演员">
+            <i class="material-icons">remove</i>
+        </button>
+    `;
     container.appendChild(div);
+    updateCastInputLabels();
+}
+
+function removeCastInput(btn) {
+    const row = btn.closest('.cocast-row');
+    const container = document.getElementById('cocast-inputs');
+    if (row && container) {
+        row.remove();
+        updateCastInputLabels();
+    }
+}
+
+function updateCastInputLabels() {
+    const inputs = document.querySelectorAll('.cocast-row .cast-name-input');
+    inputs.forEach((input, index) => {
+        const char = String.fromCharCode(65 + (index % 26)); // A, B, C...
+        input.placeholder = `输入演员${char}姓名`;
+    });
 }
 
 // 动态处理演员输入联想
