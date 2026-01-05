@@ -83,7 +83,7 @@ SERVER_VERSION = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d_%H%M%S
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -821,7 +821,18 @@ async def reply_feedback(feedback_id: int, request: Request, username: str = Dep
         
     return {"status": "ok"}
     
+@app.head("/")
+async def head_root():
+    """Handle HEAD requests for uptime monitoring."""
+    return Response(status_code=200)
+
+@app.get("/health")
+async def health_check():
+    """Lightweight health check endpoint."""
+    return {"status": "ok", "timestamp": time.time()}
+
 @app.get("/", response_class=HTMLResponse)
+
 async def read_root(request: Request):
     index_file = static_path / "index.html"
     if index_file.exists():
