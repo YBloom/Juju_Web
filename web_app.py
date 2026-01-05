@@ -402,7 +402,7 @@ async def get_co_casts(casts: str, only_student: bool = False):
     if only_student:
         # Search local Hulaquan DB for student tickets
         tickets = await service.search_co_casts(cast_list)
-        return {"results": [t.dict() for t in tickets], "source": "hulaquan"}
+        return {"results": tickets, "source": "hulaquan"}
     else:
         # Legacy: Search Saoju service
         async with saoju_service as s:
@@ -467,7 +467,7 @@ async def start_cocast_search(request: Request):
                 job_manager.update_progress(jid, 10, "正在搜索本地数据库...")
                 await asyncio.sleep(0.5) 
                 tickets = await service.search_co_casts(c_list)
-                res = {"results": [t.dict() for t in tickets], "source": "hulaquan"}
+                res = {"results": tickets, "source": "hulaquan"}
                 job_manager.complete_job(jid, res)
             else:
                 # Saoju search with progress and date range
