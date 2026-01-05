@@ -65,7 +65,7 @@ SERVER_VERSION = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d_%H%M%S
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -534,8 +534,8 @@ async def get_admin_logs(file: str = "web_out.log", lines: int = 500, username: 
         cmd = ["tail", "-n", str(lines), str(log_path)]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
         if result.returncode != 0:
-            return f"[Error] Reading logs failed: {result.stderr}"
-        return result.stdout
+            return PlainTextResponse(f"[Error] Reading logs failed: {result.stderr}")
+        return PlainTextResponse(result.stdout)
     except Exception as e:
         return f"[Error] Exception reading logs: {str(e)}"
 
