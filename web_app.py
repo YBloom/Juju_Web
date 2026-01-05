@@ -426,27 +426,34 @@ async def start_cocast_search(request: Request):
     cast_list = [c.strip() for c in casts.split(",") if c.strip()]
     
     # --- LOGGING START ---
-    # Submit log to DB asynchronously
+    # Submit log to DB asynchronously with retry for database lock
     async def log_search():
-        try:
-            from services.hulaquan.tables import HulaquanSearchLog
-            from services.db.connection import session_scope
-            import json
-            
-            # Normalize list: sort and unique
-            normalized_list = sorted(list(set(cast_list)))
-            is_combo = len(normalized_list) > 1
-            
-            with session_scope() as session:
-                log_entry = HulaquanSearchLog(
-                    search_type="co-cast",
-                    query_str=casts,
-                    artists=json.dumps(normalized_list, ensure_ascii=False),
-                    is_combination=is_combo
-                )
-                session.add(log_entry)
-        except Exception as e:
-            logger.error(f"Failed to log search: {e}")
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                from services.hulaquan.tables import HulaquanSearchLog
+                from services.db.connection import session_scope
+                import json
+                
+                # Normalize list: sort and unique
+                normalized_list = sorted(list(set(cast_list)))
+                is_combo = len(normalized_list) > 1
+                
+                with session_scope() as session:
+                    log_entry = HulaquanSearchLog(
+                        search_type="co-cast",
+                        query_str=casts,
+                        artists=json.dumps(normalized_list, ensure_ascii=False),
+                        is_combination=is_combo
+                    )
+                    session.add(log_entry)
+                return  # Success
+            except Exception as e:
+                if "database is locked" in str(e) and attempt < max_retries - 1:
+                    await asyncio.sleep(0.5 * (attempt + 1))  # Backoff: 0.5s, 1s, 1.5s
+                    continue
+                logger.warning(f"Failed to log search (attempt {attempt+1}): {e}")
 
     asyncio.create_task(log_search())
     # --- LOGGING END ---
@@ -489,27 +496,32 @@ async def start_cocast_search(request: Request):
 @app.post("/api/log/view")
 async def log_view_event(request: Request):
     """Log when a user views an event (student ticket)."""
-    try:
-        data = await request.json()
-        title = data.get("title", "")
-        if not title:
-            return {"status": "ignored"}
+    data = await request.json()
+    title = data.get("title", "")
+    if not title:
+        return {"status": "ignored"}
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            from services.hulaquan.tables import HulaquanSearchLog
+            from services.db.connection import session_scope
             
-        from services.hulaquan.tables import HulaquanSearchLog
-        from services.db.connection import session_scope
-        
-        with session_scope() as session:
-            log_entry = HulaquanSearchLog(
-                search_type="view_event",
-                query_str=title,
-                artists=None,
-                is_combination=False
-            )
-            session.add(log_entry)
-        return {"status": "ok"}
-    except Exception as e:
-        logger.error(f"Failed to log view: {e}")
-        return {"status": "error"}
+            with session_scope() as session:
+                log_entry = HulaquanSearchLog(
+                    search_type="view_event",
+                    query_str=title,
+                    artists=None,
+                    is_combination=False
+                )
+                session.add(log_entry)
+            return {"status": "ok"}
+        except Exception as e:
+            if "database is locked" in str(e) and attempt < max_retries - 1:
+                await asyncio.sleep(0.5 * (attempt + 1))
+                continue
+            logger.warning(f"Failed to log view (attempt {attempt+1}): {e}")
+            return {"status": "error"}
 
 @app.get("/api/tasks/{task_id}")
 async def get_task_status(task_id: str):
