@@ -288,9 +288,14 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 
 # Custom Rate Limit Handler
 async def friendly_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """处理请求频率超限的情况，返回用户友好的错误提示。"""
     return JSONResponse(
         status_code=429,
-        content={"error": "请求过于频繁，请稍后再试 (Rate Limit Exceeded)", "detail": str(exc)},
+        content={
+            "error": "一分钟内发起请求过多，请稍等片刻后重试", 
+            "detail": str(exc),
+            "tip": "每分钟最多可发起 5 次搜索请求"
+        },
     )
 app.add_exception_handler(RateLimitExceeded, friendly_rate_limit_handler)
 
