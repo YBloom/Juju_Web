@@ -56,6 +56,24 @@ def setup_logging():
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
 
+    # 添加文件handler (带自动清理, 按天轮转, 保留30天)
+    # 即使Supervisor管理了标准输出, 这个应用级日志也是有用的备份和开发调试工具
+    from logging.handlers import TimedRotatingFileHandler
+    
+    # 确保logs目录存在
+    log_dir = Path(__file__).parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+    
+    file_handler = TimedRotatingFileHandler(
+        filename=log_dir / "app.log",
+        when="midnight",
+        interval=1,
+        backupCount=30, # 保留30天
+        encoding="utf-8"
+    )
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+
 # Global Service Info
 # Initialize with Beijing Time
 START_TIME = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
