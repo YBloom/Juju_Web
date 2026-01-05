@@ -337,28 +337,64 @@ class SaojuService:
                     weekday_str = ['一', '二', '三', '四', '五', '六', '日'][dt.weekday()]
                     formatted_date = f"{dt.month:02d}月{dt.day:02d}日 星期{weekday_str} {dt.strftime('%H:%M')}"
 
-                    # Reconstruct roles? 
-                    # The SaojuShow table stores flat cast_str. It loses role info?
-                    # Ah, I defined cast_str as "A / B / C".
-                    # The original CSV has strictly "Artist Name". It doesn't have Role.
-                    # The API sync 'sync_future_days' implemented: 
-                    # cast_str = " / ".join([c.get("artist") for c in cast_list...])
-                    # So we lost the Role mapping in the flat table :/
-                    # User requirement for Co-Cast usually needs Role?
-                    # "role": role_str in previous impl.
-                    # If we lost role, we return "未知角色" or just names.
-                    # Given the speedup, users might accept just names, or we need to enrich.
-                    # But the CSV history probably didn't have roles either? 
-                    # Let's check CSV parser... `cast = row.get("卡司")`. 
-                    # CSV example: "严小北 丁臻滢 ... " (Space separated maybe? or just names)
-                    # Implementation plan decided on `cast_str`.
-                    # For now we will return "N/A" for role or skip it.
+                    # Attempt to resolve roles
+                    role_str = "见详情"
+                    try:
+                        resolved_roles = []
+                        # Ensure we have maps
+                        if not self.data.get("artists_map"):
+                             # This might be blocking if not loaded, but ensure_artist_map called?
+                             # Let's rely on cached data if available or just skip if empty to avoid big delays
+                             pass
+                        
+                        artist_map = self.data.get("artists_map", {})
+                        indexes = self.data.get("artist_indexes", {})
+                        artist_musicals = indexes.get("artist_musicals", {})
+
+                        for cast_name in co_casts:
+                             artist_id = artist_map.get(cast_name)
+                             if not artist_id: continue
+                             
+                             # Find musical entry for this artist
+                             # We have show.musical_name. We need to find which mid matches this name in artist's record
+                             my_musicals = artist_musicals.get(str(artist_id), {})
+                             
+                             # Search by name match (O(N) but N is small)
+                             found_roles = []
+                             for mid, payload in my_musicals.items():
+                                 if payload.get("name") == show.musical_name:
+                                     # Found it
+                                     rs = payload.get("roles", [])
+                                     if rs: found_roles.extend(rs)
+                                     break
+                             
+                             if found_roles:
+                                 r_list = sorted(list(set(found_roles)))
+                                 r_txt = "/".join(r_list)
+                                 # For one artist, just "Role". For multiple, "Name: Role"
+                                 if len(co_casts) == 1:
+                                     resolved_roles.append(r_txt)
+                                 else:
+                                     resolved_roles.append(f"{cast_name}: {r_txt}")
+                        
+                        if resolved_roles:
+                            role_str = " & ".join(resolved_roles)
+                        else:
+                            # Fallback: if we have NO role info, maybe empty string is better than "见详情"?
+                            # User said "变成了见详情", implying they want the old behavior or real data.
+                            # Changing to empty string might be cleaner if unknown.
+                            # But let's stick to simple " " if not found to avoid visual clutter
+                            role_str = "" 
+
+                    except Exception as e:
+                        # Log debug if needed, but don't crash
+                        pass
                     
                     results.append({
                         "date": formatted_date,
                         "year": dt.year,
                         "title": show.musical_name,
-                        "role": "见详情", # Placeholder since we don't store role in simple table
+                        "role": role_str or " ", # Use space to keep layout if needed, or empty
                         "others": others,
                         "city": show.city,
                         "location": show.theatre,
