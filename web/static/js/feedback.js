@@ -212,25 +212,7 @@ async function loadFeedbackWall() {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
 
-        // Mock Data for user request (Local Preview)
-        let results = data.results || [];
-        if (results.length === 0) {
-            results = [
-                {
-                    type: 'bug',
-                    content: '提交反馈时点击没反应，希望优化一下动画流畅度',
-                    created_at: new Date().toISOString(),
-                    admin_reply: '已收到，刚刚更新了交互动画，应该会好很多！',
-                    is_public: true
-                },
-                {
-                    type: 'wish',
-                    content: '许愿能在日历里直接看到卡司排期，不用切来切去',
-                    created_at: new Date(Date.now() - 86400000).toISOString(),
-                    is_public: true
-                }
-            ];
-        }
+        const results = data.results || [];
 
         if (results.length === 0) {
             container.innerHTML = `

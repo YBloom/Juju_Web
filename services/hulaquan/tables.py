@@ -121,3 +121,7 @@ class Feedback(SQLModel, table=True):
     is_public: bool = Field(default=False)
     admin_reply: Optional[str] = None
     reply_at: Optional[datetime] = None
+    
+    # Ignore Management
+    is_ignored: bool = Field(default=False)
+    ignored_at: Optional[datetime] = None

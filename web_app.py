@@ -760,13 +760,13 @@ async def submit_feedback(request: Request):
 
 @app.get("/api/admin/feedbacks")
 async def get_feedbacks(limit: int = 50, username: str = Depends(get_current_username)):
-    """Get latest feedbacks."""
+    """Get latest feedbacks (excluding ignored ones)."""
     from services.hulaquan.tables import Feedback
     from services.db.connection import session_scope
     from sqlmodel import select, col
     
     with session_scope() as session:
-        stmt = select(Feedback).order_by(col(Feedback.created_at).desc()).limit(limit)
+        stmt = select(Feedback).where(Feedback.is_ignored == False).order_by(col(Feedback.created_at).desc()).limit(limit)
         items = session.exec(stmt).all()
         return {
             "count": len(items),
@@ -820,6 +820,71 @@ async def reply_feedback(feedback_id: int, request: Request, username: str = Dep
         # Commit handled by context manager
         
     return {"status": "ok"}
+
+@app.post("/api/admin/feedback/{feedback_id}/ignore")
+async def ignore_feedback(feedback_id: int, username: str = Depends(get_current_username)):
+    """Ignore a feedback item."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+            
+        fb.is_ignored = True
+        fb.ignored_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+        session.add(fb)
+        
+    return {"status": "ok", "message": "Feedback ignored"}
+
+@app.post("/api/admin/feedback/{feedback_id}/unignore")
+async def unignore_feedback(feedback_id: int, username: str = Depends(get_current_username)):
+    """Unignore a feedback item."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+            
+        fb.is_ignored = False
+        fb.ignored_at = None
+        session.add(fb)
+        
+    return {"status": "ok", "message": "Feedback restored"}
+
+@app.get("/api/admin/feedbacks/ignored")
+async def get_ignored_feedbacks(limit: int = 100, username: str = Depends(get_current_username)):
+    """Get ignored feedbacks list."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    from sqlmodel import select, col
+    
+    with session_scope() as session:
+        stmt = select(Feedback).where(Feedback.is_ignored == True).order_by(col(Feedback.ignored_at).desc()).limit(limit)
+        items = session.exec(stmt).all()
+        return {
+            "count": len(items),
+            "results": [i.dict() for i in items]
+        }
+
+@app.delete("/api/admin/feedback/{feedback_id}")
+async def delete_feedback(feedback_id: int, username: str = Depends(get_current_username)):
+    """Permanently delete a feedback item."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+        session.delete(fb)
+        
+    return {"status": "ok", "message": "Feedback deleted"}
     
 @app.head("/")
 async def head_root():
