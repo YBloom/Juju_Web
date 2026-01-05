@@ -732,7 +732,95 @@ async def get_search_analytics(username: str = Depends(get_current_username)):
         }
 
 
+@app.post("/api/feedback")
+@limiter.limit("5/minute", key_func=key_func_remote)
+@limiter.limit("20/minute", key_func=key_func_local)
+async def submit_feedback(request: Request):
+    """Submit a feedback (bug, suggestion, wish)."""
+    data = await request.json()
+    fb_type = data.get("type")
+    content = data.get("content")
+    contact = data.get("contact")
+    
+    if not fb_type or not content:
+        return JSONResponse(status_code=400, content={"error": "Missing type or content"})
+        
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        fb = Feedback(
+            type=fb_type,
+            content=content,
+            contact=contact
+        )
+        session.add(fb)
+        
+    return {"status": "ok", "message": "Feedback submitted"}
 
+@app.get("/api/admin/feedbacks")
+async def get_feedbacks(limit: int = 50, username: str = Depends(get_current_username)):
+    """Get latest feedbacks."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    from sqlmodel import select, col
+    
+    with session_scope() as session:
+        stmt = select(Feedback).order_by(col(Feedback.created_at).desc()).limit(limit)
+        items = session.exec(stmt).all()
+        return {
+            "count": len(items),
+            "results": [i.dict() for i in items]
+        }
+
+
+
+@app.get("/api/feedbacks/public")
+async def get_public_feedbacks():
+    """Get public feedback wall (curated)."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    from sqlmodel import select, col
+    
+    with session_scope() as session:
+        # Show public items, ordered by reply time (recently updated first) -> then create time
+        stmt = select(Feedback).where(Feedback.is_public == True).order_by(
+            col(Feedback.reply_at).desc(), 
+            col(Feedback.created_at).desc()
+        ).limit(50)
+        items = session.exec(stmt).all()
+        return {
+            "results": [i.dict() for i in items]
+        }
+
+@app.post("/api/admin/feedback/{feedback_id}/reply")
+async def reply_feedback(feedback_id: int, request: Request, username: str = Depends(get_current_username)):
+    """Admin reply to feedback and toggle public status."""
+    data = await request.json()
+    reply_content = data.get("reply")
+    is_public = data.get("is_public", False)
+    
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+            
+        fb.admin_reply = reply_content
+        fb.is_public = is_public
+        if reply_content:
+            fb.reply_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+            fb.status = "closed" # Auto close if replied
+            
+        session.add(fb)
+        # Commit handled by context manager
+        
+    return {"status": "ok"}
+    
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     index_file = static_path / "index.html"

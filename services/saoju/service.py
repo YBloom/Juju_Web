@@ -329,31 +329,44 @@ class SaojuService:
                 # OR older format: "A / B / C" (just actor names)
                 # We need to extract actor names for matching
                 
-                raw_parts = show.cast_str.split()  # Split by whitespace first
+                # cast_str format: "Role:Name / Role:Name" or legacy "Name / Name"
+                # We need to extract actor names for matching and roles for display
+                
                 current_cast = set()
                 role_map = {}  # actor -> role for later use
                 
-                for part in raw_parts:
-                    part = part.strip()
-                    if not part:
-                        continue
-                    if ':' in part:
+                # Split by / if present, otherwise split by whitespace (legacy/simple)
+                if '/' in show.cast_str:
+                    segments = [s.strip() for s in show.cast_str.split('/')]
+                else:
+                    segments = show.cast_str.split()
+                
+                for seg in segments:
+                    if not seg: continue
+                    if ':' in seg:
                         # Format: role:actor
-                        role_name, actor_name = part.split(':', 1)
-                        current_cast.add(actor_name.strip())
-                        role_map[actor_name.strip()] = role_name.strip()
-                    elif '/' in show.cast_str:
-                        # Fallback: older format "A / B / C"
-                        for sub in show.cast_str.split('/'):
-                            current_cast.add(sub.strip())
-                        break  # Already processed full string
+                        try:
+                            # Split by first colon only
+                            r_part, a_part = seg.split(':', 1)
+                            role_name = r_part.strip()
+                            actor_name = a_part.strip()
+                            current_cast.add(actor_name)
+                            role_map[actor_name] = role_name
+                        except:
+                            current_cast.add(seg)
                     else:
-                        # Just actor name
-                        current_cast.add(part)
+                        current_cast.add(seg.strip())
                 
                 if all(name in current_cast for name in co_casts):
                     # Found match
-                    others = [x for x in current_cast if x not in co_casts]
+                    others = []
+                    for x in current_cast:
+                        if x in co_casts: continue
+                        role = role_map.get(x)
+                        if role:
+                            others.append(f"{role}:{x}")
+                        else:
+                            others.append(x)
                     
                     # Format date: 08月03日 星期日 14:30
                     dt = show.date
@@ -375,6 +388,16 @@ class SaojuService:
                         artist_musicals = indexes.get("artist_musicals", {})
 
                         for cast_name in co_casts:
+                             # 1. Try to get specific role from this show's record
+                             specific_role = role_map.get(cast_name)
+                             if specific_role:
+                                 if len(co_casts) == 1:
+                                     resolved_roles.append(specific_role)
+                                 else:
+                                     resolved_roles.append(f"{cast_name}: {specific_role}")
+                                 continue
+                                 
+                             # 2. Fallback to aggregate data
                              artist_id = artist_map.get(cast_name)
                              if not artist_id: continue
                              
@@ -693,7 +716,16 @@ class SaojuService:
                                 continue
 
                             cast_list = item.get("cast", [])
-                            cast_str = " / ".join([c.get("artist") for c in cast_list if c.get("artist")])
+                            parts = []
+                            for c in cast_list:
+                                artist = c.get("artist")
+                                if not artist: continue
+                                role = c.get("role")
+                                if role:
+                                    parts.append(f"{role}:{artist}")
+                                else:
+                                    parts.append(artist)
+                            cast_str = " / ".join(parts)
                             city = item.get("city", "")
                             theatre = item.get("theatre", "")
                             
