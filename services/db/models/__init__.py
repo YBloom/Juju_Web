@@ -18,6 +18,9 @@ from .play import Play, PlayAlias, PlaySnapshot, PlaySourceLink
 from .subscription import Subscription, SubscriptionOption, SubscriptionTarget
 from .user import User
 
+# Import SaojuCache for database initialization
+from services.hulaquan.tables import SaojuCache
+
 __all__ = [
     "ErrorLog",
     "Group",
@@ -31,6 +34,7 @@ __all__ = [
     "PlaySnapshot",
     "PlaySource",
     "PlaySourceLink",
+    "SaojuCache",
     "SendQueue",
     "SendQueueStatus",
     "SoftDelete",

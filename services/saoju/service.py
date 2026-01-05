@@ -83,24 +83,54 @@ class SaojuService:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
-            self._session = aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=60))
+            # 增加连接池大小和配置
+            connector = aiohttp.TCPConnector(limit=100, limit_per_host=30, force_close=False)
+            timeout = aiohttp.ClientTimeout(total=60, connect=10)
+            self._session = aiohttp.ClientSession(
+                headers=headers, 
+                timeout=timeout,
+                connector=connector
+            )
 
     async def close(self):
         if self._session and not self._session.closed:
             await self._session.close()
 
-    async def _fetch_json(self, path: str, params: Optional[Dict] = None) -> Optional[Dict]:
-        await self._ensure_session()
+    async def _fetch_json(self, path: str, params: Optional[Dict] = None, retries: int = 3) -> Optional[Dict]:
         url = f"{self.API_BASE}/{path.lstrip('/')}"
-        try:
-            async with self._session.get(url, params=params) as response:
-                if response.status != 200:
-                    log.error(f"Saoju API Error {response.status}: {url}")
+        
+        for attempt in range(retries):
+            try:
+                await self._ensure_session()
+                async with self._session.get(url, params=params) as response:
+                    if response.status != 200:
+                        log.error(f"Saoju API Error {response.status}: {url}")
+                        return None
+                    return await response.json(content_type=None)
+            except (aiohttp.ClientConnectionError, aiohttp.ClientConnectorError) as e:
+                if attempt < retries - 1:
+                    log.warning(f"连接错误,重试 {attempt + 1}/{retries}: {type(e).__name__}")
+                    # 关闭并重新创建session
+                    if self._session and not self._session.closed:
+                        await self._session.close()
+                    self._session = None
+                    await asyncio.sleep(1)  # 等待1秒后重试
+                else:
+                    log.error(
+                        f"Error fetching Saoju API\n"
+                        f"    URL: {url}\n"
+                        f"    Params: {params}\n"
+                        f"    Error: {type(e).__name__}: {e}"
+                    )
                     return None
-                return await response.json(content_type=None)
-        except Exception as e:
-            log.error(f"Error fetching Saoju {url}: {e}")
-            return None
+            except Exception as e:
+                log.error(
+                    f"Error fetching Saoju API\n"
+                    f"    URL: {url}\n"
+                    f"    Params: {params}\n"
+                    f"    Error: {type(e).__name__}: {e}"
+                )
+                return None
 
     async def search_for_musical_by_date(self, search_name: str, date_str: str, time_str: str, city: Optional[str] = None, musical_id: Optional[str] = None) -> Optional[Dict]:
         """

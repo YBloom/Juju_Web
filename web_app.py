@@ -2,6 +2,7 @@ import asyncio
 import logging
 import uuid
 import time
+import sys
 from datetime import datetime
 
 try:
@@ -9,6 +10,51 @@ try:
 except ImportError:
     # Backport for Python < 3.9 if needed, though 3.12 is used.
     from backports.zoneinfo import ZoneInfo
+
+# 自定义日志格式化器,使用UTC+8时区
+class BeijingFormatter(logging.Formatter):
+    """使用北京时间(UTC+8)的日志格式化器"""
+    
+    def formatTime(self, record, datefmt=None):
+        # 转换为北京时间
+        dt = datetime.fromtimestamp(record.created, tz=ZoneInfo("Asia/Shanghai"))
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.strftime("%Y-%m-%d %H:%M:%S CST")
+    
+    def format(self, record):
+        # 添加更多上下文信息
+        result = super().format(record)
+        # 如果消息很长且包含换行,增加缩进
+        if len(record.message) > 100 and '\n' in record.message:
+            lines = record.message.split('\n')
+            # 多行消息,增加缩进
+            indent = ' ' * 4
+            formatted_msg = '\n'.join([lines[0]] + [indent + line for line in lines[1:]])
+            result = result.replace(record.message, formatted_msg)
+        return result
+
+# 配置日志
+def setup_logging():
+    """配置应用程序日志"""
+    # 创建格式化器
+    formatter = BeijingFormatter(
+        fmt='%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S CST'
+    )
+    
+    # 配置根logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # 移除现有handlers
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # 添加控制台handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
 
 # Global Service Info
 # Initialize with Beijing Time
@@ -32,8 +78,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Setup logging with Beijing timezone
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # Import Service
@@ -150,7 +196,7 @@ def key_func_remote(request: Request):
     """Return key for remote users (applies standard limits)."""
     ip = get_remote_address(request)
     if ip in ["127.0.0.1", "localhost", "::1"]:
-        return None # Exempt from remote limits
+        return "localhost-remote-exempt" # Exempt from remote limits
     return ip
 
 def key_func_local(request: Request):
@@ -158,7 +204,7 @@ def key_func_local(request: Request):
     ip = get_remote_address(request)
     if ip in ["127.0.0.1", "localhost", "::1"]:
         return ip # Apply local limits
-    return None # Exempt from local limits
+    return "remote-local-exempt" # Exempt from local limits
 
 # Initialize Limiter
 limiter = Limiter(key_func=get_remote_address)
