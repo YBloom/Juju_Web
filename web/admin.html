@@ -719,9 +719,15 @@
                 data.results.forEach(item => {
                     const row = document.createElement('tr');
                     const isBug = item.type === 'bug';
-                    const typeLabel = isBug ? '🐞 Bug' : '💡 建议';
-                    const color = isBug ? '#c62828' : '#2e7d32';
-                    const bg = isBug ? '#ffebee' : '#e8f5e9';
+                    const isWish = item.type === 'wish';
+
+                    let typeLabel = '💡 建议';
+                    let bg = '#e8f5e9'; let color = '#2e7d32';
+
+                    if (isBug) { typeLabel = '🐞 Bug'; bg = '#ffebee'; color = '#c62828'; }
+                    if (isWish) { typeLabel = '✨ 许愿'; bg = '#e3f2fd'; color = '#1565c0'; }
+
+                    const publicBadge = item.is_public ? '<span style="font-size:0.75rem; background:#333; color:white; padding:2px 4px; border-radius:4px; margin-left:4px;">公开</span>' : '';
 
                     row.innerHTML = `
                         <td style="padding: 12px 16px; border-bottom: 1px solid #eee; white-space: nowrap; font-size: 0.85rem; color: #555;">${new Date(item.created_at).toLocaleString()}</td>
@@ -729,11 +735,17 @@
                             <span style="background: ${bg}; color: ${color}; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
                                 ${typeLabel}
                             </span>
+                            ${publicBadge}
                         </td>
-                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee; line-height: 1.5; max-width: 400px;">${escapeHtml(item.content)}</td>
+                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee; line-height: 1.5; max-width: 400px;">
+                            <div>${escapeHtml(item.content)}</div>
+                            ${item.admin_reply ? `<div style="margin-top:4px; padding:4px 8px; background:#f5f5f5; border-left:2px solid ${color}; font-size:0.85rem;">↪️ ${escapeHtml(item.admin_reply)}</div>` : ''}
+                        </td>
                         <td style="padding: 12px 16px; border-bottom: 1px solid #eee; color: #666;">${item.contact ? escapeHtml(item.contact) : '-'}</td>
                         <td style="padding: 12px 16px; border-bottom: 1px solid #eee;">
-                            <span style="font-size: 0.85rem; padding: 2px 6px; background: #eee; border-radius: 4px;">${item.status}</span>
+                            <button onclick="openReplyModal(${item.id}, '${escapeHtml(item.content.replace(/'/g, "\\'"))}', ${item.is_public}, ${item.admin_reply ? `'` + escapeHtml(item.admin_reply.replace(/'/g, "\\'")) + `'` : 'null'})" class="btn" style="font-size:0.8rem; padding:4px 8px;">
+                                ${item.admin_reply ? '编辑回复' : '回复 / 公开'}
+                            </button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -745,6 +757,46 @@
             }
         }
 
+        // Reply Modal Logic
+        let currentReplyId = null;
+
+        function openReplyModal(id, content, isPublic, existingReply) {
+            currentReplyId = id;
+            document.getElementById('reply-modal').style.display = 'flex';
+            document.getElementById('reply-verify-content').textContent = content;
+            document.getElementById('reply-input').value = existingReply || '';
+            document.getElementById('reply-public-check').checked = isPublic;
+        }
+
+        function closeReplyModal() {
+            document.getElementById('reply-modal').style.display = 'none';
+        }
+
+        async function submitReply() {
+            if (!currentReplyId) return;
+            const reply = document.getElementById('reply-input').value.trim();
+            const isPublic = document.getElementById('reply-public-check').checked;
+
+            try {
+                // Assuming fetchWithAuth is defined elsewhere or a standard fetch is used
+                // For this example, I'll use a standard fetch. If fetchWithAuth is custom, it needs to be defined.
+                const res = await fetch(`/api/admin/feedback/${currentReplyId}/reply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reply, is_public: isPublic })
+                });
+
+                if (res.ok) {
+                    closeReplyModal();
+                    loadFeedbacks(); // Refresh list
+                } else {
+                    alert('Failed to update');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
 
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -753,6 +805,36 @@
         // Initial Load
         loadLogs();
     </script>
+    <!-- Admin Reply Modal -->
+    <div id="reply-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:20px; border-radius:8px; width:400px; max-width:90%;">
+            <h3 style="margin-top:0;">回复 / 管理反馈</h3>
+            <div
+                style="margin-bottom:10px; font-size:0.9rem; color:#666; background:#f9f9f9; padding:10px; border-radius:4px;">
+                用户内容: <span id="reply-verify-content" style="color:#333;"></span>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.9rem; font-weight:bold; display:block; margin-bottom:5px;">您的回复</label>
+                <textarea id="reply-input"
+                    style="width:100%; height:100px; padding:8px; border:1px solid #ddd; border-radius:4px;"
+                    placeholder="感谢您的建议..."></textarea>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:flex; align-items:center; cursor:pointer;">
+                    <input type="checkbox" id="reply-public-check" style="margin-right:8px;">
+                    <span style="font-size:0.9rem;">公开展示在反馈墙 (Show on Feedback Wall)</span>
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" onclick="closeReplyModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitReply()">保存</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
