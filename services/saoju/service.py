@@ -107,7 +107,7 @@ class SaojuService:
                         log.error(f"Saoju API Error {response.status}: {url}")
                         return None
                     return await response.json(content_type=None)
-            except (aiohttp.ClientConnectionError, aiohttp.ClientConnectorError) as e:
+            except (aiohttp.ClientConnectionError, aiohttp.ClientConnectorError, asyncio.TimeoutError) as e:
                 if attempt < retries - 1:
                     log.warning(f"连接错误,重试 {attempt + 1}/{retries}: {type(e).__name__}")
                     # 关闭并重新创建session
