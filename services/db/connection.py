@@ -25,7 +25,7 @@ def _create_engine(db_path: Path, *, echo: bool = False):
     engine = create_engine(
         url,
         echo=echo,
-        connect_args={"check_same_thread": False, "timeout": 30},
+        connect_args={"check_same_thread": False, "timeout": 60},
     )
     with engine.begin() as conn:
         conn.exec_driver_sql("PRAGMA journal_mode=WAL;")

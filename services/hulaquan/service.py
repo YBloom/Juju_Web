@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import traceback
+import ssl
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple, Set
 
@@ -113,6 +114,12 @@ class HulaquanService:
                     # 回退
                     text = content.decode('utf-8', errors='ignore')
                     return json.loads(text)
+        except (aiohttp.ClientConnectorError, ConnectionResetError, ssl.SSLError) as e:
+            # Fail Fast: Close session and re-raise to abort retry loops
+            # 快速失败：关闭会话并重新引发以中止重试循环
+            log.warning(f"Connection failed for {url}: {e} - Closing session.")
+            await self.close()
+            raise e
         except Exception as e:
             log.error(f"Error fetching {url}: {e}")
             log.error(traceback.format_exc())
@@ -133,7 +140,13 @@ class HulaquanService:
         data = None
         while limit >= 10:
             url = f"{self.BASE_URL}/site/getevent.html?filter=recommendation&access_token=&limit={limit}&page=0"
-            data = await self._fetch_json(url)
+            try:
+                data = await self._fetch_json(url)
+            except (aiohttp.ClientConnectorError, ConnectionResetError, ssl.SSLError):
+                log.warning("Hulaquan unreachable, aborting sync.")
+                data = None
+                break
+            
             if data is False or data is None:
                 log.warning(f"API returned {data} for limit {limit}, retrying with smaller limit...")
                 limit -= 5
