@@ -290,6 +290,12 @@
                 </svg>
                 搜索统计
             </div>
+            <div class="nav-item" onclick="switchTab('feedbacks')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                用户反馈
+            </div>
             <div
                 style="margin-top: auto; padding: 20px; font-size: 0.75rem; color: #999; text-align: center; border-top: 1px solid var(--border);">
                 联系邮箱：<br><a href="mailto:contact@yaobii.com"
@@ -449,6 +455,54 @@
 
                 </div>
             </div>
+
+            <!-- Feedbacks Panel -->
+            <div id="panel-feedbacks" class="panel">
+                <div class="toolbar">
+                    <h2
+                        style="margin:0; font-size:1.2rem; color:var(--primary); display:flex; align-items:center; gap:8px;">
+                        <span>💬 用户反馈</span>
+                    </h2>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-primary" onclick="loadFeedbacks()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        刷新数据
+                    </button>
+                </div>
+
+                <div class="feedback-container"
+                    style="background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th
+                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
+                                    时间</th>
+                                <th
+                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
+                                    类型</th>
+                                <th
+                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
+                                    内容</th>
+                                <th
+                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
+                                    联系方式</th>
+                                <th
+                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
+                                    状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedback-list-body">
+                            <!-- JS will populate -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -528,6 +582,9 @@
 
             if (tabId === 'search-stats') {
                 loadSearchStats();
+            }
+            if (tabId === 'feedbacks') {
+                loadFeedbacks();
             }
         }
 
@@ -641,6 +698,53 @@
                 console.error("Failed to load stats", e);
             }
         }
+
+        async function loadFeedbacks() {
+            try {
+                const res = await fetch('/api/admin/feedbacks?limit=50');
+                if (res.status === 401) {
+                    location.reload();
+                    return;
+                }
+                const data = await res.json();
+
+                const tbody = document.getElementById('feedback-list-body');
+                tbody.innerHTML = '';
+
+                if (!data.results || data.results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding: 30px; text-align: center; color: #888;">暂无反馈数据</td></tr>';
+                    return;
+                }
+
+                data.results.forEach(item => {
+                    const row = document.createElement('tr');
+                    const isBug = item.type === 'bug';
+                    const typeLabel = isBug ? '🐞 Bug' : '💡 建议';
+                    const color = isBug ? '#c62828' : '#2e7d32';
+                    const bg = isBug ? '#ffebee' : '#e8f5e9';
+
+                    row.innerHTML = `
+                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee; white-space: nowrap; font-size: 0.85rem; color: #555;">${new Date(item.created_at).toLocaleString()}</td>
+                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee;">
+                            <span style="background: ${bg}; color: ${color}; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
+                                ${typeLabel}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee; line-height: 1.5; max-width: 400px;">${escapeHtml(item.content)}</td>
+                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee; color: #666;">${item.contact ? escapeHtml(item.contact) : '-'}</td>
+                        <td style="padding: 12px 16px; border-bottom: 1px solid #eee;">
+                            <span style="font-size: 0.85rem; padding: 2px 6px; background: #eee; border-radius: 4px;">${item.status}</span>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+            } catch (e) {
+                console.error("Failed to load feedbacks", e);
+                document.getElementById('feedback-list-body').innerHTML = `<tr><td colspan="5" style="color:red; padding:20px;">加载失败: ${e.message}</td></tr>`;
+            }
+        }
+
 
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
