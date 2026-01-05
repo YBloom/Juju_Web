@@ -30,11 +30,11 @@ fi
 
 # 4. 重启 WebApp 服务
 echo -e "${YELLOW}重启 WebApp...${NC}"
-supervisorctl restart musicalbot_web
+sudo supervisorctl restart musicalbot_web
 
 # 5. 检查服务状态
 echo -e "${YELLOW}服务状态:${NC}"
-supervisorctl status musicalbot_web
+sudo supervisorctl status musicalbot_web
 
 echo -e "${GREEN}更新完成！${NC}"
 echo -e "查看日志: ${YELLOW}tail -f /var/log/musicalbot/web_out.log${NC}"
