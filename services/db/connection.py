@@ -11,7 +11,8 @@ from typing import Iterator, Optional
 
 from sqlmodel import Session, create_engine
 
-DEFAULT_DB_PATH = Path("data/musicalbot.db")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "musicalbot.db"
 
 
 def _ensure_parent(path: Path) -> Path:
