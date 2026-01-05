@@ -717,7 +717,11 @@ function renderCoCastResults(results, source, casts) {
 
         const titleDisplay = (!isSaoju && r.event_id) ? `<span class="jump-detail" data-id="${r.event_id}" data-sess="${r.session_id || ''}" style="cursor:pointer; color:var(--primary-color); font-weight:600; text-decoration:underline;">${r.title}</span>` : r.title;
 
-        html += `<tr>${col.index ? `<td data-label="#">${idx + 1}</td>` : ''}<td class="time-cell" data-label="日期/时间">${dateDisplay}</td><td class="city-cell" data-label="城市">${r.city || '-'}</td><td class="title-cell" data-label="剧目">${titleDisplay}</td><td data-label="角色">${r.role || '-'}</td>${col.location ? `<td data-label="剧场">${r.location || '-'}</td>` : ''}${col.others ? `<td class="cast-cell" data-label="其TA卡司">${r.others && r.others.length > 0 ? r.others.join(', ') : '-'}</td>` : ''}</tr>`;
+        const othersContent = (r.others && r.others.length > 0)
+            ? `<div class="cast-list-layout">${r.others.map(c => `<div class="cast-item" title="${c}">${c}</div>`).join('')}</div>`
+            : '-';
+
+        html += `<tr>${col.index ? `<td data-label="#">${idx + 1}</td>` : ''}<td class="time-cell" data-label="日期/时间">${dateDisplay}</td><td class="city-cell" data-label="城市">${r.city || '-'}</td><td class="title-cell" data-label="剧目">${titleDisplay}</td><td data-label="角色">${r.role || '-'}</td>${col.location ? `<td data-label="剧场">${r.location || '-'}</td>` : ''}${col.others ? `<td class="cast-cell" data-label="其TA卡司">${othersContent}</td>` : ''}</tr>`;
     });
 
     html += '</tbody></table></div>';

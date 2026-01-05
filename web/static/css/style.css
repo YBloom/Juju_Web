@@ -317,7 +317,27 @@ main {
 /* Specific for Co-Cast "Other Casts" which should stretch */
 .cast-cell {
     min-width: 200px;
+    max-width: 320px;
+    /* Limit width to force wrap */
+    white-space: normal;
+    /* Allow wrapping */
+}
+
+.cast-list-layout {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    /* 3 items per row */
+    gap: 4px 8px;
+    /* row-gap 4px, col-gap 8px */
+    width: 100%;
+}
+
+.cast-item {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    font-size: 0.9em;
 }
 
 /* Detail View */
