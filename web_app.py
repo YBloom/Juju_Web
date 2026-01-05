@@ -195,11 +195,35 @@ async def lifespan(app: FastAPI):
         logger.info("Crawler ENABLED. Starting background scheduler...")
         
         async def _run_scheduler():
+            # Timestamps for periodic tasks
+            last_saoju_near = 0
+            last_saoju_distant = 0
+            
+            # Allow some startup delay or immediate run? 
+            # Let's run near sync immediately, distant sync maybe immediately too or staggered.
+            
             while True:
                 try:
-                    logger.info("Scheduler: Starting data sync...")
+                    now_ts = time.time()
+                    
+                    # 1. Hulaquan Sync (Every ~5 mins, governed by sleep)
+                    logger.info("Scheduler: Starting Hulaquan data sync...")
                     await service.sync_all_data()
-                    logger.info("Scheduler: Sync complete. Sleeping for 300s.")
+                    
+                    # 2. Saoju Near Future (Every 4 hours = 14400s)
+                    if now_ts - last_saoju_near > 14400:
+                         logger.info("Scheduler: Starting Saoju Near Future sync (0-120d)...")
+                         await saoju_service.sync_future_days(0, 120)
+                         last_saoju_near = time.time()
+
+                    # 3. Saoju Distant Future (Every 24 hours = 86400s)
+                    if now_ts - last_saoju_distant > 86400:
+                         logger.info("Scheduler: Starting Saoju Distant Tour sync (>120d)...")
+                         # Default 1st arg is start buffer days
+                         await saoju_service.sync_distant_tours(120)
+                         last_saoju_distant = time.time()
+                         
+                    logger.info("Scheduler: All sync tasks checked. Sleeping for 300s.")
                 except Exception as e:
                     logger.error(f"Scheduler Error: {e}", exc_info=True)
                 
@@ -500,8 +524,8 @@ async def get_event_detail(event_id: str):
     # 让我们添加特定逻辑或使用现有的 DB 会话。
     # Service implementation detail:
     # 服务实现细节：
-    from sqlmodel import select
-    from services.hulaquan.tables import HulaquanEvent
+    from sqlmodel import select, col
+    from services.hulaquan.tables import HulaquanEvent, SaojuChangeLog
     from services.db.connection import session_scope
     
     with session_scope() as session:
@@ -567,6 +591,22 @@ async def get_admin_logs(file: str = "web_out.log", lines: int = 500, username: 
         return PlainTextResponse(result.stdout)
     except Exception as e:
         return f"[Error] Exception reading logs: {str(e)}"
+
+@app.get("/api/admin/saoju/changes")
+async def get_saoju_changes(limit: int = 50, username: str = Depends(get_current_username)):
+    """Get latest Saoju data changes (CDC logs)."""
+    from services.hulaquan.tables import SaojuChangeLog
+    from services.db.connection import session_scope
+    from sqlmodel import select, col
+    
+    with session_scope() as session:
+        stmt = select(SaojuChangeLog).order_by(col(SaojuChangeLog.detected_at).desc()).limit(limit)
+        logs = session.exec(stmt).all()
+        return {
+            "count": len(logs),
+            "results": [l.dict() for l in logs]
+        }
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

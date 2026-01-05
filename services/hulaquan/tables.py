@@ -78,3 +78,23 @@ class SaojuCache(SQLModel, table=True):
     data: str # Stores JSON string
     updated_at: datetime = Field(default_factory=timezone_now)
 
+
+class SaojuShow(SQLModel, table=True):
+    date: datetime = Field(primary_key=True)
+    musical_name: str = Field(primary_key=True)
+    city: str = Field(index=True)
+    cast_str: Optional[str] = None # "A / B / C"
+    theatre: Optional[str] = None
+    tour_name: Optional[str] = None
+    source: str = "api_unknown" # "csv_history", "api_daily", "api_tour"
+    updated_at: datetime = Field(default_factory=timezone_now)
+
+
+class SaojuChangeLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    detected_at: datetime = Field(default_factory=timezone_now)
+    show_date: datetime
+    musical_name: str
+    change_type: str # "NEW", "UPDATE"
+    details: str # JSON or text summary
+
