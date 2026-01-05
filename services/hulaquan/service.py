@@ -185,19 +185,122 @@ class HulaquanService:
         async with self._semaphore:
             detail_url = f"{self.BASE_URL}/event/getEventDetails.html?id={event_id}"
             data = await self._fetch_json(detail_url)
-            if not data:
-                return []
+        if not data:
+            return []
 
-        # Offload the blocking DB operations to a separate thread
+        # Phase 1: Read local context (Fast DB Read)
+        # 阶段 1：读取本地上下文（快速数据库读取）
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._sync_db_update_thread, event_id, data, loop)
+        ctx = await loop.run_in_executor(None, self._get_sync_context_sync, event_id)
+        
+        # Phase 2: Enrich with Saoju Data (Network I/O - No DB Lock)
+        # 阶段 2：充实 Saoju 数据（网络 I/O - 无数据库锁）
+        enrichment = await self._enrich_ticket_data_async(event_id, data, ctx)
+        
+        # Phase 3: Write Updates (Fast DB Write)
+        # 阶段 3：写入更新（快速数据库写入）
+        return await loop.run_in_executor(None, self._save_synced_data_sync, event_id, data, enrichment)
 
-    def _sync_db_update_thread(self, event_id: str, data: dict, loop: asyncio.AbstractEventLoop) -> List[TicketUpdate]:
-        """Synchronous version of update logic to run in a thread."""
+    def _get_sync_context_sync(self, event_id: str) -> Dict:
+        """Read relevant local state before sync."""
+        with session_scope() as session:
+            event = session.get(HulaquanEvent, event_id)
+            if not event:
+                return {"exists": False}
+            
+            # Map ticket ID -> {city, has_casts}
+            tickets_ctx = {}
+            for t in event.tickets:
+                has_casts = len(t.cast_members) > 0
+                tickets_ctx[t.id] = {"city": t.city, "has_casts": has_casts}
+                
+            return {
+                "exists": True,
+                "title": event.title,
+                "saoju_musical_id": event.saoju_musical_id,
+                "tickets": tickets_ctx
+            }
+
+    async def _enrich_ticket_data_async(self, event_id: str, data: dict, ctx: dict) -> Dict:
+        """Perfom all Saoju lookups without holding DB lock."""
+        res = {
+            "saoju_musical_id": ctx.get("saoju_musical_id"),
+            "tickets": {} # map tid -> {city: ..., casts: []}
+        }
+        
+        b_info = data.get("basic_info", {})
+        title = b_info.get("title", "")
+        if not title and ctx.get("title"):
+             title = ctx.get("title", "")
+             
+        # 1. Auto-Link Musical ID if missing
+        if not res["saoju_musical_id"]:
+            try:
+                search_name = extract_text_in_brackets(title, keep_brackets=False)
+                mid = await self._saoju.get_musical_id_by_name(search_name)
+                if mid:
+                    res["saoju_musical_id"] = mid
+            except Exception as e:
+                log.warning(f"Failed to auto-link musical ID for {title}: {e}")
+
+        # 2. Process Tickets for City/Casts
+        ticket_details = data.get("ticket_details", [])
+        for t_data in ticket_details:
+            tid = str(t_data.get("id"))
+            if not tid: continue
+            
+            t_title = t_data.get("title", "")
+            if not t_title and int(t_data.get("total_ticket", 0)) == 0: continue # Invalid filter
+            
+            # Context for this ticket
+            t_ctx = ctx.get("tickets", {}).get(tid, {})
+            current_city = t_ctx.get("city")
+            has_casts = t_ctx.get("has_casts", False)
+            
+            # Parse time
+            session_time = self._parse_api_date(t_data.get("start_time"))
+            
+            enrich_t = {}
+            
+            # City Logic (Fallback to Saoju if missing locally)
+            if not current_city and session_time and self._saoju:
+                try:
+                    search_name = extract_text_in_brackets(title, keep_brackets=False)
+                    date_str = session_time.strftime("%Y-%m-%d")
+                    time_str = session_time.strftime("%H:%M")
+                    
+                    saoju_match = await self._saoju.search_for_musical_by_date(
+                        search_name, date_str, time_str, city=None, musical_id=res["saoju_musical_id"]
+                    )
+                    if saoju_match and saoju_match.get("city"):
+                        enrich_t["city"] = saoju_match.get("city")
+                        current_city = enrich_t["city"] # Update local var for cast lookup
+                except Exception as e:
+                    pass
+            
+            # Cast Logic
+            if not has_casts and session_time:
+                 try:
+                    search_name = extract_text_in_brackets(title, keep_brackets=False)
+                    # Use potentially newly found city
+                    c_data = await self._saoju.get_cast_for_show(
+                        search_name, session_time, current_city, musical_id=res["saoju_musical_id"]
+                    )
+                    if c_data:
+                        enrich_t["casts"] = c_data
+                 except Exception as e:
+                    pass
+            
+            if enrich_t:
+                res["tickets"][tid] = enrich_t
+                
+        return res
+
+    def _save_synced_data_sync(self, event_id: str, data: dict, enrichment: dict) -> List[TicketUpdate]:
+        """Perform all DB writes in a single fast transaction."""
         updates = []
         with session_scope() as session:
             # 1. Sync Event
-            # 1. 同步事件
             b_info = data.get("basic_info", {})
             event = session.get(HulaquanEvent, event_id)
             if not event:
@@ -210,90 +313,50 @@ class HulaquanService:
             event.end_time = self._parse_api_date(b_info.get("end_time"))
             event.updated_at = timezone_now()
             
+            # Update Musical ID if found in enrichment
+            if enrichment.get("saoju_musical_id") and event.saoju_musical_id != enrichment["saoju_musical_id"]:
+                 event.saoju_musical_id = enrichment["saoju_musical_id"]
+                 event.last_synced_at = timezone_now()
+                 session.add(event)
+            
             # 2. Sync Tickets
-            # 2. 同步票据
             ticket_details = data.get("ticket_details", [])
             for t_data in ticket_details:
                 tid = str(t_data.get("id"))
-                if not tid:
-                    continue
+                if not tid: continue
                 
-                # Basic fields
-                # 基本字段
                 total_ticket = int(t_data.get("total_ticket", 0))
                 left_ticket = int(t_data.get("left_ticket_count", 0))
                 price = float(t_data.get("ticket_price", 0))
                 status = t_data.get("status", "active")
                 title = t_data.get("title", "")
                 
-                # Skip invalid tickets (following legacy logic)
-                # 跳过无效票据（沿用旧有逻辑）
-                if not title and total_ticket == 0:
-                    continue
-                if status == "expired":
-                    continue
-
+                if not title and total_ticket == 0: continue
+                if status == "expired": continue
+                
                 ticket = session.get(HulaquanTicket, tid)
                 is_new = False
                 
                 if not ticket:
                     is_new = True
-                    ticket = HulaquanTicket(
-                        id=tid, 
-                        event_id=event_id, 
-                        title=title
-                    )
+                    ticket = HulaquanTicket(id=tid, event_id=event_id, title=title)
                     session.add(ticket)
                 
-                # Detect state changes for notification
-                # 检测状态更改以进行通知
+                # Notifications
                 if is_new:
                     if status == "pending":
-                        updates.append(TicketUpdate(
-                            ticket_id=tid,
-                            event_id=event_id,
-                            event_title=event.title,
-                            change_type="pending",
-                            message=f"⏲️开票: {title} (开票时间: {t_data.get('valid_from') or '未知'})"
-                        ))
+                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="pending", message=f"⏲️开票: {title}"))
                     elif left_ticket > 0:
-                        updates.append(TicketUpdate(
-                            ticket_id=tid,
-                            event_id=event_id,
-                            event_title=event.title,
-                            change_type="new",
-                            message=f"🆕上新: {title} 余票{left_ticket}/{total_ticket}"
-                        ))
+                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="new", message=f"🆕上新: {title} 余票{left_ticket}/{total_ticket}"))
                 else:
-                    # Check for status change to pending
-                    # 检查状态是否更改为待处理
                     if status == "pending" and ticket.status != "pending":
-                        updates.append(TicketUpdate(
-                            ticket_id=tid,
-                            event_id=event_id,
-                            event_title=event.title,
-                            change_type="pending",
-                            message=f"⏲️开票: {title} (开票时间: {t_data.get('valid_from') or '未知'})"
-                        ))
+                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="pending", message=f"⏲️开票: {title}"))
                     elif ticket.stock == 0 and left_ticket > 0:
-                        updates.append(TicketUpdate(
-                            ticket_id=tid,
-                            event_id=event_id,
-                            event_title=event.title,
-                            change_type="restock",
-                            message=f"♻️回流: {title} 余票{left_ticket}/{total_ticket}"
-                        ))
+                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="restock", message=f"♻️回流: {title} 余票{left_ticket}/{total_ticket}"))
                     elif left_ticket > ticket.stock:
-                        updates.append(TicketUpdate(
-                            ticket_id=tid,
-                            event_id=event_id,
-                            event_title=event.title,
-                            change_type="back",
-                            message=f"➕票增: {title} 余票{left_ticket}/{total_ticket}"
-                        ))
-                
-                # Update ticket attributes
-                # 更新票据属性
+                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="back", message=f"➕票增: {title} 余票{left_ticket}/{total_ticket}"))
+
+                # Updates
                 ticket.title = title
                 ticket.stock = left_ticket
                 ticket.total_ticket = total_ticket
@@ -302,92 +365,39 @@ class HulaquanService:
                 ticket.valid_from = t_data.get("valid_from")
                 ticket.session_time = self._parse_api_date(t_data.get("start_time"))
                 
-                # Extract city if not present
-                # 如果不存在，则提取城市
-                if not ticket.city:
+                # Apply Enrichment (City)
+                t_enrich = enrichment.get("tickets", {}).get(tid, {})
+                if t_enrich.get("city"):
+                    ticket.city = t_enrich["city"]
+                elif not ticket.city:
+                    # Logic 4 & 5 (Text Extraction) fallback
                     info = extract_title_info(title)
-                    ticket.city = info.get("city")
-                
-                # Helper for async calls from thread
-                def call_async(coro):
-                     future = asyncio.run_coroutine_threadsafe(coro, loop)
-                     return future.result()
+                    if info.get("city"): ticket.city = info.get("city")
 
-                # Auto-Link Logic: Try to find persistent Saoju ID (Before city/cast sync)
-                # 自动关联逻辑：尝试查找持久的扫剧 ID（在城市/卡司同步之前）
-                if not event.saoju_musical_id:
-                    try:
-                        search_name = extract_text_in_brackets(event.title, keep_brackets=False)
-                        musical_id = call_async(self._saoju.get_musical_id_by_name(search_name))
-                        if musical_id:
-                            event.saoju_musical_id = musical_id
-                            event.last_synced_at = timezone_now()
-                            session.add(event)
-                            log.info(f"Auto-linked {event.title} to Saoju ID: {musical_id}")
-                    except Exception as e:
-                        log.warning(f"Failed to auto-link musical ID for {event.title}: {e}")
-
-                # Fallback: Try to find city via Saoju match if still missing
-                # 回退：如果仍然缺失，尝试通过扫剧匹配查找城市
-                if not ticket.city and ticket.session_time and self._saoju:
-                    try:
-                        search_name = extract_text_in_brackets(event.title, keep_brackets=False)
-                        date_str = ticket.session_time.strftime("%Y-%m-%d")
-                        time_str = ticket.session_time.strftime("%H:%M")
+                # Apply Enrichment (Casts)
+                if t_enrich.get("casts"):
+                     for c_item in t_enrich["casts"]:
+                        artist_name = c_item.get("artist")
+                        role_name = c_item.get("role")
+                        if not artist_name: continue
                         
-                        # Use ID if available for precision
-                        saoju_match = call_async(self._saoju.search_for_musical_by_date(
-                            search_name, 
-                            date_str, 
-                            time_str, 
-                            city=None,
-                            musical_id=event.saoju_musical_id
-                        ))
-                        if saoju_match and saoju_match.get("city"):
-                            ticket.city = saoju_match.get("city")
-                            log.info(f"Filled missing city for {title} via Saoju: {ticket.city}")
-                    except Exception as e:
-                        log.warning(f"Saoju fallback city search failed for {title}: {e}")
-
-                # 3. Sync Casts (Enrichment)
-                # 3. 同步演员阵容（丰富数据）
-                if not ticket.cast_members and ticket.session_time:
-                    try:
-                        # Search name from title brackets
-                        # 从标题括号中搜索名称
-                        search_name = extract_text_in_brackets(event.title, keep_brackets=False)
-                        cast_data = call_async(self._saoju.get_cast_for_show(
-                            search_name, 
-                            ticket.session_time, 
-                            ticket.city,
-                            musical_id=event.saoju_musical_id
-                        ))
+                        stmt = select(HulaquanCast).where(HulaquanCast.name == artist_name)
+                        cast_obj = session.exec(stmt).first()
+                        if not cast_obj:
+                            cast_obj = HulaquanCast(name=artist_name)
+                            session.add(cast_obj)
+                            session.flush() # Need ID
                         
-                        for c_item in cast_data:
-                            artist_name = c_item.get("artist")
-                            role_name = c_item.get("role")
-                            if not artist_name: continue
-                            
-                            # Get or create Cast
-                            # 获取或创建演员
-                            stmt = select(HulaquanCast).where(HulaquanCast.name == artist_name)
-                            cast_obj = session.exec(stmt).first()
-                            if not cast_obj:
-                                cast_obj = HulaquanCast(name=artist_name)
-                                session.add(cast_obj)
-                                session.flush()
-                            
-                            # Link with role
-                            # 与角色关联
-                            assoc = TicketCastAssociation(
-                                ticket_id=tid,
-                                cast_id=cast_obj.id,
-                                role=role_name
-                            )
+                        # Check exist
+                        stmt_assoc = select(TicketCastAssociation).where(
+                            TicketCastAssociation.ticket_id == tid,
+                            TicketCastAssociation.cast_id == cast_obj.id,
+                            TicketCastAssociation.role == role_name
+                        )
+                        if not session.exec(stmt_assoc).first():
+                            assoc = TicketCastAssociation(ticket_id=tid, cast_id=cast_obj.id, role=role_name)
                             session.add(assoc)
-                    except Exception as e:
-                        log.warning(f"Failed to sync cast for {title}: {e}")
-            
+
             session.commit()
         return updates
 
