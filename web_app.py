@@ -146,6 +146,16 @@ async def lifespan(app: FastAPI):
     # 启动逻辑
     logger.info("Starting Hulaquan Web Service...")
     
+    # Ensure database is initialized
+    # 确保数据库已初始化
+    try:
+        from services.db.init import init_db
+        engine = init_db()
+        logger.info(f"✓ Database initialized at: {engine.url}")
+    except Exception as e:
+        logger.error(f"✗ Database initialization failed: {e}", exc_info=True)
+        raise
+    
     # Start Crawler if enabled (or force it for now since this is the dedicated process)
     # 如果启用则启动爬虫（或者因为这是专用进程所以强制启动）
     # TODO: In Phase 3, we will use config.ENABLE_CRAWLER, but for now let's use a simple flag or method
