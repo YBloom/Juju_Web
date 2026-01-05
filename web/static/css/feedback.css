@@ -1,0 +1,835 @@
+/* Scheme C: Origami Letter / 折纸信笺 */
+
+:root {
+    --paper-bg: #fdfbf7;
+    --paper-line: #e3e6e8;
+    --ink-color: #2c3e50;
+    --brand-green: #466344;
+    --brand-green-light: #637e60;
+    --stamp-red: #c0392b;
+}
+
+/* Modal Container as "Letter" */
+.feedback-modal {
+    background: var(--paper-bg);
+    width: 90%;
+    max-width: 420px;
+    /* Narrower as requested */
+    border-radius: 4px;
+    /* Slightly sharp corners like paper */
+    padding: 0;
+    box-shadow:
+        0 1px 1px rgba(0, 0, 0, 0.15),
+        0 10px 0 -5px #eee,
+        0 10px 1px -4px rgba(0, 0, 0, 0.15),
+        0 20px 0 -10px #e5e5e5,
+        0 20px 1px -9px rgba(0, 0, 0, 0.15),
+        0 30px 60px rgba(0, 0, 0, 0.3);
+    /* Stacked papers effect */
+    transform: translateY(100px) rotateX(20deg) scale(0.9);
+    transform-origin: bottom center;
+    opacity: 0;
+    transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+    max-height: 85vh;
+    border: none;
+    position: relative;
+}
+
+/* Unfold Animation */
+.feedback-modal-overlay.active .feedback-modal {
+    transform: translateY(0) rotateX(0) scale(1);
+    opacity: 1;
+}
+
+/* Paper Plane Fly Away Animation (Added via JS class 'flying') */
+.feedback-modal.flying {
+    animation: paperPlaneFly 1s ease-in forwards;
+}
+
+@keyframes paperPlaneFly {
+    0% {
+        transform: scale(1) rotate(0);
+    }
+
+    30% {
+        transform: scale(0.9) rotate(-5deg) translateY(20px);
+    }
+
+    100% {
+        transform: scale(0.2) rotate(45deg) translate(2000px, -2000px);
+        opacity: 0;
+    }
+}
+
+/* Header - "Envelope Flap" Style */
+/* Removed .feedback-hero-section wrapper specific styles to simplify structure for this theme */
+.feedback-hero-section {
+    background: transparent;
+    padding-bottom: 0;
+}
+
+.feedback-header {
+    background: var(--brand-green);
+    /* Zigzag bottom edge using clip-path or background image? Let's use a simpler clean flap or a distinctive paper texture */
+    background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03) 0px, rgba(255, 255, 255, 0.03) 2px, transparent 2px, transparent 10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 28px;
+    color: #fff;
+    position: relative;
+    box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+/* Faux "Stamp" decorative element */
+.feedback-header::after {
+    content: 'POST';
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-15deg);
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.feedback-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-family: 'Outfit', sans-serif;
+    /* A bit more humanist */
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.close-modal-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+    background: #c0392b;
+    /* Wax seal red */
+    transform: rotate(90deg);
+}
+
+/* Tabs - Bookmarks */
+.feedback-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 16px 28px 0;
+    margin-bottom: 10px;
+    position: relative;
+    background: transparent;
+}
+
+.feedback-tab {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    color: #888;
+    cursor: pointer;
+    background: #eee;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s;
+    font-weight: 600;
+    position: relative;
+    top: 0;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    box-shadow: inset 0 -5px 10px -5px rgba(0, 0, 0, 0.05);
+}
+
+.feedback-tab.active {
+    background: var(--paper-bg);
+    color: var(--brand-green);
+    top: 2px;
+    /* Connects to the paper body */
+    padding-bottom: 10px;
+    /* Overlap border */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+    border-bottom: 1px solid var(--paper-bg);
+    /* Mask the line */
+}
+
+/* Content Area - Lined Paper */
+.modal-content-area {
+    padding: 20px 28px 28px;
+    flex: 1;
+    overflow-y: auto;
+    background:
+        linear-gradient(var(--paper-bg) 29px, transparent 29px, transparent 30px, var(--paper-bg) 30px),
+        linear-gradient(#999 1px, transparent 1px);
+    background-size: 100% 30px;
+    background-attachment: local;
+    position: relative;
+    z-index: 1;
+    /* Separator line from tabs if needed */
+    margin-top: -1px;
+    /* Overlap */
+}
+
+/* View Toggling Logic */
+.feedback-view-section {
+    display: none;
+}
+
+.feedback-view-section.active {
+    display: block;
+    animation: fadeInView 0.4s ease-out forwards;
+}
+
+@keyframes fadeInView {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* "Post-it" Note Buttons */
+.feedback-type-options {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 5px;
+    /* Space for shadows */
+}
+
+.type-option {
+    flex: 1;
+    position: relative;
+    cursor: pointer;
+}
+
+
+/* Hide default radio */
+.type-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    appearance: none;
+    /* Force hide */
+    pointer-events: none;
+}
+
+.type-card {
+    height: 60px;
+    /* Reduced to 60px (75% of 80px) */
+    /* Standard */
+    background: #fff9c4;
+    /* Classic yellow post-it base */
+    color: var(--ink-color);
+    border: none;
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: rotate(0deg);
+}
+
+/* Unfold Animation */
+.feedback-modal-overlay.active .feedback-modal {
+    transform: translateY(0) rotateX(0) scale(1);
+    opacity: 1;
+}
+
+/* Paper Plane Fly Away Animation (Added via JS class 'flying') */
+.feedback-modal.flying {
+    animation: paperPlaneFly 1s ease-in forwards;
+}
+
+@keyframes paperPlaneFly {
+    0% {
+        transform: scale(1) rotate(0);
+    }
+
+    30% {
+        transform: scale(0.9) rotate(-5deg) translateY(20px);
+    }
+
+    100% {
+        transform: scale(0.2) rotate(45deg) translate(2000px, -2000px);
+        opacity: 0;
+    }
+}
+
+/* Header - "Envelope Flap" Style */
+/* Removed .feedback-hero-section wrapper specific styles to simplify structure for this theme */
+.feedback-hero-section {
+    background: transparent;
+    padding-bottom: 0;
+}
+
+.feedback-header {
+    background: var(--brand-green);
+    /* Zigzag bottom edge using clip-path or background image? Let's use a simpler clean flap or a distinctive paper texture */
+    background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03) 0px, rgba(255, 255, 255, 0.03) 2px, transparent 2px, transparent 10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 28px;
+    color: #fff;
+    position: relative;
+    box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+/* Faux "Stamp" decorative element */
+.feedback-header::after {
+    content: 'POST';
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-15deg);
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.feedback-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-family: 'Outfit', sans-serif;
+    /* A bit more humanist */
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.close-modal-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+    background: #c0392b;
+    /* Wax seal red */
+    transform: rotate(90deg);
+}
+
+/* Tabs - Bookmarks */
+.feedback-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 16px 28px 0;
+    margin-bottom: 10px;
+    position: relative;
+    background: transparent;
+}
+
+.feedback-tab {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    color: #888;
+    cursor: pointer;
+    background: #eee;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s;
+    font-weight: 600;
+    position: relative;
+    top: 0;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    box-shadow: inset 0 -5px 10px -5px rgba(0, 0, 0, 0.05);
+}
+
+.feedback-tab.active {
+    background: var(--paper-bg);
+    color: var(--brand-green);
+    top: 2px;
+    /* Connects to the paper body */
+    padding-bottom: 10px;
+    /* Overlap border */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+    border-bottom: 1px solid var(--paper-bg);
+    /* Mask the line */
+}
+
+/* Content Area - Lined Paper */
+.modal-content-area {
+    padding: 20px 28px 28px;
+    flex: 1;
+    overflow-y: auto;
+    background:
+        linear-gradient(var(--paper-bg) 29px, transparent 29px, transparent 30px, var(--paper-bg) 30px),
+        linear-gradient(#999 1px, transparent 1px);
+    background-size: 100% 30px;
+    background-attachment: local;
+    position: relative;
+    z-index: 1;
+    /* Separator line from tabs if needed */
+    margin-top: -1px;
+    /* Overlap */
+}
+
+/* View Toggling Logic */
+.feedback-view-section {
+    display: none;
+}
+
+.feedback-view-section.active {
+    display: block;
+    animation: fadeInView 0.4s ease-out forwards;
+}
+
+@keyframes fadeInView {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* "Post-it" Note Buttons */
+.feedback-type-options {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 5px;
+    /* Space for shadows */
+}
+
+.type-option {
+    flex: 1;
+    position: relative;
+    cursor: pointer;
+}
+
+/* Hide default radio */
+/* Hide default radio */
+.type-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    appearance: none;
+    /* Force hide */
+    pointer-events: none;
+}
+
+.type-card {
+    height: 120px;
+    /* Restored larger height */
+    /* Standard */
+    background: #fff9c4;
+    /* Classic yellow post-it base */
+    color: var(--ink-color);
+    border: none;
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: rotate(0deg);
+}
+
+/* Paper Colors for diff types */
+.type-option:nth-child(1) .type-card {
+    background: #ffebee;
+    transform: rotate(-2deg);
+}
+
+/* Bug - Reddish */
+.type-option:nth-child(2) .type-card {
+    background: #e8f5e9;
+    transform: rotate(1deg);
+}
+
+/* Suggestion - Greenish */
+.type-option:nth-child(3) .type-card {
+    background: #e3f2fd;
+    transform: rotate(-1deg);
+}
+
+/* Wish - Blueish */
+
+.type-option input:checked+.type-card {
+    transform: scale(1.05) rotate(0deg) translateY(-2px);
+    box-shadow: 4px 6px 12px rgba(0, 0, 0, 0.15);
+    z-index: 5;
+    background: #fff;
+    /* Highlight makes it clean white? Or deeper color? Let's keep color but brighter border */
+    border: 2px solid var(--brand-green);
+}
+
+.type-card i {
+    font-size: 20px;
+    margin-bottom: 4px;
+    color: #555;
+}
+
+.type-option input:checked+.type-card i {
+    color: var(--brand-green);
+}
+
+.type-card span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: 'Kalam', 'Architects Daughter', cursive, sans-serif;
+    /* If available, else fallback */
+}
+
+.type-option input:checked+.type-card span {
+    color: var(--brand-green);
+}
+
+
+/* Inputs - Handwriting Style */
+.feedback-label {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.feedback-textarea,
+.feedback-input-clean {
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    /* Maybe a more handwriting font if possible? */
+    font-size: 1rem;
+    color: var(--ink-color);
+    line-height: 30px;
+    /* Match grid */
+    padding: 0;
+    width: 100%;
+    outline: none;
+    resize: none;
+}
+
+.feedback-textarea::placeholder {
+    color: rgba(0, 0, 0, 0.25);
+    font-style: italic;
+}
+
+/* Submit Button - Stamp/Seal */
+.feedback-submit-btn {
+    background: var(--brand-green);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 0 var(--brand-green-light);
+    margin-top: 10px;
+    transition: all 0.1s;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    align-items: center;
+}
+
+.feedback-submit-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 var(--brand-green-light);
+}
+
+.feedback-submit-btn:hover {
+    filter: brightness(1.1);
+}
+
+/* Wall List */
+.feedback-wall-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.wall-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 2px;
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eee;
+    /* Optional: Washed tape effect */
+    position: relative;
+}
+
+.wall-card::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 12px;
+    background: rgba(99, 126, 96, 0.2);
+    /* Tape color */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Tag Styles */
+.wall-tag {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.wall-tag.bug {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.wall-tag.suggestion {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.wall-tag.wish {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.wall-time {
+    float: right;
+    font-size: 0.75rem;
+    color: #ccc;
+}
+
+.dev-reply {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f1f8e9;
+    /* Light green note */
+    border-radius: 0 10px 10px 10px;
+    position: relative;
+    color: var(--brand-green);
+    font-size: 0.9rem;
+}
+
+/* Footer Entry */
+.feedback-footer-entry {
+    background-color: #f8f9fa;
+    border-top: 1px solid #eee;
+    padding: 30px 20px;
+    text-align: center;
+    margin-top: 40px;
+}
+
+.feedback-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 20px;
+    background: #fff;
+    padding: 15px 30px;
+    border-radius: 50px;
+    border: 1px solid #eee;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0 auto;
+    /* Auto width for better alignment */
+}
+
+.feedback-card:hover {
+    border-color: var(--brand-green);
+    transform: translateY(-2px);
+}
+
+.feedback-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(70, 99, 68, 0.1);
+    color: var(--brand-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feedback-title {
+    font-weight: bold;
+    color: #333;
+}
+
+.feedback-desc {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+/* Overlay */
+.feedback-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    backdrop-filter: blur(2px);
+    perspective: 1000px;
+    /* For 3D rotation */
+}
+
+.feedback-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}/* Celebration Overlay */
+.celebration-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 3000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    /* Ensure vertical stacking */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease;
+    background: rgba(255, 255, 255, 0.9);
+    /* Stronger background to hide underlying */
+    backdrop-filter: blur(5px);
+}
+
+.celebration-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.celebration-content {
+    text-align: center;
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 3002;
+    padding: 20px;
+}
+
+.celebration-overlay.active .celebration-content {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.celebration-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #ff9800;
+    /* Orange */
+    margin: 0 0 15px 0;
+    text-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.celebration-subtitle {
+    font-size: 1.1rem;
+    color: #466344;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* Confetti Container */
+#confetti-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 3001;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    opacity: 0.9;
+    border-radius: 2px;
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--tx), var(--ty)) rotate(720deg);
+        opacity: 0;
+    }
+}.close-hint {
+    position: absolute;
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+    color: #999;
+    opacity: 0;
+    transition: opacity 1s ease;
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+.close-hint.visible {
+    opacity: 1;
+}

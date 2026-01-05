@@ -12,7 +12,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Material+Icons&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css?v=20260105_2">
-    <link rel="stylesheet" href="/static/css/grouping.css?v=20260104">
+    <link rel="stylesheet" href="/static/css/feedback.css?v=20260105">
+
     <!-- Pinyin Library for Autocomplete -->
     <script src="https://unpkg.com/pinyin-pro@3.18.2/dist/index.js"></script>
 
@@ -86,7 +87,7 @@
 
         <!-- Co-Cast Tab -->
         <div id="tab-cocast" class="tab-content">
-            <div class="header-section" style="text-align: center; padding: 40px 20px 10px;">
+            <div class="header-section cocast-header-styled">
                 <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">同场演员查询</h3>
                 <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">查询多位演员共同出演的场次</p>
             </div>
@@ -139,17 +140,124 @@
             <div id="cast-results"></div>
         </div>
     </main>
-    <footer style="margin-top: -20px; margin-bottom: 20px;">
-        <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
-            <div>数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
-                    style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈</div>
-            <div>联系邮箱：<a href="mailto:contact@yaobii.com"
-                    style="color: inherit; text-decoration: underline;">contact@yaobii.com</a></div>
-            <div id="update-status" style="margin-top: 8px; font-size: 0.75rem;">正在加载更新状态...</div>
-        </div>
-    </footer>
 
-    <script type="module" src="/static/js/main.js?v=20260105"></script>
+    <!-- Feedback Footer Entry -->
+    <div class="feedback-footer-entry">
+        <div class="feedback-card" id="feedback-entry-card">
+            <div class="feedback-icon">
+                <i class="material-icons">rate_review</i>
+            </div>
+            <div class="feedback-text">
+                <div class="feedback-title">反馈与建议</div>
+                <div class="feedback-desc">发现Bug或有改进建议？告诉我们</div>
+            </div>
+            <i class="material-icons" style="color: var(--text-secondary);">chevron_right</i>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div class="feedback-modal-overlay" id="feedback-overlay">
+        <div class="feedback-modal">
+            <div class="feedback-hero-section">
+                <div class="feedback-header">
+                    <h3>意见反馈</h3>
+                    <button class="close-modal-btn" id="feedback-close-btn">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
+
+                <div class="feedback-tabs">
+                    <div class="feedback-tab active" id="fb-tab-submit">我要反馈</div>
+                    <div class="feedback-tab" id="fb-tab-wall">反馈动态</div>
+                </div>
+            </div>
+
+            <!-- Views Wrapper for Grid Transition -->
+            <div class="feedback-views-wrapper">
+                <!-- View: Submit Form -->
+                <div class="modal-content-area feedback-view-section active" id="fb-view-submit">
+                    <form id="feedback-form">
+                        <div class="feedback-form-group">
+                            <label class="feedback-label">反馈类型</label>
+                            <div class="feedback-type-options">
+                                <label class="type-option">
+                                    <input type="radio" name="feedback-type" value="bug">
+                                    <div class="type-card">
+                                        <i class="material-icons">bug_report</i>
+                                        <span>Bug反馈</span>
+                                    </div>
+                                </label>
+                                <label class="type-option">
+                                    <input type="radio" name="feedback-type" value="suggestion" checked>
+                                    <div class="type-card">
+                                        <i class="material-icons">lightbulb</i>
+                                        <span>优化建议</span>
+                                    </div>
+                                </label>
+                                <label class="type-option">
+                                    <input type="radio" name="feedback-type" value="wish">
+                                    <div class="type-card">
+                                        <i class="material-icons">auto_awesome</i>
+                                        <span>功能许愿</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="feedback-form-group">
+                            <label class="feedback-label">*反馈内容</label>
+                            <textarea class="feedback-textarea" id="feedback-content"
+                                placeholder="请详细描述您遇到的问题或您的建议..."></textarea>
+                        </div>
+
+                        <div class="feedback-form-group">
+                            <label class="feedback-label">昵称（选填）</label>
+                            <input type="text" class="feedback-input-clean" id="feedback-contact"
+                                placeholder="怎么称呼您？/ 若收入精选反馈，将作为昵称">
+                        </div>
+
+                        <button type="submit" class="feedback-submit-btn" id="feedback-submit-btn">
+                            <span class="material-icons">send</span>
+                            <span class="btn-text">提交反馈</span>
+                        </button>
+                    </form>
+
+            </div>
+
+                    <!-- View: Feedback Wall -->
+                    <div class="modal-content-area feedback-view-section slide-right" id="fb-view-wall">
+                        <div class="feedback-wall-list" id="feedback-wall-list">
+                            <!-- JS Populated -->
+                        </div>
+                    </div>
+                </div> <!-- End Wrapper -->
+            </div>
+        </div>
+
+        <footer style="margin-top: 0px; margin-bottom: 20px;">
+            <div
+                style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
+                <div>数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
+                        style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈</div>
+                <div>联系邮箱：<a href="mailto:contact@yaobii.com"
+                        style="color: inherit; text-decoration: underline;">contact@yaobii.com</a></div>
+                <div id="update-status" style="margin-top: 8px; font-size: 0.75rem;">正在加载更新状态...</div>
+            </div>
+        </footer>
+
+        <!-- Celebration Content -->
+        <div id="celebration-overlay" class="celebration-overlay">
+            <div class="celebration-content">
+                <h1 class="celebration-title">感谢您的宝贵建议</h1>
+                <p class="celebration-subtitle">祝戏剧之神永在您身畔～</p>
+            </div>
+            <p id="close-hint" class="close-hint">(点击任意处关闭)</p>
+            <div id="confetti-container"></div>
+        </div>
+
+        <script type="module" src="/static/js/main.js?v=20260105_1"></script>
+        <script src="/static/js/feedback.js?v=20260105"></script>
+
 </body>
 
 </html>

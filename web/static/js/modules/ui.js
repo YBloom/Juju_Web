@@ -154,9 +154,14 @@ export function sortEvents(events) {
 
         const getStartDate = (range) => {
             if (!range) return new Date(0);
-            const part = range.split('至')[0].trim().replace(/\./g, '-');
-            const d = new Date(part);
-            return isNaN(d.getTime()) ? new Date(0) : d;
+            // 提取第一个日期格式 (YYYY.MM.DD 或 YYYY-MM-DD)
+            const match = range.match(/(\d{4})[.-](\d{1,2})[.-](\d{1,2})/);
+            if (match) {
+                const dateStr = match[0].replace(/\./g, '-');
+                const d = new Date(dateStr);
+                return isNaN(d.getTime()) ? new Date(0) : d;
+            }
+            return new Date(0);
         };
         const dateA = getStartDate(a.schedule_range);
         const dateB = getStartDate(b.schedule_range);
@@ -672,23 +677,23 @@ function renderCoCastResults(results, source, casts) {
     const summaryHtml = calculateCoCastStats(filtered, casts);
 
     let html = `
-        <div style="margin-bottom:20px;padding:15px;background:#f0f7ff;border-radius:12px;border-left:5px solid var(--primary-color)">${summaryHtml}</div>
-        <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-                <div><div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">🎭 查询到 ${results.length} 场同台演出</div></div>
-                <div style="display:flex;gap:10px;align-items:center;font-size:0.9em;flex-wrap:wrap">
-                    <label style="cursor:pointer"><input type="checkbox" data-col="index" ${col.index ? 'checked' : ''}> 序号</label>
-                    <label style="cursor:pointer"><input type="checkbox" data-col="others" ${col.others ? 'checked' : ''}> 其TA卡司</label>
-                    <label style="cursor:pointer"><input type="checkbox" data-col="location" ${col.location ? 'checked' : ''}> 剧场</label>
-                    <span>|</span>
-                    <select id="cocast-year-filter" style="padding:3px 8px;border-radius:4px"><option value="">全部年份</option>${years.map(y => `<option value="${y}" ${selectedYear == y ? 'selected' : ''}>${y}年</option>`).join('')}</select>
-                    <button id="cocast-sort-btn" style="padding:3px 10px;border-radius:4px;border:1px solid #ddd;background:white;cursor:pointer">日期 ${sortAsc ? '↓' : '↑'}</button>
+        <div class="cocast-summary-result">${summaryHtml}</div>
+        <div class="cocast-control-panel">
+            <div class="cocast-control-flex">
+                <div><div class="cocast-result-title">🎭 查询到 ${results.length} 场同台演出</div></div>
+                <div class="cocast-filters">
+                    <label class="cocast-filter-label"><input type="checkbox" data-col="index" ${col.index ? 'checked' : ''}> 序号</label>
+                    <label class="cocast-filter-label"><input type="checkbox" data-col="others" ${col.others ? 'checked' : ''}> 其TA卡司</label>
+                    <label class="cocast-filter-label"><input type="checkbox" data-col="location" ${col.location ? 'checked' : ''}> 剧场</label>
+                    <span class="cocast-filter-separator">|</span>
+                    <select id="cocast-year-filter" class="cocast-year-select"><option value="">全部年份</option>${years.map(y => `<option value="${y}" ${selectedYear == y ? 'selected' : ''}>${y}年</option>`).join('')}</select>
+                    <button id="cocast-sort-btn" class="cocast-sort-btn">日期 ${sortAsc ? '↓' : '↑'}</button>
                 </div>
             </div>
         </div>
         <div class="data-table-container">
             <table class="data-table">
-                <thead><tr>${col.index ? '<th width="50">#</th>' : ''}<th width="200">日期/时间</th><th width="60">城市</th><th>剧目</th><th width="120">角色</th>${col.location ? '<th>剧场</th>' : ''}${col.others ? '<th>其TA卡司</th>' : ''}</tr></thead>
+                <thead><tr>${col.index ? '<th width="40">#</th>' : ''}<th width="80">日期/时间</th><th width="40">城市</th><th>剧目</th><th>角色</th>${col.location ? '<th>剧场</th>' : ''}${col.others ? '<th>其TA卡司</th>' : ''}</tr></thead>
                 <tbody>
     `;
 
@@ -718,7 +723,18 @@ function renderCoCastResults(results, source, casts) {
         const titleDisplay = (!isSaoju && r.event_id) ? `<span class="jump-detail" data-id="${r.event_id}" data-sess="${r.session_id || ''}" style="cursor:pointer; color:var(--primary-color); font-weight:600; text-decoration:underline;">${r.title}</span>` : r.title;
 
         const othersContent = (r.others && r.others.length > 0)
-            ? `<div class="cast-list-layout">${r.others.map(c => `<div class="cast-item" title="${c}">${c}</div>`).join('')}</div>`
+            ? `<div class="cast-list-layout">${r.others.map(c => {
+                let text = c;
+                let title = c;
+                if (c.includes(':')) {
+                    const parts = c.split(':');
+                    const role = parts[0];
+                    const name = parts[1];
+                    text = `${name}<span class="cast-role-tiny">${role}</span>`;
+                    title = `${name} 饰 ${role}`;
+                }
+                return `<div class="cast-item" title="${title}">${text}</div>`;
+            }).join('')}</div>`
             : '-';
 
         html += `<tr>${col.index ? `<td data-label="#">${idx + 1}</td>` : ''}<td class="time-cell" data-label="日期/时间">${dateDisplay}</td><td class="city-cell" data-label="城市">${r.city || '-'}</td><td class="title-cell" data-label="剧目">${titleDisplay}</td><td data-label="角色">${r.role || '-'}</td>${col.location ? `<td data-label="剧场">${r.location || '-'}</td>` : ''}${col.others ? `<td class="cast-cell" data-label="其TA卡司">${othersContent}</td>` : ''}</tr>`;

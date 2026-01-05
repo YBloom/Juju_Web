@@ -277,13 +277,13 @@ main {
 
 /* Columns */
 .city-cell {
-    width: 60px;
+    width: 48px;
     white-space: nowrap;
 }
 
 .title-cell {
-    min-width: 250px;
-    /* Make musical title wider */
+    min-width: 120px;
+    font-weight: 500;
 }
 
 .time-cell {
@@ -296,22 +296,28 @@ main {
 
 .dt-container {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 2px;
     align-items: center;
-    white-space: nowrap;
-    /* Prevent items inside from wrapping */
+    justify-content: center;
+    line-height: 1.2;
 }
 
 .dt-year {
-    display: inline-block;
+    display: block;
+    font-size: 0.8em;
+    opacity: 0.8;
 }
 
 .dt-date {
-    display: inline-block;
+    display: block;
+    font-weight: 600;
 }
 
 .dt-time {
-    display: inline-block;
+    display: block;
+    font-size: 0.85em;
+    color: var(--text-secondary);
 }
 
 /* Specific for Co-Cast "Other Casts" which should stretch */
@@ -1023,4 +1029,140 @@ main {
     opacity: 0.4;
     text-transform: uppercase;
     letter-spacing: 0.1em;
+}
+
+/* --- Co-Cast Page Enhancements --- */
+
+.cocast-header-styled {
+    text-align: center;
+    padding: 40px 20px 10px;
+}
+
+.cocast-summary-result {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f0f7ff;
+    border-radius: 12px;
+    border-left: 5px solid var(--primary-color);
+}
+
+.cocast-control-panel {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0f7ff;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.cocast-control-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.cocast-result-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.cocast-filters {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+
+.cocast-filter-label {
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.cocast-filter-separator {
+    color: #ccc;
+    font-size: 0.8em;
+}
+
+.cocast-year-select {
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+}
+
+.cocast-sort-btn {
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+}
+
+/* Mobile Optimizations for Cocast */
+@media (max-width: 480px) {
+    .cocast-header-styled {
+        padding: 20px 15px 5px;
+        /* Reduced header padding */
+    }
+
+    .cocast-summary-result {
+        padding: 12px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+    }
+
+    .cocast-control-panel {
+        padding: 10px 8px;
+        /* Tighter padding */
+        margin-bottom: 10px;
+        border-radius: 8px;
+    }
+
+    .cocast-control-flex {
+        gap: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cocast-result-title {
+        font-size: 1rem;
+        margin-bottom: 5px;
+        width: 100%;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+        padding-bottom: 5px;
+    }
+
+    .cocast-filters {
+        gap: 8px;
+        font-size: 0.8em;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .cocast-filters label {
+        display: flex;
+        align-items: center;
+    }
+
+    .cocast-year-select,
+    .cocast-sort-btn {
+        padding: 2px 5px;
+        font-size: 0.85em;
+    }
+
+    .cocast-filter-separator {
+        display: none;
+        /* Hide separator on mobile to save space */
+    }
+}
+
+.cast-role-tiny {
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    margin-left: 4px;
+    opacity: 0.8;
 }
