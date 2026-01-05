@@ -182,25 +182,29 @@
             background: var(--terminal-bg);
             color: var(--terminal-text);
             font-family: 'Source Code Pro', monospace;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             font-size: 0.85rem;
             overflow-y: auto;
-            line-height: 1.4;
+            line-height: 1.6;
             white-space: pre-wrap;
+            word-wrap: break-word;
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
         }
 
         .log-line {
-            margin: 0;
+            margin: 2px 0;
             display: block;
+            padding: 2px 0;
         }
 
         .log-error {
             color: #ff6b6b;
+            font-weight: 500;
         }
 
-        .log-warn {
+        .log-warn,
+        .log-warning {
             color: #ffd93d;
         }
 
@@ -208,10 +212,29 @@
             color: #6bcbef;
         }
 
-        .log-time {
-            color: #666;
-            margin-right: 10px;
-            user-select: none;
+        .log-timestamp {
+            color: #888;
+            font-weight: 500;
+        }
+
+        .log-level-error {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        .log-level-warning {
+            color: #ffd93d;
+            font-weight: 600;
+        }
+
+        .log-level-info {
+            color: #6bcbef;
+            font-weight: 600;
+        }
+
+        .log-indent {
+            padding-left: 20px;
+            color: #b0b0b0;
         }
 
         /* Umami Card */
@@ -351,14 +374,49 @@
 
                 const text = await res.text();
 
-                // Basic syntax highlighting
+                // 改进的语法高亮,支持换行符渲染
                 const html = text.split('\n').map(line => {
+                    if (!line.trim()) return '<br>'; // 空行
+
+                    let processedLine = escapeHtml(line);
                     let cls = 'log-line';
-                    if (line.toLowerCase().includes('error')) cls += ' log-error';
-                    else if (line.toLowerCase().includes('warn')) cls += ' log-warn';
-                    else if (line.includes('INFO')) cls += ' log-info';
-                    return `<span class="${cls}">${escapeHtml(line)}</span>`;
-                }).join('');
+
+                    // 检测缩进行(以空格开头)
+                    if (line.match(/^\s{4,}/)) {
+                        cls += ' log-indent';
+                    }
+
+                    // 高亮时间戳 (匹配 YYYY-MM-DD HH:MM:SS 格式)
+                    processedLine = processedLine.replace(
+                        /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+CST)?)/g,
+                        '<span class="log-timestamp">$1</span>'
+                    );
+
+                    // 高亮日志级别
+                    processedLine = processedLine.replace(
+                        /\[(ERROR|ERRO)\]/gi,
+                        '<span class="log-level-error">[$1]</span>'
+                    );
+                    processedLine = processedLine.replace(
+                        /\[(WARNING|WARN)\]/gi,
+                        '<span class="log-level-warning">[$1]</span>'
+                    );
+                    processedLine = processedLine.replace(
+                        /\[(INFO)\]/gi,
+                        '<span class="log-level-info">[$1]</span>'
+                    );
+
+                    // 检测整行级别
+                    if (line.toLowerCase().includes('error')) {
+                        cls += ' log-error';
+                    } else if (line.toLowerCase().includes('warn')) {
+                        cls += ' log-warning';
+                    } else if (line.includes('INFO')) {
+                        cls += ' log-info';
+                    }
+
+                    return `<span class="${cls}">${processedLine}</span>`;
+                }).join('\n');
 
                 term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
 
