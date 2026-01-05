@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MusicalBot Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #637E60;
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --terminal-bg: #1e1e1e;
+            --terminal-text: #d4d4d4;
+            --border: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--card-bg);
+            padding: 0 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            background: #e6f4ea;
+            color: #1e7e34;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .badge-live {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #1e7e34;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            color: #666;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 0, 0, 0.03);
+            color: #333;
+        }
+
+        .nav-item.active {
+            background: rgba(99, 126, 96, 0.08);
+            color: var(--primary);
+            border-left-color: var(--primary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            opacity: 0.8;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .panel.active {
+            display: flex;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            border: 1px solid var(--border);
+            background: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #f9f9f9;
+            border-color: #ccc;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #526950;
+            border-color: #526950;
+        }
+
+        select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .terminal-window {
+            flex: 1;
+            background: var(--terminal-bg);
+            color: var(--terminal-text);
+            font-family: 'Source Code Pro', monospace;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .log-line {
+            margin: 0;
+            display: block;
+        }
+
+        .log-error {
+            color: #ff6b6b;
+        }
+
+        .log-warn {
+            color: #ffd93d;
+        }
+
+        .log-info {
+            color: #6bcbef;
+        }
+
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+            user-select: none;
+        }
+
+        /* Umami Card */
+        .analytics-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            padding: 40px;
+            text-align: center;
+            max-width: 600px;
+            margin: 40px auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        .analytics-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="logo">
+            <span>🛡️ MusicalBot Admin</span>
+        </div>
+        <div class="status-badge"><span class="badge-live"></span>SERVICE RUNNING</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="nav-item active" onclick="switchTab('logs')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                    <polyline points="13 2 13 9 20 9"></polyline>
+                </svg>
+                系统日志
+            </div>
+            <div class="nav-item" onclick="switchTab('analytics')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3v18h18"></path>
+                    <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+                </svg>
+                Umami 分析
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Logs Panel -->
+            <div id="panel-logs" class="panel active">
+                <div class="toolbar">
+                    <select id="log-file-select" onchange="loadLogs()">
+                        <option value="web_out.log">Web Output (web_out.log)</option>
+                        <option value="web_err.log">Web Errors (web_err.log)</option>
+                        <option value="auto_update.log">Auto Update (auto_update.log)</option>
+                    </select>
+                    <div style="flex:1"></div>
+                    <label
+                        style="display:flex; align-items:center; gap:5px; font-size:0.85rem; cursor:pointer; margin-right:10px">
+                        <input type="checkbox" id="auto-scroll" checked> 自动滚动
+                    </label>
+                    <label
+                        style="display:flex; align-items:center; gap:5px; font-size:0.85rem; cursor:pointer; margin-right:10px">
+                        <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh(this)"> 自动刷新 (5s)
+                    </label>
+                    <button class="btn btn-primary" onclick="loadLogs()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        刷新
+                    </button>
+                </div>
+                <div id="terminal" class="terminal-window">Loading logs...</div>
+            </div>
+
+            <!-- Analytics Panel -->
+            <div id="panel-analytics" class="panel">
+                <div class="analytics-card">
+                    <span class="analytics-icon">📊</span>
+                    <h2 style="margin-top:0; color:var(--primary)">流量分析 & 监控</h2>
+                    <p style="color:#666; margin-bottom:30px; line-height:1.6">
+                        MusicalBot 使用自托管的 Umami 进行隐私友好的数据统计。<br>
+                        请点击下方按钮前往 Umami 管理控制台查看完整报表。
+                    </p>
+                    <a href="https://analytics.yaobii.com" target="_blank" class="btn btn-primary"
+                        style="display:inline-flex; padding:12px 24px; font-size:1rem; text-decoration:none;">
+                        打开 Umami 控制台 <svg style="margin-left:8px; width:16px;" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval = null;
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+
+            event.currentTarget.classList.add('active');
+            document.getElementById('panel-' + tabId).classList.add('active');
+        }
+
+        function toggleAutoRefresh(checkbox) {
+            if (checkbox.checked) {
+                refreshInterval = setInterval(loadLogs, 5000);
+            } else {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        async function loadLogs() {
+            const file = document.getElementById('log-file-select').value;
+            const term = document.getElementById('terminal');
+            const autoScroll = document.getElementById('auto-scroll').checked;
+
+            try {
+                // Using a cache bust param to ensure fresh logs
+                const res = await fetch(`/api/admin/logs?file=${file}&t=${Date.now()}`);
+                if (res.status === 401) {
+                    location.reload(); // Force re-auth
+                    return;
+                }
+                if (!res.ok) throw new Error("Failed to load");
+
+                const text = await res.text();
+
+                // Basic syntax highlighting
+                const html = text.split('\n').map(line => {
+                    let cls = 'log-line';
+                    if (line.toLowerCase().includes('error')) cls += ' log-error';
+                    else if (line.toLowerCase().includes('warn')) cls += ' log-warn';
+                    else if (line.includes('INFO')) cls += ' log-info';
+                    return `<span class="${cls}">${escapeHtml(line)}</span>`;
+                }).join('');
+
+                term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
+
+                if (autoScroll) {
+                    term.scrollTop = term.scrollHeight;
+                }
+            } catch (e) {
+                term.innerHTML = `<span class="log-error">Error loading logs: ${e.message}</span>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // Initial Load
+        loadLogs();
+    </script>
+</body>
+
+</html>

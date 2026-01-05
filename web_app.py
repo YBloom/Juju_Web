@@ -18,12 +18,14 @@ SERVER_VERSION = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d_%H%M%S
 
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pathlib import Path
+import secrets
+import os
 
 # Rate Limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -161,7 +163,29 @@ def key_func_local(request: Request):
 # Initialize Limiter
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(lifespan=lifespan)
+security = HTTPBasic()
 app.state.limiter = limiter
+
+# --- Admin Security ---
+def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+    """Validate Basic Auth credentials for admin routes."""
+    # Use env vars or default fallback
+    correct_username = os.getenv("ADMIN_USERNAME", "admin").encode("utf8")
+    correct_password = os.getenv("ADMIN_PASSWORD", "musicalbot").encode("utf8")
+    
+    current_username_bytes = credentials.username.encode("utf8")
+    current_password_bytes = credentials.password.encode("utf8")
+    
+    is_correct_username = secrets.compare_digest(current_username_bytes, correct_username)
+    is_correct_password = secrets.compare_digest(current_password_bytes, correct_password)
+    
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 # Custom Rate Limit Handler
 async def friendly_rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -433,6 +457,41 @@ async def get_event_detail(event_id: str):
 
 # --- Frontend Routes ---
 # --- 前端路由 ---
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard(username: str = Depends(get_current_username)):
+    """Serve the protected Admin Dashboard."""
+    admin_file = Path(__file__).parent / "web" / "admin.html"
+    if admin_file.exists():
+        return admin_file.read_text(encoding="utf-8")
+    return "<h1>Admin Panel Not Found</h1>"
+
+@app.get("/api/admin/logs")
+async def get_admin_logs(file: str = "web_out.log", lines: int = 500, username: str = Depends(get_current_username)):
+    """Read system logs from /var/log/musicalbot/ (Protected)."""
+    # Security: whitelist allowed files to prevent path traversal
+    ALLOWED_FILES = ["web_out.log", "web_err.log", "auto_update.log"]
+    if file not in ALLOWED_FILES:
+        raise HTTPException(status_code=400, detail="Invalid log file")
+    
+    log_path = Path(f"/var/log/musicalbot/{file}")
+    
+    if not log_path.exists():
+        return f"[Error] Log file not found: {log_path}"
+        
+    try:
+        # Simple tail implementation using 'tail' command is robust, 
+        # or read last N bytes. Python readlines on huge files is slow.
+        # Let's use shell tail for efficiency if on Linux/Mac
+        import subprocess
+        # Use -n lines
+        cmd = ["tail", "-n", str(lines), str(log_path)]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            return f"[Error] Reading logs failed: {result.stderr}"
+        return result.stdout
+    except Exception as e:
+        return f"[Error] Exception reading logs: {str(e)}"
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
