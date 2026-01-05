@@ -88,6 +88,14 @@ from services.hulaquan.service import HulaquanService
 from services.saoju.service import SaojuService
 from services.config import config
 
+# CRITICAL: Initialize database BEFORE creating service instances
+# 关键：在创建服务实例之前初始化数据库
+# This ensures all tables exist before SaojuService.__init__ calls load_data()
+# 这确保在 SaojuService.__init__ 调用 load_data() 之前所有表都已存在
+from services.db.init import init_db
+_db_engine = init_db()
+logger.info(f"✓ Database initialized at module level: {_db_engine.url}")
+
 # Initialize Service
 # 初始化服务
 # Enable crawler in this process if configured (Phase 3 will set config.ENABLE_CRAWLER = True for this process context)
@@ -146,15 +154,8 @@ async def lifespan(app: FastAPI):
     # 启动逻辑
     logger.info("Starting Hulaquan Web Service...")
     
-    # Ensure database is initialized
-    # 确保数据库已初始化
-    try:
-        from services.db.init import init_db
-        engine = init_db()
-        logger.info(f"✓ Database initialized at: {engine.url}")
-    except Exception as e:
-        logger.error(f"✗ Database initialization failed: {e}", exc_info=True)
-        raise
+    # Database is already initialized at module level (before service instances)
+    # 数据库已在模块级别初始化（在服务实例之前）
     
     # Start Crawler if enabled (or force it for now since this is the dedicated process)
     # 如果启用则启动爬虫（或者因为这是专用进程所以强制启动）
