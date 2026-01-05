@@ -310,6 +310,18 @@ export async function showDetailView(eventId) {
         const data = await api.fetchEventDetail(eventId);
         if (data.results && data.results.length > 0) {
             renderDetailView(data.results[0]);
+
+            // --- LOGGING ---
+            const evt = data.results[0];
+            try {
+                fetch('/api/log/view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: evt.title, id: evt.id })
+                });
+            } catch (ignore) { }
+            // --- END LOGGING ---
+
         } else {
             container.innerHTML = '<div style="padding:40px;text-align:center;color:#999">未找到演出信息</div>';
         }

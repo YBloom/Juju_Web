@@ -283,6 +283,13 @@
                 </svg>
                 Umami 分析
             </div>
+            <div class="nav-item" onclick="switchTab('search-stats')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                搜索统计
+            </div>
             <div
                 style="margin-top: auto; padding: 20px; font-size: 0.75rem; color: #999; text-align: center; border-top: 1px solid var(--border);">
                 联系邮箱：<br><a href="mailto:contact@yaobii.com"
@@ -340,106 +347,306 @@
                         </svg>
                     </a>
                 </div>
+                <!-- Search Analytics Panel -->
+                <div id="panel-search-stats" class="panel">
+                    <div class="toolbar">
+                        <h2
+                            style="margin:0; font-size:1.2rem; color:var(--primary); display:flex; align-items:center; gap:8px;">
+                            <span>📊 搜索统计</span>
+                        </h2>
+                        <div style="flex:1"></div>
+                        <button class="btn btn-primary" onclick="loadSearchStats()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M23 4v6h-6"></path>
+                                <path d="M1 20v-6h6"></path>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            刷新数据
+                        </button>
+                    </div>
+
+                    <div
+                        style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; padding-bottom:50px;">
+
+                        <!-- 1. Artist Frequency -->
+                        <div class="stat-card">
+                            <h3>🎭 演员检索频次 (Top 20)</h3>
+                            <p class="subtitle">出现次数 (包含单人或组合)</p>
+                            <table class="stat-table" id="table-artist">
+                                <thead>
+                                    <tr>
+                                        <th>演员</th>
+                                        <th>次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="2">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 2. Solo Frequency -->
+                        <div class="stat-card">
+                            <h3>👤 单人检索频次 (Top 20)</h3>
+                            <p class="subtitle">仅统计单独搜索该演员</p>
+                            <table class="stat-table" id="table-solo">
+                                <thead>
+                                    <tr>
+                                        <th>演员</th>
+                                        <th>次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="2">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 3. Combo Frequency -->
+                        <div class="stat-card">
+                            <h3>🤝 组合检索频次 (Top 20)</h3>
+                            <p class="subtitle">特定组合搜索 (顺序不敏感)</p>
+                            <table class="stat-table" id="table-combo">
+                                <thead>
+                                    <tr>
+                                        <th>组合</th>
+                                        <th>次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="2">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 4. View Frequency -->
+                        <div class="stat-card">
+                            <h3>🎫 学生票点击 (Top 20)</h3>
+                            <p class="subtitle">详情页查看次数</p>
+                            <table class="stat-table" id="table-views">
+                                <thead>
+                                    <tr>
+                                        <th>剧目</th>
+                                        <th>查看</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="2">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <script>
-        let refreshInterval = null;
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
-
-            event.currentTarget.classList.add('active');
-            document.getElementById('panel-' + tabId).classList.add('active');
-        }
-
-        function toggleAutoRefresh(checkbox) {
-            if (checkbox.checked) {
-                refreshInterval = setInterval(loadLogs, 5000);
-            } else {
-                clearInterval(refreshInterval);
+        <style>
+            .stat-card {
+                background: white;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+                display: flex;
+                flex-direction: column;
+                max-height: 500px;
             }
-        }
 
-        async function loadLogs() {
-            const file = document.getElementById('log-file-select').value;
-            const term = document.getElementById('terminal');
-            const autoScroll = document.getElementById('auto-scroll').checked;
-
-            try {
-                // Using a cache bust param to ensure fresh logs
-                const res = await fetch(`/api/admin/logs?file=${file}&t=${Date.now()}`);
-                if (res.status === 401) {
-                    location.reload(); // Force re-auth
-                    return;
-                }
-                if (!res.ok) throw new Error("Failed to load");
-
-                const text = await res.text();
-
-                // 改进的语法高亮,支持换行符渲染
-                const html = text.split('\n').map(line => {
-                    if (!line.trim()) return '<br>'; // 空行
-
-                    let processedLine = escapeHtml(line);
-                    let cls = 'log-line';
-
-                    // 检测缩进行(以空格开头)
-                    if (line.match(/^\s{4,}/)) {
-                        cls += ' log-indent';
-                    }
-
-                    // 高亮时间戳 (匹配 YYYY-MM-DD HH:MM:SS 格式)
-                    processedLine = processedLine.replace(
-                        /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+CST)?)/g,
-                        '<span class="log-timestamp">$1</span>'
-                    );
-
-                    // 高亮日志级别
-                    processedLine = processedLine.replace(
-                        /\[(ERROR|ERRO)\]/gi,
-                        '<span class="log-level-error">[$1]</span>'
-                    );
-                    processedLine = processedLine.replace(
-                        /\[(WARNING|WARN)\]/gi,
-                        '<span class="log-level-warning">[$1]</span>'
-                    );
-                    processedLine = processedLine.replace(
-                        /\[(INFO)\]/gi,
-                        '<span class="log-level-info">[$1]</span>'
-                    );
-
-                    // 检测整行级别
-                    if (line.toLowerCase().includes('error')) {
-                        cls += ' log-error';
-                    } else if (line.toLowerCase().includes('warn')) {
-                        cls += ' log-warning';
-                    } else if (line.includes('INFO')) {
-                        cls += ' log-info';
-                    }
-
-                    return `<span class="${cls}">${processedLine}</span>`;
-                }).join('');
-
-                term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
-
-                if (autoScroll) {
-                    term.scrollTop = term.scrollHeight;
-                }
-            } catch (e) {
-                term.innerHTML = `<span class="log-error">Error loading logs: ${e.message}</span>`;
+            .stat-card h3 {
+                margin: 0 0 5px 0;
+                color: #333;
+                font-size: 1rem;
             }
-        }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
+            .stat-card .subtitle {
+                margin: 0 0 15px 0;
+                color: #888;
+                font-size: 0.8rem;
+            }
 
-        // Initial Load
-        loadLogs();
-    </script>
+            .stat-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+
+            .stat-table th {
+                text-align: left;
+                padding: 8px;
+                background: #f9f9f9;
+                color: #666;
+                font-weight: 500;
+                position: sticky;
+                top: 0;
+            }
+
+            .stat-table td {
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+
+            .stat-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .stat-table-container {
+                overflow-y: auto;
+                flex: 1;
+            }
+        </style>
+
+        <script>
+            let refreshInterval = null;
+
+            function switchTab(tabId) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+
+                // Find nav item by text content (fragile but works for now without IDs)
+                // Better: use proper IDs. But let's assume `event.currentTarget` works if called from onclick
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('active');
+                } else {
+                    // Fallback for manual calls, find by tabId
+                    const btn = Array.from(document.querySelectorAll('.nav-item')).find(el => el.onclick.toString().includes(tabId));
+                    if (btn) btn.classList.add('active');
+                }
+
+                document.getElementById('panel-' + tabId).classList.add('active');
+
+                if (tabId === 'search-stats') {
+                    loadSearchStats();
+                }
+            }
+
+            function toggleAutoRefresh(checkbox) {
+                if (checkbox.checked) {
+                    refreshInterval = setInterval(loadLogs, 5000);
+                } else {
+                    clearInterval(refreshInterval);
+                }
+            }
+
+            async function loadLogs() {
+                const file = document.getElementById('log-file-select').value;
+                const term = document.getElementById('terminal');
+                const autoScroll = document.getElementById('auto-scroll').checked;
+
+                try {
+                    // Using a cache bust param to ensure fresh logs
+                    const res = await fetch(`/api/admin/logs?file=${file}&t=${Date.now()}`);
+                    if (res.status === 401) {
+                        location.reload(); // Force re-auth
+                        return;
+                    }
+                    if (!res.ok) throw new Error("Failed to load");
+
+                    const text = await res.text();
+
+                    // 改进的语法高亮,支持换行符渲染
+                    const html = text.split('\n').map(line => {
+                        if (!line.trim()) return '<br>'; // 空行
+
+                        let processedLine = escapeHtml(line);
+                        let cls = 'log-line';
+
+                        // 检测缩进行(以空格开头)
+                        if (line.match(/^\s{4,}/)) {
+                            cls += ' log-indent';
+                        }
+
+                        // 高亮时间戳 (匹配 YYYY-MM-DD HH:MM:SS 格式)
+                        processedLine = processedLine.replace(
+                            /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+CST)?)/g,
+                            '<span class="log-timestamp">$1</span>'
+                        );
+
+                        // 高亮日志级别
+                        processedLine = processedLine.replace(
+                            /\[(ERROR|ERRO)\]/gi,
+                            '<span class="log-level-error">[$1]</span>'
+                        );
+                        processedLine = processedLine.replace(
+                            /\[(WARNING|WARN)\]/gi,
+                            '<span class="log-level-warning">[$1]</span>'
+                        );
+                        processedLine = processedLine.replace(
+                            /\[(INFO)\]/gi,
+                            '<span class="log-level-info">[$1]</span>'
+                        );
+
+                        // 检测整行级别
+                        if (line.toLowerCase().includes('error')) {
+                            cls += ' log-error';
+                        } else if (line.toLowerCase().includes('warn')) {
+                            cls += ' log-warning';
+                        } else if (line.includes('INFO')) {
+                            cls += ' log-info';
+                        }
+
+                        return `<span class="${cls}">${processedLine}</span>`;
+                    }).join('');
+
+                    term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
+
+                    if (autoScroll) {
+                        term.scrollTop = term.scrollHeight;
+                    }
+                } catch (e) {
+                    term.innerHTML = `<span class="log-error">Error loading logs: ${e.message}</span>`;
+                }
+            }
+
+            async function loadSearchStats() {
+                const setTable = (id, data, colName) => {
+                    const tbody = document.querySelector(`#${id} tbody`);
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="2" style="color:#999; text-align:center;">暂无数据</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = data.map((row, i) => `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center;">
+                                <span style="display:inline-block; width:20px; color:#aaa; font-size:0.8rem;">${i + 1}</span>
+                                <span style="font-weight:500; color:#333;">${escapeHtml(row.name)}</span>
+                            </div>
+                        </td>
+                        <td style="color:#666;">${row.count}</td>
+                    </tr>
+                `).join('');
+                };
+
+                try {
+                    const res = await fetch('/api/admin/analytics/searches');
+                    const data = await res.json();
+
+                    setTable('table-artist', data.top_artists);
+                    setTable('table-solo', data.top_solo);
+                    setTable('table-combo', data.top_combos);
+                    setTable('table-views', data.top_views);
+                } catch (e) {
+                    console.error("Failed to load stats", e);
+                }
+            }
+
+            function escapeHtml(text) {
+                return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
+
+            // Initial Load
+            loadLogs();
+        </script>
 </body>
 
 </html>

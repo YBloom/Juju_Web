@@ -420,6 +420,32 @@ async def start_cocast_search(request: Request):
     
     cast_list = [c.strip() for c in casts.split(",") if c.strip()]
     
+    # --- LOGGING START ---
+    # Submit log to DB asynchronously
+    async def log_search():
+        try:
+            from services.hulaquan.tables import HulaquanSearchLog
+            from services.db.connection import session_scope
+            import json
+            
+            # Normalize list: sort and unique
+            normalized_list = sorted(list(set(cast_list)))
+            is_combo = len(normalized_list) > 1
+            
+            with session_scope() as session:
+                log_entry = HulaquanSearchLog(
+                    search_type="co-cast",
+                    query_str=casts,
+                    artists=json.dumps(normalized_list, ensure_ascii=False),
+                    is_combination=is_combo
+                )
+                session.add(log_entry)
+        except Exception as e:
+            logger.error(f"Failed to log search: {e}")
+
+    asyncio.create_task(log_search())
+    # --- LOGGING END ---
+    
     job_id = job_manager.create_job()
     
     async def run_task(jid, c_list, is_student, s_date, e_date):
@@ -454,6 +480,31 @@ async def start_cocast_search(request: Request):
     asyncio.create_task(run_task(job_id, cast_list, only_student, start_date, end_date))
     
     return {"task_id": job_id}
+
+@app.post("/api/log/view")
+async def log_view_event(request: Request):
+    """Log when a user views an event (student ticket)."""
+    try:
+        data = await request.json()
+        title = data.get("title", "")
+        if not title:
+            return {"status": "ignored"}
+            
+        from services.hulaquan.tables import HulaquanSearchLog
+        from services.db.connection import session_scope
+        
+        with session_scope() as session:
+            log_entry = HulaquanSearchLog(
+                search_type="view_event",
+                query_str=title,
+                artists=None,
+                is_combination=False
+            )
+            session.add(log_entry)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Failed to log view: {e}")
+        return {"status": "error"}
 
 @app.get("/api/tasks/{task_id}")
 async def get_task_status(task_id: str):
@@ -525,7 +576,7 @@ async def get_event_detail(event_id: str):
     # Service implementation detail:
     # 服务实现细节：
     from sqlmodel import select, col
-    from services.hulaquan.tables import HulaquanEvent, SaojuChangeLog
+    from services.hulaquan.tables import HulaquanEvent, SaojuChangeLog, HulaquanSearchLog
     from services.db.connection import session_scope
     
     with session_scope() as session:
@@ -606,6 +657,63 @@ async def get_saoju_changes(limit: int = 50, username: str = Depends(get_current
             "count": len(logs),
             "results": [l.dict() for l in logs]
         }
+
+@app.get("/api/admin/analytics/searches")
+async def get_search_analytics(username: str = Depends(get_current_username)):
+    """Aggregate search analytics."""
+    from services.hulaquan.tables import HulaquanSearchLog
+    from services.db.connection import session_scope
+    from sqlmodel import select, col
+    from collections import Counter
+    import json
+    
+    with session_scope() as session:
+        logs = session.exec(select(HulaquanSearchLog)).all()
+        
+        # 1. Artist Frequency (Individual appearances in any search)
+        artist_counts = Counter()
+        
+        # 2. Solo Frequency (Searches with exactly 1 artist)
+        solo_counts = Counter()
+        
+        # 3. Combo Frequency (String rep of combo)
+        combo_counts = Counter()
+        
+        # 4. View Frequency
+        view_counts = Counter()
+        
+        for l in logs:
+            if l.search_type == "view_event":
+                view_counts[l.query_str] += 1
+                continue
+                
+            if l.search_type == "co-cast" and l.artists:
+                try:
+                    names = json.loads(l.artists)
+                    # Count for individual artist
+                    for n in names:
+                        artist_counts[n] += 1
+                        
+                    # Logic
+                    if len(names) == 1:
+                        solo_counts[names[0]] += 1
+                    elif len(names) > 1:
+                        # Normalized string
+                        combo_str = " & ".join(names)
+                        combo_counts[combo_str] += 1
+                except:
+                    pass
+
+        def format_top(counter, limit=20):
+            return [{"name": k, "count": v} for k, v in counter.most_common(limit)]
+            
+        return {
+            "top_artists": format_top(artist_counts),
+            "top_solo": format_top(solo_counts),
+            "top_combos": format_top(combo_counts),
+            "top_views": format_top(view_counts)
+        }
+
 
 
 @app.get("/", response_class=HTMLResponse)

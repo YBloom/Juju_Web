@@ -98,3 +98,13 @@ class SaojuChangeLog(SQLModel, table=True):
     change_type: str # "NEW", "UPDATE"
     details: str # JSON or text summary
 
+
+class HulaquanSearchLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=timezone_now)
+    search_type: str # "co-cast", "view_event"
+    query_str: str # Raw input or Event Title
+    artists: Optional[str] = None # JSON list or null
+    is_combination: bool = False
+
+
