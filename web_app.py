@@ -896,6 +896,11 @@ async def health_check():
     """Lightweight health check endpoint."""
     return {"status": "ok", "timestamp": time.time()}
 
+@app.get("/8726ae85b5d54209b12c399526d8e3b0.txt", response_class=PlainTextResponse)
+async def wechat_verification():
+    """微信验证文件"""
+    return "563f0d9e2f141bb88997c42d353289de5668be13"
+
 @app.get("/", response_class=HTMLResponse)
 
 async def read_root(request: Request):
