@@ -4,8 +4,17 @@ import uuid
 import time
 from datetime import datetime
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    # Backport for Python < 3.9 if needed, though 3.12 is used.
+    from backports.zoneinfo import ZoneInfo
+
 # Global Service Info
-START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# Initialize with Beijing Time
+START_TIME = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+# Version for cache busting (using timestamp relative to start)
+SERVER_VERSION = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d_%H%M%S")
 
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
@@ -426,11 +435,38 @@ async def get_event_detail(event_id: str):
 # --- 前端路由 ---
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root():
+async def read_root(request: Request):
     index_file = static_path / "index.html"
     if index_file.exists():
-        return index_file.read_text(encoding="utf-8")
-    return "<h1>Web Interface Not Found</h1>"
+        content = index_file.read_text(encoding="utf-8")
+        
+        # Cache Busting Strategy A:
+        # 1. Inject server version into static asset URLs
+        #    Replaces ?v=... or adds ?v=... to .css and .js files
+        import re
+        # Pattern to find css/js links and inject/replace version
+        # Matches: href="/static/css/style.css?v=old" or href="/static/css/style.css"
+        
+        # Replace CSS versions
+        content = re.sub(
+            r'href="(/static/css/[^"]+\.css)(?:\?v=[^"]*)?"', 
+            f'href="\\1?v={SERVER_VERSION}"', 
+            content
+        )
+        
+        # Replace JS versions
+        content = re.sub(
+            r'src="(/static/js/[^"]+\.js)(?:\?v=[^"]*)?"', 
+            f'src="\\1?v={SERVER_VERSION}"', 
+            content
+        )
+        
+        response = HTMLResponse(content=content)
+        # 2. Force browser to re-validate HTML (Negotiated Cache)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+        
+    return HTMLResponse("<h1>Web Interface Not Found</h1>")
 
 if __name__ == "__main__":
     import uvicorn
