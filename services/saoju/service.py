@@ -325,8 +325,31 @@ class SaojuService:
                 if not show.cast_str:
                     continue
                 
-                # Assume cast_str is "A / B / C"
-                current_cast = set(x.strip() for x in show.cast_str.split("/"))
+                # cast_str format: "角色1:演员1 角色2:演员2 ..." (space-separated role:actor pairs)
+                # OR older format: "A / B / C" (just actor names)
+                # We need to extract actor names for matching
+                
+                raw_parts = show.cast_str.split()  # Split by whitespace first
+                current_cast = set()
+                role_map = {}  # actor -> role for later use
+                
+                for part in raw_parts:
+                    part = part.strip()
+                    if not part:
+                        continue
+                    if ':' in part:
+                        # Format: role:actor
+                        role_name, actor_name = part.split(':', 1)
+                        current_cast.add(actor_name.strip())
+                        role_map[actor_name.strip()] = role_name.strip()
+                    elif '/' in show.cast_str:
+                        # Fallback: older format "A / B / C"
+                        for sub in show.cast_str.split('/'):
+                            current_cast.add(sub.strip())
+                        break  # Already processed full string
+                    else:
+                        # Just actor name
+                        current_cast.add(part)
                 
                 if all(name in current_cast for name in co_casts):
                     # Found match
