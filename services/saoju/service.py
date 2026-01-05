@@ -847,6 +847,7 @@ class SaojuService:
             await asyncio.gather(*tasks)
         log.info("Distant Tour Discovery Complete.")
 
+    async def sync_musical_data(self, musical_id: int):
         """
         Traverse Tour -> Schedule -> Show -> Cast to build a complete picture.
         Returns a list of 'Show' dictionaries with resolved data.
