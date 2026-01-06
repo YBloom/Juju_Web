@@ -618,7 +618,7 @@ async def get_service_status():
             "last_updated": saoju_updated
         },
         "service_info": {
-            "version": "v1.1",
+            "version": "v1.2",
             "start_time": START_TIME
         }
     }
@@ -665,6 +665,58 @@ async def get_event_detail(event_id: str):
     # use service.search_events(event.title)
     # 使用 service.search_events(event.title)
     return {"results": await service.get_event_details_by_id(event_id)}
+
+
+@app.get("/api/analytics/heatmap")
+async def get_heatmap(year: int = 2025):
+    """Get heatmap data for a specific year (SaojuShow)."""
+    
+    # 2023: Static Data
+    if year == 2023:
+        from services.saoju.static_data import get_2023_data
+        return {
+            "year": 2023,
+            "total": sum(v for k, v in get_2023_data()),
+            "peak": max((v for k, v in get_2023_data()), default=0),
+            "data": get_2023_data()
+        }
+
+    from services.hulaquan.tables import SaojuShow
+    from services.db.connection import session_scope
+    from sqlmodel import select
+    from collections import Counter
+    from datetime import datetime
+    
+    start_date = datetime(year, 1, 1)
+    end_date = datetime(year, 12, 31, 23, 59, 59)
+    
+    data = []
+    total = 0
+    peak = 0
+    
+    with session_scope() as session:
+        # Query SaojuShow for daily show counts
+        stmt = select(SaojuShow.date).where(SaojuShow.date >= start_date).where(SaojuShow.date <= end_date)
+        results = session.exec(stmt).all()
+        
+        # Count per day (YYYY-MM-DD string)
+        counts = Counter()
+        for dt in results:
+            d_str = dt.strftime("%Y-%m-%d")
+            counts[d_str] += 1
+            
+        # Format for ECharts [[date, count], ...]
+        data = [[k, v] for k, v in counts.items()]
+        total = len(results)
+        if data:
+            peak = max(counts.values())
+            
+    return {
+        "year": year,
+        "total": total,
+        "peak": peak,
+        "data": data
+    }
 
 
 # --- Frontend Routes ---
