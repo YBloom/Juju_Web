@@ -726,7 +726,9 @@
 .feedback-modal-overlay.active {
     opacity: 1;
     visibility: visible;
-}/* Celebration Overlay */
+}
+
+/* Celebration Overlay */
 .celebration-overlay {
     position: fixed;
     top: 0;
@@ -799,6 +801,41 @@
     z-index: 3001;
 }
 
+/* Footer Note inside Modal */
+/* Footer Note inside Modal */
+.feedback-footer-note {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 25px;
+    /* Reduced from 35px to balance vertical space */
+    margin-bottom: 0;
+    /* Rely on container padding (28px) for bottom space */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.feedback-footer-note a {
+    color: var(--brand-green);
+    text-decoration: underline;
+    opacity: 0.8;
+    text-decoration-color: rgba(70, 99, 68, 0.4);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.feedback-footer-note a:hover {
+    opacity: 1;
+    text-decoration-color: var(--brand-green);
+}
+
+/* Match consistency for input placeholder */
+.feedback-input-clean::placeholder {
+    color: rgba(0, 0, 0, 0.25);
+    font-style: italic;
+}
+
 .confetti {
     position: absolute;
     width: 10px;
@@ -817,7 +854,9 @@
         transform: translate(var(--tx), var(--ty)) rotate(720deg);
         opacity: 0;
     }
-}.close-hint {
+}
+
+.close-hint {
     position: absolute;
     bottom: 20%;
     left: 50%;

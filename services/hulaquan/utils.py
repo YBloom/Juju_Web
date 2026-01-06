@@ -158,7 +158,7 @@ def standardize_datetime(dateAndTime: str, return_str=True, with_second=True):
     ]
     # 处理“8月3日 星期日 14:30”格式
     
-    # 其他格式
+    # 其它格式
     for fmt in formats:
         try:
             dt_str = dateAndTime

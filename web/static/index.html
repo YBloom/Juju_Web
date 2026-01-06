@@ -182,7 +182,7 @@
                 <!-- 主卡片：热力图 -->
                 <div class="gallery-card card-heatmap" onclick="router.navigate('/lab/heatmap')">
                     <div class="card-content">
-                        <div class="card-label">2025 年度收录</div>
+                        <div class="card-label">2023-2026 年度收录</div>
                         <h3 class="card-title">演出热力图</h3>
                         <p class="card-desc">查看 <strong>8,886</strong> 场演出的时间分布</p>
                         <div class="card-visual-preview">
@@ -198,7 +198,7 @@
                 <!-- 副卡片：关系网 (占位) -->
                 <div class="gallery-card card-galaxy coming-soon">
                     <div class="card-content">
-                        <div class="card-label">人物关系</div>
+                        <div class="card-label">人物联系</div>
                         <h3 class="card-title">共演网络</h3>
                         <p class="card-desc">探索演员的合作关系</p>
                     </div>
@@ -244,11 +244,16 @@
                             <span class="stat-label">单日峰值</span>
                             <span class="stat-num" id="hm_peak">-</span>
                         </div>
+                        <div class="stat-box">
+                            <span class="stat-label">无剧天数</span>
+                            <span class="stat-num" id="hm_zero">-</span>
+                        </div>
                     </div>
                     <div id="heatmap-chart"></div>
                     <div class="heatmap-source-note">
                         <i class="material-icons" style="font-size: 0.9rem; vertical-align: middle;">info_outline</i>
-                        数据来源：<a href="https://y.saoju.net/yyj" target="_blank">y.saoju.net/yyj</a> ，仅包含中国音乐剧排期。若有遗漏，敬请谅解。
+                        数据来源：<a href="https://y.saoju.net/yyj" target="_blank">扫剧网</a>，<a
+                            href="https://clubz.cloudsation.com/" target="_blank">呼啦圈</a> ，仅包含中国音乐剧排期。若有遗漏，敬请谅解。
                     </div>
                 </div>
             </div>
@@ -319,7 +324,7 @@
                         </div>
 
                         <div class="feedback-form-group">
-                            <label class="feedback-label">*反馈内容</label>
+                            <label class="feedback-label">反馈内容</label>
                             <textarea class="feedback-textarea" id="feedback-content"
                                 placeholder="请详细描述您遇到的问题或您的建议..."></textarea>
                         </div>
@@ -334,6 +339,10 @@
                             <span class="material-icons">send</span>
                             <span class="btn-text">提交反馈</span>
                         </button>
+
+                        <div class="feedback-footer-note">
+                            其它咨询或合作，请联系：<a href="mailto:contact@yaobii.com">contact@yaobii.com</a>
+                        </div>
                     </form>
 
                 </div>
@@ -348,13 +357,11 @@
         </div>
     </div>
 
-    <footer style="margin-top: 0px; margin-bottom: 20px;">
-        <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
-            <div>数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
-                    style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈</div>
-            <div>联系邮箱：<a href="mailto:contact@yaobii.com"
-                    style="color: inherit; text-decoration: underline;">contact@yaobii.com</a></div>
-            <div id="update-status" style="margin-top: 8px; font-size: 0.75rem;">正在加载更新状态...</div>
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-row">数据来源：<a href="https://y.saoju.net/yyj" target="_blank">扫剧网</a> · <a
+                    href="https://clubz.cloudsation.com/" target="_blank">呼啦圈</a></div>
+            <div class="footer-row" id="update-status">正在加载更新状态...</div>
         </div>
     </footer>
 

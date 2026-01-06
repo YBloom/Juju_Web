@@ -647,7 +647,7 @@ class SaojuService:
         # pk: 2114
         # model: "yyj.musicalcast"
         # fields: {} (empty)
-        # But wait, User snippet says: "fields:{} （此项为空，无需包含其他信息。根据卡司信息组合，即可知道当日演出演员...）"
+        # But wait, User snippet says: "fields:{} （此项为空，无需包含其它信息。根据卡司信息组合，即可知道当日演出演员...）"
         # And "pk" is musicalcast PK.
         # So we probably need to resolve these PKs to Artist names using our local index/map.
         # Actually user said: "根据卡司信息组合，即可知道当日演出演员"

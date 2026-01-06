@@ -703,10 +703,33 @@ async def get_heatmap(year: int = 2025):
         if data:
             peak = max(counts.values())
             
+        # Calculate zero_days (days with 0 shows)
+        # For current year, only count days until today
+        # For past years, count whole year
+        now = datetime.now()
+        is_current_year = (year == now.year)
+        
+        zero_days = 0
+        current_day = start_date
+        
+        # Determine the end date for counting: today if current year, else end of year
+        count_end_date = min(now, end_date) if is_current_year else end_date
+        
+        # Iterate through each day
+        temp_date = start_date
+        while temp_date <= count_end_date:
+            d_str = temp_date.strftime("%Y-%m-%d")
+            if counts[d_str] == 0:
+                zero_days += 1
+            temp_date = datetime(temp_date.year, temp_date.month, temp_date.day) # reset time
+            from datetime import timedelta
+            temp_date += timedelta(days=1)
+            
     return {
         "year": year,
         "total": total,
         "peak": peak,
+        "zero_days": zero_days,
         "data": data
     }
 

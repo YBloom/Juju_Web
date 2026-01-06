@@ -33,6 +33,9 @@ export async function loadHeatmap() {
         const peakEl = document.getElementById('hm_peak');
         if (peakEl) peakEl.innerText = result.peak;
 
+        const zeroEl = document.getElementById('hm_zero');
+        if (zeroEl) zeroEl.innerText = result.zero_days;
+
         renderChart(result.data, result.peak);
         heatmapChart.hideLoading();
 
@@ -67,6 +70,13 @@ function renderChart(data, maxVal) {
         fontWeight: 'bold'
     };
 
+    // 计算格子尺寸
+    // 手机端纵向布局：一年约53周，需要让完整年份在一页内显示
+    const mobileCellSize = 11;  // 11px * 53周 ≈ 580px + 月份标签
+    const cellSize = isMobile
+        ? [mobileCellSize, mobileCellSize]
+        : [18, 18];  // 电脑端标准尺寸
+
     const option = {
         backgroundColor: BG_COLOR,
         tooltip: {
@@ -78,7 +88,6 @@ function renderChart(data, maxVal) {
             formatter: (p) => {
                 const date = p.value[0];
                 const count = p.value[1];
-                // Clean white card style with shadow
                 return `
                 <div style="
                     background: rgba(255, 255, 255, 0.95);
@@ -106,33 +115,38 @@ function renderChart(data, maxVal) {
             }
         },
         visualMap: {
+            show: !isMobile,  // 手机端隐藏标尺
             min: 0,
             max: visualMax,
             calculable: false,
-            orient: isMobile ? 'horizontal' : 'horizontal', // Always horizontal for cleaner look
-            left: isMobile ? 'center' : 'center',
-            bottom: isMobile ? 10 : 0,
+            orient: 'horizontal',
+            right: 30,
+            bottom: 10,
             inRange: { color: RANGE_COLORS },
-            textStyle: { color: '#9CA3AF', fontFamily: 'Outfit' },
-            itemWidth: 15,
-            itemHeight: 15, // Square dots for legend
+            textStyle: { color: '#9CA3AF', fontFamily: 'Outfit', fontSize: 12 },
+            itemWidth: 18,   // 高度和格子一样
+            itemHeight: 108, // 约6个格子长度
             align: 'auto'
         },
         calendar: {
-            top: 50,
-            left: isMobile ? 'center' : 'center',
-            right: isMobile ? null : null,
+            top: isMobile ? 15 : 50,
+            left: isMobile ? 25 : 40,
+            right: isMobile ? 5 : 40,
             range: String(currentYear),
-            orient: 'horizontal',
-            cellSize: isMobile ? [Math.floor(window.innerWidth / 55), Math.floor(window.innerWidth / 55)] : [20, 20],
+            orient: isMobile ? 'vertical' : 'horizontal',  // 手机端纵向，电脑端横向
+            cellSize: cellSize,
             splitLine: { show: false },
             itemStyle: {
-                borderWidth: 3,
+                borderWidth: isMobile ? 1 : 3,
                 borderColor: '#FFFFFF',
                 color: '#FAFAF8'
             },
             yearLabel: { show: false },
-            monthLabel: monthLabel,
+            monthLabel: {
+                ...monthLabel,
+                fontSize: isMobile ? 9 : 14,
+                margin: isMobile ? 4 : 8
+            },
             dayLabel: isMobile ? { show: false } : dayLabel
         },
         series: [{
@@ -140,7 +154,7 @@ function renderChart(data, maxVal) {
             coordinateSystem: 'calendar',
             data: data,
             itemStyle: {
-                borderRadius: 4, // More rounded
+                borderRadius: isMobile ? 3 : 4, // 圆角矩形
                 shadowBlur: 0,
                 shadowColor: 'rgba(0, 0, 0, 0.0)'
             },
