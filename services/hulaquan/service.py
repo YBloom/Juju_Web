@@ -238,7 +238,7 @@ class HulaquanService:
         if not res["saoju_musical_id"]:
             try:
                 search_name = extract_text_in_brackets(title, keep_brackets=False)
-                mid = await self._saoju.get_musical_id_by_name(search_name)
+                mid = await self._saoju.resolve_musical_id_by_name(search_name)
                 if mid:
                     res["saoju_musical_id"] = mid
             except Exception as e:

@@ -178,24 +178,6 @@ class SaojuService:
                     return show
         return None
 
-    async def get_cast_for_show(self, search_name: str, session_time: datetime, city: Optional[str] = None, musical_id: Optional[str] = None) -> List[Dict]:
-        """
-        Get cast list for a specific show.
-        search_name: Musical title (or fallback if ID not found).
-        session_time: Show datetime.
-        musical_id: Optional Saoju Musical ID.
-        """
-        date_str = session_time.strftime("%Y-%m-%d")
-        time_str = session_time.strftime("%H:%M")
-        
-        show = await self.search_for_musical_by_date(search_name, date_str, time_str, city, musical_id)
-        if not show:
-            return []
-            
-        # The search_day API usually returns cast as a list of dicts:
-        # [{"artist": "Name", "role": "Role"}, ...]
-        return show.get("cast", [])
-
     async def get_cast_for_hulaquan_session(self, search_name: str, session_time: datetime, city: Optional[str] = None) -> List[Dict]:
         """
         Dedicated method for Hulaquan Service to populate cast info from LOCAL DB ONLY.
@@ -251,74 +233,6 @@ class SaojuService:
                     result.append(item)
                     
             return result
-
-    async def get_artist_events_data(self, cast_name: str) -> List[Dict]:
-        """获取演员的演出排期时间轴。"""
-        from services.hulaquan.utils import standardize_datetime_for_saoju, parse_datetime
-        
-        await self._ensure_artist_map()
-        artist_id = self.data.get("artists_map", {}).get(cast_name)
-        if not artist_id:
-            return []
-            
-        indexes = await self._ensure_artist_indexes()
-        artist_musicals = indexes.get("artist_musicals", {}).get(str(artist_id), {})
-        if not artist_musicals:
-            return []
-            
-        ARTIST_LOOKBACK_DAYS = 180
-        ARTIST_LOOKAHEAD_DAYS = 365
-        
-        begin_date = (timezone_now() - timedelta(days=ARTIST_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
-        end_date = (timezone_now() + timedelta(days=ARTIST_LOOKAHEAD_DAYS)).strftime("%Y-%m-%d")
-        
-        events: List[Dict] = []
-        seen_keys = set()
-        
-        for musical_info in artist_musicals.values():
-            musical_name = musical_info.get("name")
-            if not musical_name:
-                continue
-            show_list = await self._get_musical_shows(musical_name, begin_date, end_date)
-            for show in show_list:
-                cast_list = show.get("cast") or []
-                matched = next((c for c in cast_list if c.get("artist") == cast_name), None)
-                if not matched:
-                    continue
-                time_str = show.get("time")
-                try:
-                    dt = parse_datetime(time_str)
-                except Exception:
-                    continue
-                if not dt:
-                    continue
-                
-                # Format: 08月03日 星期日 14:30
-                WEEKDAY_LABEL = ["一", "二", "三", "四", "五", "六", "日"]
-                weekday = WEEKDAY_LABEL[dt.weekday()]
-                formatted_date = f"{dt.month:02d}月{dt.day:02d}日 星期{weekday} {dt.strftime('%H:%M')}"
-                
-                city = show.get("city") or ""
-                theatre = show.get("theatre") or ""
-                others = [c.get("artist") for c in cast_list if c.get("artist") and c.get("artist") != cast_name]
-                
-                dedupe_key = (musical_name, dt.isoformat(), city)
-                if dedupe_key in seen_keys:
-                    continue
-                seen_keys.add(dedupe_key)
-                
-                events.append({
-                    "date": formatted_date,
-                    "title": show.get("musical") or musical_name,
-                    "role": matched.get("role") or " / ".join(musical_info.get("roles", [])),
-                    "others": others,
-                    "city": city,
-                    "location": theatre,
-                })
-        
-        # Sort using utils helper
-        events.sort(key=lambda entry: standardize_datetime_for_saoju(entry["date"]))
-        return events
 
     async def match_co_casts(self, co_casts: List[str], show_others: bool = True, progress_callback=None, start_date: str = None, end_date: str = None) -> List[Dict]:
         """
@@ -537,32 +451,13 @@ class SaojuService:
         self.data["musical_map"] = name_map
         log.info(f"Loaded {len(name_map)} musicals from Saoju.")
 
-    async def get_musical_id_by_name(self, name: str) -> Optional[str]:
-        """Look up musical ID by exact name."""
+    async def resolve_musical_id_by_name(self, name: str) -> Optional[str]:
+        """Look up musical ID by exact name (Resolves via network if needed)."""
         await self.ensure_musical_map()
         return self.data.get("musical_map", {}).get(name)
 
     # --- Helper methods ported and adapted from SaojuDataManager ---
     
-    async def _get_musical_shows(self, musical: str, begin_date: str, end_date: str):
-        self.data.setdefault("musical_show_cache", {})
-        self.data.setdefault("update_time_dict", {}).setdefault("musical_show_cache", {})
-        
-        if not musical: return []
-        cache_key = f"{musical}|{begin_date}|{end_date}"
-        
-        # Simplified cache check
-        if cache_key in self.data["musical_show_cache"]:
-             return self.data["musical_show_cache"][cache_key]
-             
-        response = await self._fetch_json(
-            "search_musical_show/",
-            params={"musical": musical, "begin_date": begin_date, "end_date": end_date},
-        )
-        show_list = (response or {}).get("show_list", []) if response else []
-        self.data["musical_show_cache"][cache_key] = show_list
-        return show_list
-
     async def _ensure_artist_map(self):
         """Ensure artist map is loaded and not expired (3 days)."""
         now = datetime.now()
@@ -677,40 +572,6 @@ class SaojuService:
         }
         self.save_data()
         return result
-    async def get_tours(self, musical_id: int) -> List[Dict]:
-        """API 12: Get all tours for a musical."""
-        data = await self._fetch_json("tour/")
-        if not data:
-            return []
-        # Filter locally since API returns all
-        return [t for t in data if t.get("fields", {}).get("musical") == musical_id]
-
-    async def get_schedules(self, tour_id: int) -> List[Dict]:
-        """API 13: Get all schedules for a tour."""
-        data = await self._fetch_json("schedule/")
-        if not data:
-            return []
-        return [s for s in data if s.get("fields", {}).get("tour") == tour_id]
-
-    async def get_shows(self, schedule_id: int) -> List[Dict]:
-        """API 14: Get all shows for a schedule."""
-        return await self._fetch_json(f"schedule/{schedule_id}/show/") or []
-
-    async def get_show_cast(self, show_id: int) -> List[Dict]:
-        """API 15: Get cast for a specific show."""
-        # API 15 returns list of dicts: [{"pk":..., "fields":{}, ...}] or similar structure?
-        # User request says:
-        # pk: 2114
-        # model: "yyj.musicalcast"
-        # fields: {} (empty)
-        # But wait, User snippet says: "fields:{} （此项为空，无需包含其它信息。根据卡司信息组合，即可知道当日演出演员...）"
-        # And "pk" is musicalcast PK.
-        # So we probably need to resolve these PKs to Artist names using our local index/map.
-        # Actually user said: "根据卡司信息组合，即可知道当日演出演员"
-        # This implies the result LIST of PKs is what we get.
-        # Let's verify what the API returns. The user example showed a list structure.
-        return await self._fetch_json(f"show/{show_id}/cast/") or []
-
     async def sync_future_days(self, start_days: int = 0, end_days: int = 120):
         """
         Sync future days using search_day API with Change Data Capture (CDC).
