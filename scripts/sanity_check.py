@@ -151,31 +151,27 @@ class SanityChecker:
 
     async def check_cast_schedule(self):
         print("\n🔍 [4/5] Checking Cast Schedule Integration...")
-        print("  ⚠️  Skipping: 'get_artist_events_data' method not found in service.")
-        # Re-enable when method is restored or new equivalent is found
-        return
-        """
         found_any = False
         for artist in TEST_ARTISTS:
-            if hasattr(self.saoju, 'get_artist_events_data'):
-                events = await self.saoju.get_artist_events_data(artist)
-                if events:
-                    found_any = True
-                    print(f"  ✅ Found {len(events)} events for '{artist}'")
-                    # Structure Check
-                    first = events[0]
-                    if "date" in first and "title" in first and "city" in first:
-                        pass
-                    else:
-                        self.errors.append(f"Malformed Cast Event Data for {artist}: {first.keys()}")
-                    break
+            # match_co_casts searches local DB (SaojuShow) for any matching casts
+            events = await self.saoju.match_co_casts([artist])
+            
+            if events:
+                found_any = True
+                print(f"  ✅ Found {len(events)} events for '{artist}'")
+                # Structure Check
+                first = events[0]
+                # Keys are: ['date', 'year', 'title', 'role', 'others', 'city', 'location']
+                if "date" in first and "title" in first and "city" in first:
+                    pass
+                else:
+                    self.errors.append(f"Malformed Cast Event Data for {artist}: {first.keys()}")
+                break
             else:
-                 print(f"  ⚪ SaojuService missing 'get_artist_events_data'")
-                 break
+                print(f"  ⚪ No events for '{artist}'")
         
         if not found_any:
             self.warnings.append("No cast schedules found for any test artists. Data sync might be needed.")
-        """
 
     async def check_heatmap_data(self):
         print("\n🔍 [5/5] Checking Heatmap Aggregation...")
