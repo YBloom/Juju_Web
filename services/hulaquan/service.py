@@ -284,8 +284,9 @@ class HulaquanService:
                  try:
                     search_name = extract_text_in_brackets(title, keep_brackets=False)
                     # Use potentially newly found city
-                    c_data = await self._saoju.get_cast_for_show(
-                        search_name, session_time, current_city, musical_id=res["saoju_musical_id"]
+                    # DB-Only Lookup (No Network I/O)
+                    c_data = await self._saoju.get_cast_for_hulaquan_session(
+                        search_name, session_time, current_city
                     )
                     if c_data:
                         enrich_t["casts"] = c_data

@@ -196,6 +196,62 @@ class SaojuService:
         # [{"artist": "Name", "role": "Role"}, ...]
         return show.get("cast", [])
 
+    async def get_cast_for_hulaquan_session(self, search_name: str, session_time: datetime, city: Optional[str] = None) -> List[Dict]:
+        """
+        Dedicated method for Hulaquan Service to populate cast info from LOCAL DB ONLY.
+        Strictly NO network I/O.
+        """
+        if not search_name or not session_time:
+            return []
+            
+        with session_scope() as session:
+            # We query by time first (most selective)
+            stmt = select(SaojuShow).where(SaojuShow.date == session_time)
+            if city:
+                stmt = stmt.where(SaojuShow.city == city)
+                
+            candidates = session.exec(stmt).all()
+            
+            # Fuzzy Title Match in Memory
+            matched_show = None
+            for show in candidates:
+                # Check if titles overlap
+                if search_name in show.musical_name or show.musical_name in search_name:
+                    matched_show = show
+                    break
+            
+            if not matched_show or not matched_show.cast_str:
+                return []
+                
+            # Parse cast_str back to list of dicts
+            # Format: "Role:Actor / Role:Actor" or "Actor / Actor"
+            result = []
+            
+            # Robust split (support both / and space if / is missing)
+            if '/' in matched_show.cast_str:
+                segments = [s.strip() for s in matched_show.cast_str.split('/')]
+            else:
+                segments = matched_show.cast_str.split()
+                
+            for seg in segments:
+                if not seg: continue
+                item = {}
+                if ':' in seg:
+                    # Role:Name
+                    try:
+                        r_part, a_part = seg.split(':', 1)
+                        item['role'] = r_part.strip()
+                        item['artist'] = a_part.strip()
+                    except:
+                        item['artist'] = seg
+                else:
+                    item['artist'] = seg
+                
+                if item.get('artist'):
+                    result.append(item)
+                    
+            return result
+
     async def get_artist_events_data(self, cast_name: str) -> List[Dict]:
         """获取演员的演出排期时间轴。"""
         from services.hulaquan.utils import standardize_datetime_for_saoju, parse_datetime
