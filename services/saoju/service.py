@@ -134,49 +134,43 @@ class SaojuService:
 
     async def search_for_musical_by_date(self, search_name: str, date_str: str, time_str: str, city: Optional[str] = None, musical_id: Optional[str] = None) -> Optional[Dict]:
         """
-        Search for a musical show to get its cast.
-        搜索音乐剧以获取其演员阵容。
-        search_name: Musical title or keyword.
-        search_name: 音乐剧标题或关键字。
-        date_str: YYYY-MM-DD
-        time_str: HH:MM
-        musical_id: Optional Saoju Musical ID for precise filtering.
+        Search for a musical show in LOCAL DB ONLY (SaojuShow).
+        Replaces the old network-dependent logic to prevent N+1 request issues.
         """
-        # Follow legacy logic: first search by date, then filter
-        # 遵循旧有逻辑：先按日期搜索，然后过滤
-        cache_key = f"{date_str}|{city or ''}"
-        if cache_key in self._day_cache:
-            data = self._day_cache[cache_key]
-        else:
-            params = {"date": date_str}
-            if city:
-                params["city"] = city
-            
-            data = await self._fetch_json("search_day/", params=params)
-            if data:
-                self._day_cache[cache_key] = data
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._search_show_db_sync, search_name, date_str, time_str, city)
 
-        if not data or "show_list" not in data:
+    def _search_show_db_sync(self, search_name: str, date_str: str, time_str: str, city: Optional[str] = None) -> Optional[Dict]:
+        try:
+            target_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        except ValueError:
             return None
-        
-        # Match by name and time
-        # 按名称和时间匹配
-        for show in data["show_list"]:
-            if time_str == show.get("time"):
-                # If musical_id is provided, check it (assuming show result contains musical id)
-                # API response for search_day usually contains 'musical_id' or similar?
-                # Actually standard saoju API returns 'musical' name, maybe not ID in this endpoint.
-                # Let's check typical response structure or assume title match is robust enough if ID provided.
-                # If we have ID, we might need a different strategy or just rely on title match + date.
-                # But wait, if we have ID, we can cross check if the show's musical name matches the ID's name?
-                # For now, let's keep it simple: if musical_id provided, we assume caller wants us to rely on it 
-                # but since this specific endpoint might not return ID, we still string match.
-                # However, we can use the cache to verify.
+
+        with session_scope() as session:
+            # Index scan on date
+            stmt = select(SaojuShow).where(SaojuShow.date == target_dt)
+            if city:
+                stmt = stmt.where(SaojuShow.city == city)
+            
+            candidates = session.exec(stmt).all()
+            
+            # Memory filter for title fuzzy match
+            for show in candidates:
+                if not search_name:
+                    # Defensive: if no search name, return first match or None? 
+                    # Logic implies we are looking for specific show info.
+                    continue
                 
-                # Check title
-                if search_name in show.get("musical", ""):
-                    return show
-        return None
+                # Check title overlap (e.g. "Phantom" in "Phantom of the Opera")
+                if search_name in show.musical_name or show.musical_name in search_name:
+                    return {
+                        "musical": show.musical_name,
+                        "city": show.city,
+                        "theatre": show.theatre,
+                        "time": show.date.strftime("%H:%M")
+                    }
+            
+            return None
 
     async def get_cast_for_hulaquan_session(self, search_name: str, session_time: datetime, city: Optional[str] = None) -> List[Dict]:
         """

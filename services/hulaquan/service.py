@@ -41,7 +41,8 @@ class HulaquanService:
     }
     
     def __init__(self):
-        self._semaphore = asyncio.Semaphore(1)  # Sequential sync to avoid SQLite locking
+        self._db_write_lock = asyncio.Lock()  # Lock for SQLite writes
+        self._fetch_semaphore = asyncio.Semaphore(5)  # Concurrency limit for Hulaquan API
         self._session: Optional[aiohttp.ClientSession] = None
         self._saoju = SaojuService()
         self._city_resolver = CityResolver()
@@ -165,27 +166,36 @@ class HulaquanService:
         
         updates = []
         
-        # 2. Sequentially fetch details for each event to avoid SQLite lock issues
-        # 2. 顺序获取每个事件的详细信息以避免 SQLite 锁定问题
-        for eid in event_ids:
-            try:
-                res = await self._sync_event_details(eid)
-                if res:
-                    updates.extend(res)
-            except Exception as e:
-                log.error(f"Error syncing event {eid}: {e}")
-                log.error(traceback.format_exc())
+        # 2. Concurrently fetch details (Semaphore limited)
+        # 2. 并发获取详情（受信号量限制）
+        tasks = [self._sync_event_wrapper(eid) for eid in event_ids]
+        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for res in raw_results:
+            if isinstance(res, list):
+                updates.extend(res)
+            elif isinstance(res, Exception):
+                # Logged in wrapper, but just in case
+                pass
         
         log.info(f"Synchronization complete. Detected {len(updates)} updates.")
         return updates
 
+    async def _sync_event_wrapper(self, event_id: str) -> List[TicketUpdate]:
+        """Exception-safe wrapper for gather."""
+        try:
+            return await self._sync_event_details(event_id)
+        except Exception as e:
+            log.error(f"Error syncing event {event_id}: {e}")
+            log.error(traceback.format_exc())
+            return []
+
     async def _sync_event_details(self, event_id: str) -> List[TicketUpdate]:
-        """Fetch and sync a single event's details and tickets.
-        获取并同步单个事件的详细信息和票据。
-        """
-        async with self._semaphore:
+        """Fetch and sync a single event's details and tickets."""
+        async with self._fetch_semaphore:
             detail_url = f"{self.BASE_URL}/event/getEventDetails.html?id={event_id}"
             data = await self._fetch_json(detail_url)
+        
         if not data:
             return []
 
@@ -194,13 +204,14 @@ class HulaquanService:
         loop = asyncio.get_running_loop()
         ctx = await loop.run_in_executor(None, self._get_sync_context_sync, event_id)
         
-        # Phase 2: Enrich with Saoju Data (Network I/O - No DB Lock)
-        # 阶段 2：充实 Saoju 数据（网络 I/O - 无数据库锁）
+        # Phase 2: Enrich with Saoju Data (Pure DB Lookup - safe for concurrency)
+        # 阶段 2：充实 Saoju 数据（纯数据库查找 - 并发安全）
         enrichment = await self._enrich_ticket_data_async(event_id, data, ctx)
         
-        # Phase 3: Write Updates (Fast DB Write)
-        # 阶段 3：写入更新（快速数据库写入）
-        return await loop.run_in_executor(None, self._save_synced_data_sync, event_id, data, enrichment)
+        # Phase 3: Write Updates (Serialized DB Write)
+        # 阶段 3：写入更新（串行数据库写入以避免锁定）
+        async with self._db_write_lock:
+            return await loop.run_in_executor(None, self._save_synced_data_sync, event_id, data, enrichment)
 
     def _get_sync_context_sync(self, event_id: str) -> Dict:
         """Read relevant local state before sync."""
