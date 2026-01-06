@@ -671,15 +671,7 @@ async def get_event_detail(event_id: str):
 async def get_heatmap(year: int = 2025):
     """Get heatmap data for a specific year (SaojuShow)."""
     
-    # 2023: Static Data
-    if year == 2023:
-        from services.saoju.static_data import get_2023_data
-        return {
-            "year": 2023,
-            "total": sum(v for k, v in get_2023_data()),
-            "peak": max((v for k, v in get_2023_data()), default=0),
-            "data": get_2023_data()
-        }
+    # All years now read from database (2023-2026 all have data in SaojuShow table)
 
     from services.hulaquan.tables import SaojuShow
     from services.db.connection import session_scope

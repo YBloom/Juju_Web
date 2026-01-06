@@ -85,17 +85,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Changelog Modal
-    const versionLink = document.getElementById('version-link');
+    // Changelog Modal (use event delegation since version-link is dynamically created)
     const changelogOverlay = document.getElementById('changelog-overlay');
     const changelogCloseBtn = document.getElementById('changelog-close-btn');
 
-    if (versionLink && changelogOverlay) {
-        versionLink.addEventListener('click', (e) => {
+    // Event delegation for dynamically created version link
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'version-link' || e.target.closest('#version-link')) {
             e.preventDefault();
-            changelogOverlay.classList.add('active');
-        });
+            changelogOverlay?.classList.add('active');
+        }
+    });
 
+    if (changelogOverlay) {
         changelogCloseBtn?.addEventListener('click', () => {
             changelogOverlay.classList.remove('active');
         });

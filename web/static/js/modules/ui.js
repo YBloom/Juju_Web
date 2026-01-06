@@ -75,7 +75,7 @@ export async function fetchUpdateStatus() {
 
         // Add Service Info
         if (data.service_info) {
-            html += `<div style="margin-top:4px; opacity:0.8;">${data.service_info.version || 'v1.0'} | 启动于: ${data.service_info.start_time || '未知'}</div>`;
+            html += `<div style="margin-top:4px;"><a href="#" id="version-link" class="version-link">${data.service_info.version || 'v1.0'}</a> | 启动于: ${data.service_info.start_time || '未知'}</div>`;
         }
 
         statusEl.innerHTML = html;
