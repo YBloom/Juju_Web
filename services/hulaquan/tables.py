@@ -125,3 +125,23 @@ class Feedback(SQLModel, table=True):
     # Ignore Management
     is_ignored: bool = Field(default=False)
     ignored_at: Optional[datetime] = None
+
+
+class TicketUpdateLog(SQLModel, table=True):
+    """票务更新日志表，用于持久化和展示票务动态"""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ticket_id: str = Field(index=True)
+    event_id: str = Field(index=True)
+    event_title: str
+    change_type: str  # new, restock, back, pending
+    message: str
+    
+    # 详细字段用于前端展示
+    # Detailed fields for frontend display
+    session_time: Optional[datetime] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
+    total_ticket: Optional[int] = None
+    cast_names: Optional[str] = None  # JSON string: ["江东旭", "韦岸"]
+    
+    created_at: datetime = Field(default_factory=timezone_now, index=True)

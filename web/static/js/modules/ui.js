@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { api } from './api.js';
 import { router } from './router.js';
 import { getCityScore, formatDateStr, formatDateDisplay, getNormalizedTitle, getPrice } from './utils.js';
+import { initTicketUpdates } from './ticket_updates.js';
 
 // --- Tab Management ---
 
@@ -92,6 +93,9 @@ export async function initHlqTab() {
         state.allEvents = data.results;
         renderCityFilterOptions();
         applyFilters();
+
+        // Initialize Ticket Updates Dashboard
+        initTicketUpdates();
     } catch (e) {
         container.innerHTML = `<div style="color:red;padding:20px;text-align:center">加载失败: ${e.message}</div>`;
     }

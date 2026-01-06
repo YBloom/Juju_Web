@@ -2,6 +2,7 @@
 import { router } from './modules/router.js';
 import { state } from './modules/state.js';
 import * as ui from './modules/ui.js';
+import { loadHeatmap } from './modules/heatmap.js';
 
 // Expose functions to global scope for HTML event handlers
 window.router = router;
@@ -54,6 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.showTabContent('tab-cocast');
     });
 
+    router.on('/lab', () => {
+        ui.showTabContent('tab-lab');
+    });
+
+    router.on('/lab/heatmap', () => {
+        ui.showTabContent('tab-lab-heatmap');
+        loadHeatmap();
+    });
+
     // Global search hook
     const globalSearchEl = document.getElementById('global-search');
     if (globalSearchEl) {
@@ -74,4 +84,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Changelog Modal
+    const versionLink = document.getElementById('version-link');
+    const changelogOverlay = document.getElementById('changelog-overlay');
+    const changelogCloseBtn = document.getElementById('changelog-close-btn');
+
+    if (versionLink && changelogOverlay) {
+        versionLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            changelogOverlay.classList.add('active');
+        });
+
+        changelogCloseBtn?.addEventListener('click', () => {
+            changelogOverlay.classList.remove('active');
+        });
+
+        changelogOverlay.addEventListener('click', (e) => {
+            if (e.target === changelogOverlay) {
+                changelogOverlay.classList.remove('active');
+            }
+        });
+    }
 });

@@ -16,7 +16,8 @@ from services.hulaquan.tables import (
     HulaquanCast, 
     TicketCastAssociation,
     HulaquanSubscription,
-    HulaquanAlias
+    HulaquanAlias,
+    TicketUpdateLog
 )
 from services.hulaquan.models import (
     EventInfo, 
@@ -80,7 +81,7 @@ class HulaquanService:
     async def _ensure_session(self):
         if self._session is None or self._session.closed:
             connector = aiohttp.TCPConnector(ssl=False)
-            timeout = aiohttp.ClientTimeout(total=60, connect=15)
+            timeout = aiohttp.ClientTimeout(total=90, connect=20)
             self._session = aiohttp.ClientSession(
                 headers=self.DEFAULT_HEADERS,
                 connector=connector,
@@ -114,10 +115,10 @@ class HulaquanService:
                     # 回退
                     text = content.decode('utf-8', errors='ignore')
                     return json.loads(text)
-        except (aiohttp.ClientConnectorError, ConnectionResetError, ssl.SSLError) as e:
+        except (aiohttp.ClientConnectorError, ConnectionResetError, ssl.SSLError, asyncio.TimeoutError, TimeoutError) as e:
             # Fail Fast: Close session and re-raise to abort retry loops
             # 快速失败：关闭会话并重新引发以中止重试循环
-            log.warning(f"Connection failed for {url}: {e} - Closing session.")
+            log.warning(f"Connection failed for {url}: {type(e).__name__}: {e} - Closing session.")
             await self.close()
             raise e
         except Exception as e:
@@ -142,8 +143,8 @@ class HulaquanService:
             url = f"{self.BASE_URL}/site/getevent.html?filter=recommendation&access_token=&limit={limit}&page=0"
             try:
                 data = await self._fetch_json(url)
-            except (aiohttp.ClientConnectorError, ConnectionResetError, ssl.SSLError):
-                log.warning("Hulaquan unreachable, aborting sync.")
+            except (aiohttp.ClientConnectorError, ConnectionResetError, ssl.SSLError, asyncio.TimeoutError, TimeoutError):
+                log.warning("Hulaquan unreachable (connection/timeout issue), aborting sync.")
                 data = None
                 break
             
@@ -342,19 +343,50 @@ class HulaquanService:
                     ticket = HulaquanTicket(id=tid, event_id=event_id, title=title)
                     session.add(ticket)
                 
+                # Parse session time and extract cast names for detailed display
+                # 解析场次时间和提取演员列表用于详细展示
+                session_time = self._parse_api_date(t_data.get("start_time"))
+                t_enrich = enrichment.get("tickets", {}).get(tid, {})
+                cast_names_list = [c.get("artist") for c in t_enrich.get("casts", []) if c.get("artist")]
+                
                 # Notifications
                 if is_new:
                     if status == "pending":
-                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="pending", message=f"⏲️开票: {title}"))
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="pending", message=f"⏲️开票: {title}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list
+                        ))
                     elif left_ticket > 0:
-                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="new", message=f"🆕上新: {title} 余票{left_ticket}/{total_ticket}"))
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="new", message=f"🆕上新: {title} 余票{left_ticket}/{total_ticket}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list
+                        ))
                 else:
                     if status == "pending" and ticket.status != "pending":
-                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="pending", message=f"⏲️开票: {title}"))
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="pending", message=f"⏲️开票: {title}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list
+                        ))
                     elif ticket.stock == 0 and left_ticket > 0:
-                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="restock", message=f"♻️回流: {title} 余票{left_ticket}/{total_ticket}"))
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="restock", message=f"♻️回流: {title} 余票{left_ticket}/{total_ticket}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list
+                        ))
                     elif left_ticket > ticket.stock:
-                        updates.append(TicketUpdate(ticket_id=tid, event_id=event_id, event_title=event.title, change_type="back", message=f"➕票增: {title} 余票{left_ticket}/{total_ticket}"))
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="back", message=f"➕票增: {title} 余票{left_ticket}/{total_ticket}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list
+                        ))
 
                 # Updates
                 ticket.title = title
@@ -363,10 +395,9 @@ class HulaquanService:
                 ticket.price = price
                 ticket.status = status
                 ticket.valid_from = t_data.get("valid_from")
-                ticket.session_time = self._parse_api_date(t_data.get("start_time"))
+                ticket.session_time = session_time  # Already parsed above
                 
                 # Apply Enrichment (City)
-                t_enrich = enrichment.get("tickets", {}).get(tid, {})
                 if t_enrich.get("city"):
                     ticket.city = t_enrich["city"]
                 elif not ticket.city:
@@ -397,6 +428,24 @@ class HulaquanService:
                         if not session.exec(stmt_assoc).first():
                             assoc = TicketCastAssociation(ticket_id=tid, cast_id=cast_obj.id, role=role_name)
                             session.add(assoc)
+
+
+            # Write updates to TicketUpdateLog table for persistence
+            # 将更新写入 TicketUpdateLog 表以持久化
+            for update in updates:
+                log_entry = TicketUpdateLog(
+                    ticket_id=update.ticket_id,
+                    event_id=update.event_id,
+                    event_title=update.event_title,
+                    change_type=update.change_type,
+                    message=update.message,
+                    session_time=update.session_time,
+                    price=update.price,
+                    stock=update.stock,
+                    total_ticket=update.total_ticket,
+                    cast_names=json.dumps(update.cast_names) if update.cast_names else None
+                )
+                session.add(log_entry)
 
             session.commit()
         return updates
@@ -749,6 +798,39 @@ class HulaquanService:
             
             session.commit()
 
+    async def get_recent_updates(self, limit: int = 20, change_types: List[str] = None) -> List[TicketUpdate]:
+        """Fetch recent ticket updates from the log.
+        从日志中获取最近的票务更新。
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_recent_updates_sync, limit, change_types)
+
+    def _get_recent_updates_sync(self, limit: int = 20, change_types: List[str] = None) -> List[TicketUpdate]:
+        with session_scope() as session:
+            stmt = select(TicketUpdateLog).order_by(TicketUpdateLog.detected_at.desc())
+            
+            if change_types:
+                stmt = stmt.where(TicketUpdateLog.change_type.in_(change_types))
+            
+            stmt = stmt.limit(limit)
+            logs = session.exec(stmt).all()
+            
+            results = []
+            for log in logs:
+                results.append(TicketUpdate(
+                    ticket_id=log.ticket_id,
+                    event_id=log.event_id,
+                    event_title=log.event_title or "未知剧目",
+                    change_type=log.change_type,
+                    message=log.message or "",
+                    session_time=log.session_time,
+                    price=log.price,
+                    stock=log.stock,
+                    total_ticket=log.total_ticket,
+                    cast_names=json.loads(log.cast_names) if log.cast_names else []
+                ))
+            return results
+
     async def get_event_id_by_name(self, name: str) -> Optional[Tuple[str, str]]:
         """
         Try to find event ID by title or alias.
@@ -912,3 +994,65 @@ class HulaquanService:
             # Sort by time
             results.sort(key=lambda x: x.get("_raw_time", ""))
             return results
+
+    async def get_recent_updates(
+        self,
+        limit: int = 20,
+        change_types: Optional[List[str]] = None
+    ) -> List[TicketUpdate]:
+        """
+        Get recent ticket updates from the database.
+        从数据库获取最近的票务更新。
+        
+        Args:
+            limit: Maximum number of updates to return (default 20, max 100)
+            change_types: List of change types to filter (e.g. ["new", "restock"])
+        
+        Returns:
+            List of TicketUpdate objects with detailed fields
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_recent_updates_sync, limit, change_types)
+    
+    def _get_recent_updates_sync(self, limit: int, change_types: Optional[List[str]]) -> List[TicketUpdate]:
+        # Cap limit to 100
+        limit = min(limit, 100)
+        
+        with session_scope() as session:
+            # Build query
+            stmt = select(TicketUpdateLog).order_by(TicketUpdateLog.created_at.desc())
+            
+            # Apply type filter if specified
+            if change_types:
+                stmt = stmt.where(TicketUpdateLog.change_type.in_(change_types))
+            
+            # Apply limit
+            stmt = stmt.limit(limit)
+            
+            logs = session.exec(stmt).all()
+            
+            # Convert to TicketUpdate objects
+            updates = []
+            for log in logs:
+                cast_names_list = None
+                if log.cast_names:
+                    try:
+                        cast_names_list = json.loads(log.cast_names)
+                    except Exception:
+                        pass
+                
+                updates.append(TicketUpdate(
+                    ticket_id=log.ticket_id,
+                    event_id=log.event_id,
+                    event_title=log.event_title,
+                    change_type=log.change_type,
+                    message=log.message,
+                    session_time=log.session_time,
+                    price=log.price,
+                    stock=log.stock,
+                    total_ticket=log.total_ticket,
+                    cast_names=cast_names_list,
+                    created_at=log.created_at
+                ))
+            
+            return updates

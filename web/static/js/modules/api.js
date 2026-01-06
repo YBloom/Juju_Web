@@ -54,5 +54,12 @@ export const api = {
         const res = await fetch(`/api/tasks/${taskId}`);
         if (!res.ok) throw new Error("获取任务状态失败");
         return await res.json();
+    },
+
+    // Ticket Updates
+    async fetchRecentUpdates(limit = 20, types = "new,restock,back") {
+        const res = await fetch(`/api/tickets/recent-updates?limit=${limit}&types=${types}`);
+        if (!res.ok) throw new Error("获取票务更新失败");
+        return await res.json();
     }
 };

@@ -112,15 +112,7 @@ class SaojuService:
                     # 指数退避: 1s, 2s, 4s
                     backoff_time = 2 ** attempt
                     log.warning(f"连接错误,重试 {attempt + 1}/{retries - 1} (等待{backoff_time}秒): {type(e).__name__}")
-                    # 彻底关闭并重新创建session
-                    try:
-                        if self._session and not self._session.closed:
-                            await self._session.close()
-                            # 确保connector也被关闭
-                            await asyncio.sleep(0.1)
-                    except Exception as close_err:
-                        log.debug(f"Session close error (ignored): {close_err}")
-                    self._session = None
+                    # DO NOT close session here as it kills concurrent requests
                     await asyncio.sleep(backoff_time)  # 退避等待
                 else:
                     log.error(
@@ -129,13 +121,7 @@ class SaojuService:
                         f"    Params: {params}\n"
                         f"    Error: {type(e).__name__}: {e}"
                     )
-                    # 最后一次失败也要清理session
-                    try:
-                        if self._session:
-                            await self._session.close()
-                    except:
-                        pass
-                    self._session = None
+                    # Do not close session on error, let it persist or be closed by lifespan
                     return None
             except Exception as e:
                 log.error(
@@ -144,13 +130,6 @@ class SaojuService:
                     f"    Params: {params}\n"
                     f"    Error: {type(e).__name__}: {e}"
                 )
-                # 其他异常也要清理session
-                try:
-                    if self._session:
-                        await self._session.close()
-                except:
-                    pass
-                self._session = None
                 return None
 
     async def search_for_musical_by_date(self, search_name: str, date_str: str, time_str: str, city: Optional[str] = None, musical_id: Optional[str] = None) -> Optional[Dict]:

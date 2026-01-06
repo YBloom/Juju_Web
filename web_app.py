@@ -222,8 +222,30 @@ async def lifespan(app: FastAPI):
                          # Default 1st arg is start buffer days
                          await saoju_service.sync_distant_tours(120)
                          last_saoju_distant = time.time()
-                         
-                    logger.info("Scheduler: All sync tasks checked. Sleeping for 300s.")
+
+                    # 4. Saoju 2026 Sync (Reuse Near Future Logic but target 2026 range)
+                    # Sync 2026-01-01 to 2026-12-31 daily
+                    # Current year is 2026, so this is "Current Year Full Sync"
+                    if now_ts - last_saoju_distant > 86400: # Run with distant loop
+                         logger.info("Scheduler: Starting 2026 Full Year Sync...")
+                         try:
+                             # Calculate offsets to cover 2026-01-01 to 2026-12-31 relative to now
+                             from datetime import datetime
+                             sch_now = datetime.now()
+                             start_2026 = datetime(2026, 1, 1)
+                             end_2026 = datetime(2026, 12, 31)
+                             
+                             # Offsets in days
+                             start_offset = (start_2026 - sch_now).days
+                             end_offset = (end_2026 - sch_now).days + 1 # +1 to ensure coverage
+                             
+                             # Ensure we don't sync too far past (though end_offset handles it)
+                             # sync_future_days handles the loop
+                             await saoju_service.sync_future_days(start_offset, end_offset)
+                             
+                             last_saoju_distant = time.time()
+                         except Exception as e:
+                             logger.error(f"Error in 2026 Sync: {e}")
                 except Exception as e:
                     logger.error(f"Scheduler Error: {e}", exc_info=True)
                 
@@ -243,6 +265,9 @@ async def lifespan(app: FastAPI):
             await scheduler_task
         except asyncio.CancelledError:
             pass
+    
+    # Close services
+    await saoju_service.close()
 
 # Helper Functions for Rate Limiting
 def key_func_remote(request: Request):
@@ -386,6 +411,25 @@ async def get_events_by_date(date: str):
     except ValueError:
         return {"error": "Invalid date format. Use YYYY-MM-DD"}
 
+@app.get("/api/tickets/recent-updates")
+async def get_recent_ticket_updates(limit: int = 20, types: str = "new,restock,back,pending"):
+    """
+    Get recent ticket updates for the ticket dashboard.
+    获取最近的票务更新用于票务动态展示。
+    
+    Query Parameters:
+        limit: Maximum number of updates to return (default 20, max 100)
+        types: Comma-separated list of change types to filter (e.g. "new,restock")
+    """
+    # Parse types
+    change_types = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    
+    # Fetch updates from service
+    updates = await service.get_recent_updates(limit=limit, change_types=change_types)
+    
+    # Convert to dict for JSON response
+    return {"results": [u.dict() for u in updates]}
+
 @app.get("/api/events/co-cast")
 async def get_co_casts(casts: str, only_student: bool = False):
     """Get tickets with co-performing casts. casts=name1,name2
@@ -471,19 +515,20 @@ async def start_cocast_search(request: Request):
                 job_manager.complete_job(jid, res)
             else:
                 # Saoju search with progress and date range
-                async with saoju_service as s:
-                    async def progress_cb(p, msg):
-                        job_manager.update_progress(jid, p, msg)
-                        
-                    results = await s.match_co_casts(
-                        c_list, 
-                        show_others=True, 
-                        progress_callback=progress_cb,
-                        start_date=s_date,
-                        end_date=e_date
-                    )
-                    res = {"results": results, "source": "saoju"}
-                    job_manager.complete_job(jid, res)
+                # Use global service instance directly, do NOT use async with (context manager closes it)
+                s = saoju_service
+                async def progress_cb(p, msg):
+                    job_manager.update_progress(jid, p, msg)
+                    
+                results = await s.match_co_casts(
+                    c_list, 
+                    show_others=True, 
+                    progress_callback=progress_cb,
+                    start_date=s_date,
+                    end_date=e_date
+                )
+                res = {"results": results, "source": "saoju"}
+                job_manager.complete_job(jid, res)
         except Exception as e:
             logger.error(f"Task failed: {e}", exc_info=True)
             job_manager.fail_job(jid, str(e))

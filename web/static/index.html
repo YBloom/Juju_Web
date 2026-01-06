@@ -31,9 +31,13 @@
         <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')"><i class="material-icons">list</i>
             呼啦圈剧目</button>
         <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')"><i
-                class="material-icons">event</i> 学生票日历</button>
+                class="material-icons">event</i>
+            学生票日历</button>
         <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')"><i
                 class="material-icons">people</i> 同场演员</button>
+        <button class="nav-btn" data-tab="tab-lab" onclick="router.navigate('/lab')"><i
+                class="material-icons">palette</i>
+            数据艺廊</button>
     </div>
 
     <main>
@@ -47,6 +51,32 @@
             <div class="toolbar" style="justify-content: center; padding: 0 20px 20px;">
                 <!-- Existing controls like city filter and column toggles will be injected here -->
             </div>
+
+            <!-- 票务动态卡片 (Ticket Updates Dashboard) -->
+            <div class="ticket-updates-card" id="ticket-updates-card">
+                <div class="updates-header">
+                    <h4><i class="material-icons" style="color: #22c55e;">flight_takeoff</i> 票务动态</h4>
+                    <i class="material-icons expand-icon">expand_more</i>
+                </div>
+                <div class="updates-body" id="updates-body">
+                    <div class="updates-filters">
+                        <label title="新增加的场次或票档"><input type="checkbox" class="filter-type" value="new" checked><i
+                                class="material-icons">add_circle_outline</i> 上新</label>
+                        <label title="即将开售的场次"><input type="checkbox" class="filter-type" value="pending" checked><i
+                                class="material-icons">schedule</i> 开票</label>
+                        <label title="此前锁定的区域或座位重新开放"><input type="checkbox" class="filter-type" value="back" checked><i
+                                class="material-icons">replay</i> 补票</label>
+                        <label title="因退票或超时未支付而重新上架的票"><input type="checkbox" class="filter-type" value="restock"><i
+                                class="material-icons">sync</i> 回流</label>
+                        <label class="toggle-cast"><input type="checkbox" id="show-cast-toggle"> 显示卡司</label>
+                    </div>
+                    <div class="updates-scroll" id="updates-list">
+                        <!-- Content will be loaded via JS -->
+                        <div style="text-align:center; padding:20px; color:#666;">正在获取最新动态...</div>
+                    </div>
+                </div>
+            </div>
+
             <div id="hlq-list-container">
                 <!-- Table will be rendered here -->
             </div>
@@ -139,6 +169,86 @@
             </div>
             <div id="cast-results"></div>
         </div>
+
+        <!-- Visualization Lab Tab -->
+        <div id="tab-lab" class="tab-content">
+            <!-- 顶部画廊介绍 -->
+            <div class="lab-header">
+                <h2 class="lab-welcome-title">数据艺廊</h2>
+                <p class="lab-welcome-text">用另一种视角，探索演出数据</p>
+            </div>
+            <!-- Bento Grid 布局 -->
+            <div class="lab-gallery-grid">
+                <!-- 主卡片：热力图 -->
+                <div class="gallery-card card-heatmap" onclick="router.navigate('/lab/heatmap')">
+                    <div class="card-content">
+                        <div class="card-label">2025 年度收录</div>
+                        <h3 class="card-title">演出热力图</h3>
+                        <p class="card-desc">查看 <strong>8,886</strong> 场演出的时间分布</p>
+                        <div class="card-visual-preview">
+                            <!-- CSS 绘制的抽象热力点阵装饰 -->
+                            <div class="heat-dots"></div>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <span>查看详情</span>
+                        <i class="material-icons">arrow_forward</i>
+                    </div>
+                </div>
+                <!-- 副卡片：关系网 (占位) -->
+                <div class="gallery-card card-galaxy coming-soon">
+                    <div class="card-content">
+                        <div class="card-label">人物关系</div>
+                        <h3 class="card-title">共演网络</h3>
+                        <p class="card-desc">探索演员的合作关系</p>
+                    </div>
+                    <div class="card-icon-bg">
+                        <i class="material-icons">hub</i>
+                    </div>
+                </div>
+                <!-- 小卡片：更多 (占位) -->
+                <div class="gallery-card card-more coming-soon">
+                    <div class="card-center">
+                        <i class="material-icons">more_horiz</i>
+                        <span>更多功能开发中</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmap Detail Tab (Hidden by default) -->
+        <div id="tab-lab-heatmap" class="tab-content">
+            <div class="heatmap-page">
+                <div class="heatmap-header-area">
+                    <button class="icon-back-btn" onclick="router.navigate('/lab')">
+                        <i class="material-icons">arrow_back</i>
+                    </button>
+                    <div class="heatmap-meta">
+                        <h2>2025 演出时间轴</h2>
+                        <div class="year-selector">
+                            <span>2026</span>
+                            <span class="active">2025</span>
+                            <span>2024</span>
+                            <span>2023</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 图表容器：白色画框风格 -->
+                <div class="chart-frame">
+                    <div class="chart-stats-row">
+                        <div class="stat-box">
+                            <span class="stat-label">演出总数</span>
+                            <span class="stat-num" id="hm_total">-</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">单日峰值</span>
+                            <span class="stat-num" id="hm_peak">-</span>
+                        </div>
+                    </div>
+                    <div id="heatmap-chart"></div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Feedback Footer Entry -->
@@ -222,41 +332,79 @@
                         </button>
                     </form>
 
-            </div>
+                </div>
 
-                    <!-- View: Feedback Wall -->
-                    <div class="modal-content-area feedback-view-section slide-right" id="fb-view-wall">
-                        <div class="feedback-wall-list" id="feedback-wall-list">
-                            <!-- JS Populated -->
-                        </div>
+                <!-- View: Feedback Wall -->
+                <div class="modal-content-area feedback-view-section slide-right" id="fb-view-wall">
+                    <div class="feedback-wall-list" id="feedback-wall-list">
+                        <!-- JS Populated -->
                     </div>
-                </div> <!-- End Wrapper -->
+                </div>
+            </div> <!-- End Wrapper -->
+        </div>
+    </div>
+
+    <footer style="margin-top: 0px; margin-bottom: 20px;">
+        <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
+            <div>数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
+                    style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈</div>
+            <div>联系邮箱：<a href="mailto:contact@yaobii.com"
+                    style="color: inherit; text-decoration: underline;">contact@yaobii.com</a></div>
+            <div id="update-status" style="margin-top: 8px; font-size: 0.75rem;">正在加载更新状态...</div>
+            <div style="margin-top: 8px;"><a href="#" id="version-link" class="version-link">v1.2</a></div>
+        </div>
+    </footer>
+
+    <!-- Changelog Modal -->
+    <div class="changelog-modal-overlay" id="changelog-overlay">
+        <div class="changelog-modal">
+            <div class="changelog-header">
+                <h3><i class="material-icons">new_releases</i> 更新日志</h3>
+                <button class="close-modal-btn" id="changelog-close-btn">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="changelog-content">
+                <div class="changelog-version">
+                    <div class="version-tag">v1.2</div>
+                    <span class="version-date">2026-01-06</span>
+                </div>
+                <div class="changelog-section">
+                    <h4><i class="material-icons">add_circle</i> 新增功能</h4>
+                    <ul>
+                        <li><strong>票务动态看板</strong>：实时展示上新、开票、补票、回流等票务变动</li>
+                        <li><strong>热力图多年份切换</strong>：支持 2023-2026 年度数据查看</li>
+                        <li><strong>热力图视觉优化</strong>：采用 Sage Green 配色，更加美观</li>
+                        <li><strong>版本更新日志</strong>：点击版本号可查看更新内容</li>
+                    </ul>
+                </div>
+                <div class="changelog-section">
+                    <h4><i class="material-icons">build</i> 问题修复</h4>
+                    <ul>
+                        <li>修复 Saoju 服务连接意外关闭的问题</li>
+                        <li>优化 Hulaquan 数据库写入与网络 I/O 分离，提升稳定性</li>
+                        <li>修复同场演员查询时的连接错误</li>
+                    </ul>
+                </div>
             </div>
         </div>
+    </div>
 
-        <footer style="margin-top: 0px; margin-bottom: 20px;">
-            <div
-                style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.5;">
-                <div>数据来源：<a href="https://y.saoju.net/yyj" target="_blank"
-                        style="color: inherit; text-decoration: underline;">y.saoju.net/yyj</a>，呼啦圈</div>
-                <div>联系邮箱：<a href="mailto:contact@yaobii.com"
-                        style="color: inherit; text-decoration: underline;">contact@yaobii.com</a></div>
-                <div id="update-status" style="margin-top: 8px; font-size: 0.75rem;">正在加载更新状态...</div>
-            </div>
-        </footer>
-
-        <!-- Celebration Content -->
-        <div id="celebration-overlay" class="celebration-overlay">
-            <div class="celebration-content">
-                <h1 class="celebration-title">感谢您的宝贵建议</h1>
-                <p class="celebration-subtitle">祝戏剧之神永在您身畔～</p>
-            </div>
-            <p id="close-hint" class="close-hint">(点击任意处关闭)</p>
-            <div id="confetti-container"></div>
+    <!-- Celebration Content -->
+    <div id="celebration-overlay" class="celebration-overlay">
+        <div class="celebration-content">
+            <h1 class="celebration-title">感谢您的宝贵建议</h1>
+            <p class="celebration-subtitle">祝戏剧之神永在您身畔～</p>
         </div>
+        <p id="close-hint" class="close-hint">(点击任意处关闭)</p>
+        <div id="confetti-container"></div>
+    </div>
 
-        <script type="module" src="/static/js/main.js?v=20260105_1"></script>
-        <script src="/static/js/feedback.js?v=20260105"></script>
+    <!-- Heatmap Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+    <script type="module" src="/static/js/main.js?v=20260105_1"></script>
+    <script src="/static/js/feedback.js?v=20260105"></script>
 
 </body>
 

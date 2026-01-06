@@ -39,5 +39,14 @@ class TicketUpdate(BaseModel):
     message: str # Pre-formatted short message for now
     # 目前为预格式化的短消息
     
+    # 详细字段用于前端展示
+    # Detailed fields for frontend display
+    session_time: Optional[datetime] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
+    total_ticket: Optional[int] = None
+    cast_names: Optional[List[str]] = None  # ["江东旭", "韦岸"]
+    created_at: Optional[datetime] = None # detection time
+    
 class SearchResult(BaseModel):
     events: List[EventInfo]
