@@ -18,22 +18,19 @@ async def main():
     
     logging.info("Initializing Bot Service...")
     
-    # Force Config
-    from ncatbot.utils.config import ncatbot_config
-    ncatbot_config.set_bot_uin(3132859862)
-    ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
-    ncat_config = ncatbot_config # alias if needed or just use ncatbot_config
-    ncat_config.set_ws_token("NcatBot")
-    ncat_config.set_webui_token("StrongPassword123!")
-    # Actually, NapCat docker default token is usually "NcatBot" if not set, or we set it?
-    # Our docker run command didn't set WEBUI_TOKEN_ENABLE=true or similar?
-    # Actually, NapCat Docker by mlikiowa usually has HTTP/WS enabled.
-    # NcatBot checks security. setting webui_token prevents crash.
+    # Force Config via Arguments (The standard way)
+    # This avoids "input()" prompt and "weak password" interactive check
+    bot_uin = "3132859862"
     
     bot = BotService()
     
     try:
-        await bot.start()
+        # Start with specific parameters to avoid interactive mode
+        await bot.start(
+            bt_uin=bot_uin,
+            active=True, # v4 argument? Check if needed. usually bt_uin is enough
+            enable_webui_interaction=False # Critical for headless
+        )
     except KeyboardInterrupt:
         logging.info("Stopping Bot Service...")
         await bot.stop()

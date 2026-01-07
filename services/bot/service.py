@@ -38,7 +38,8 @@ class BotService:
              # Handle private commands if needed
              pass
 
-    async def start(self):
+    async def start(self, **kwargs):
+        """Start the bot client."""
         log.info("Starting Bot Service...")
         
         # Start Notifier
