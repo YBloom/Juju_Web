@@ -23,6 +23,12 @@ async def main():
     ncatbot_config.set_ws_token("NcatBot") # Ensure this matches NapCat server
     ncatbot_config.set_webui_token("StrongPassword123!") # Strong Password to pass security check
     
+    # Disable auto-install logic
+    # Set attributes directly if setters don't exist for these
+    ncatbot_config.start_napcat = False 
+    if hasattr(ncatbot_config, 'skip_ncatbot_install_check'):
+         ncatbot_config.skip_ncatbot_install_check = True
+    
     # Args for run()
     bot_uin = "3132859862"
     
