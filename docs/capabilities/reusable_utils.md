@@ -25,7 +25,7 @@
 ## Text Extraction (NLP-lite)
 
 ### `extract_text_in_brackets(text, keep_brackets=True)`
-- **Purpose**: Extract musical title from `《Phantom of the Opera》`.
+- **Purpose**: Extract musical title from `《辛吉路的画材店》`.
 - **Usage**: Use `keep_brackets=False` to get raw title for searching.
 
 ### `detect_city_in_text(text)`

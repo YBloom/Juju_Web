@@ -1,15 +1,24 @@
 # Server Operations Manual
 
-**Server**: `yyj` (Alias) | IP: `54.169.3.40`
+**Server 1 (Prod)**: `yyj` (Alias) | IP: `54.169.3.40`
 **Location**: `/opt/MusicalBot`
+
+**Server 2 (Legacy/Bot)**: `aliyun` (Alias) | IP: `47.117.167.13`
+**Specs**: 2 Core / 2GB RAM / 40GB SSD
+**Location**: `/bots/MusicalBot`
+> [!WARNING] pending_refactor
+> This server is currently managed via `tmux` and runs as **ROOT**.
+> Future Goal: Migrate capabilities to unify with standard deployment.
 
 ## SSH Connection
 ```bash
-ssh yyj
+ssh yyj    # Production (AWS)
+ssh aliyun # Bot Server (Aliyun) - ROOT ACCESS
 ```
 
-## Service Management (Supervisor)
+## Service Management
 
+### Server 1: `yyj` (Supervisor)
 The web service is managed by `supervisor`.
 
 | Action | Command |
@@ -18,6 +27,16 @@ The web service is managed by `supervisor`.
 | **Stop** | `ssh yyj "sudo supervisorctl stop musicalbot_web"` |
 | **Start** | `ssh yyj "sudo supervisorctl start musicalbot_web"` |
 | **Status** | `ssh yyj "sudo supervisorctl status"` |
+
+### Server 2: `aliyun` (Tmux)
+> [!CAUTION]
+> Runs as ROOT. Be careful with file operations.
+
+**Process Management (Tmux)**:
+1.  **Attach Session**: `ssh aliyun "tmux attach -t qqbot"`
+2.  **Detach**: Press `Ctrl+B` then `D`.
+3.  **Start New**: `ssh aliyun "tmux new -s qqbot"` (Then run `python3 main.py`)
+4.  **Kill**: `ssh aliyun "tmux kill-session -t qqbot"`
 
 ## Logs
 

@@ -15,7 +15,7 @@
 ### `resolve_musical_id_by_name(name: str) -> str`
 - **Purpose**: Fuzzy matching to find Saoju Musical ID.
 - **Cost**: Medium (Read DB/Cache).
-- **Use Case**: Linking a raw string "Phantom" to ID "61".
+- **Use Case**: Linking a raw string "时光代理人" to its ID.
 
 ### `search_for_musical_by_date(...)` **[REFRACTORED]**
 - **Purpose**: Find show context (City/Theatre) for a specific date/time.

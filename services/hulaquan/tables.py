@@ -6,8 +6,8 @@ from services.utils.timezone import now as timezone_now
 class TicketCastAssociation(SQLModel, table=True):
     ticket_id: str = Field(foreign_key="hulaquanticket.id", primary_key=True)
     cast_id: int = Field(foreign_key="hulaquancast.id", primary_key=True)
-    role: Optional[str] = None  # e.g. "本杰明·巴顿"
-    # 例如 "本杰明·巴顿"
+    role: Optional[str] = None  # e.g. "陆光"
+    # 例如 "陆光"
 
 class HulaquanEvent(SQLModel, table=True):
     id: str = Field(primary_key=True) # e.g. "3911"
@@ -49,9 +49,9 @@ class HulaquanTicket(SQLModel, table=True):
     cast_members: List["HulaquanCast"] = Relationship(back_populates="tickets", link_model=TicketCastAssociation)
 
 class HulaquanCast(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(index=True) # e.g. "王培杰"
-    # 例如 "王培杰"
+    id: int = Field(primary_key=True)
+    name: str = Field(index=True) # e.g. "丁辰西"
+    # 例如 "丁辰西"
     tickets: List[HulaquanTicket] = Relationship(back_populates="cast_members", link_model=TicketCastAssociation)
 
 class HulaquanSubscription(SQLModel, table=True):

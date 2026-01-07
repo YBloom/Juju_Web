@@ -161,7 +161,7 @@ class SaojuService:
                     # Logic implies we are looking for specific show info.
                     continue
                 
-                # Check title overlap (e.g. "Phantom" in "Phantom of the Opera")
+                # Check title overlap (e.g. "时光" in "时光代理人")
                 if search_name in show.musical_name or show.musical_name in search_name:
                     return {
                         "musical": show.musical_name,
@@ -449,6 +449,22 @@ class SaojuService:
         """Look up musical ID by exact name (Resolves via network if needed)."""
         await self.ensure_musical_map()
         return self.data.get("musical_map", {}).get(name)
+
+    async def get_tours(self, musical_id: int) -> List[Dict]:
+        """Fetch tours for a specific musical."""
+        return await self._fetch_json("tour/", params={"musical": musical_id}) or []
+
+    async def get_schedules(self, tour_id: int) -> List[Dict]:
+        """Fetch schedules for a specific tour."""
+        return await self._fetch_json("schedule/", params={"tour": tour_id}) or []
+
+    async def get_shows(self, schedule_id: int) -> List[Dict]:
+        """Fetch shows for a specific schedule."""
+        return await self._fetch_json("show/", params={"schedule": schedule_id}) or []
+
+    async def get_show_cast(self, show_id: int) -> List[Dict]:
+        """Fetch cast entries for a specific show."""
+        return await self._fetch_json("musicalcast/", params={"show": show_id}) or []
 
     # --- Helper methods ported and adapted from SaojuDataManager ---
     

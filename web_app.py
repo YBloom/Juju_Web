@@ -798,6 +798,29 @@ async def get_search_analytics(username: str = Depends(get_current_username)):
     
     with session_scope() as session:
         logs = session.exec(select(HulaquanSearchLog)).all()
+        return {"count": len(logs)}
+
+@app.get("/api/admin/bot/qr")
+async def get_bot_qr_code(username: str = Depends(get_current_username)):
+    """
+    Retrieve NapCat QR Code or Login Status.
+    Since NapCat runs in Docker/Systemd, we can try to fetch from its internal HTTP API 
+    if configured, or parse the latest log file.
+    
+    Assumption: NapCat WebUI is not publicly exposed, but local HTTP API might be on 3000 or 6099.
+    
+    Fallback: Look for 'napcat.log' in standard location and grep for 'qrcode'.
+    """
+    # TODO: Implement robust method. 
+    # For now, let's try to read a shared 'qr_code.txt' if we configure NapCat to write it, 
+    # or just proxy to NapCat's local API if available.
+    
+    # Mock for implementation verification
+    return {
+        "status": "unknown", 
+        "qr_code": None, 
+        "message": "NapCat integration pending. Please check server logs."
+    }
         
         # 1. Artist Frequency (Individual appearances in any search)
         artist_counts = Counter()
