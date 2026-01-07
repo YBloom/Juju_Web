@@ -11,6 +11,12 @@ class BotHandler:
     def __init__(self, service: HulaquanService):
         self.service = service
 
+    async def handle_message(self, message: str, user_id: str) -> Optional[str]:
+        """
+        统一消息处理入口，供私聊和群聊共用。
+        """
+        return await self.handle_group_message(0, int(user_id), message)
+
     async def handle_group_message(self, group_id: int, user_id: int, message: str, sender_role: str = "member") -> Optional[str]:
         """
         Handle group messages and return a response string or None.

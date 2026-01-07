@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Iterator, Optional
 
-from plugins.AdminPlugin.BaseDataManager import BaseDataManager
+from services.common.base_data_manager import BaseDataManager
 
 
 @dataclass(slots=True)
