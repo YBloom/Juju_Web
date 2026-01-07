@@ -2119,6 +2119,9 @@ main {
     font-size: 0.8rem;
     color: #6b7280;
     white-space: nowrap;
+    width: 130px;
+    text-align: right;
+    flex-shrink: 0;
 }
 
 /* Count */
@@ -2126,6 +2129,9 @@ main {
     font-size: 0.75rem;
     color: #9ca3af;
     white-space: nowrap;
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
 }
 
 /* Time Ago */
@@ -2133,6 +2139,9 @@ main {
     font-size: 0.7rem;
     color: #9ca3af;
     white-space: nowrap;
+    width: 70px;
+    text-align: right;
+    flex-shrink: 0;
 }
 
 /* Arrow */
@@ -2245,6 +2254,8 @@ main {
 
     .summary-date-range {
         font-size: 0.7rem;
+        width: auto;
+        flex-shrink: 1;
     }
 
     .summary-count {
@@ -2253,6 +2264,7 @@ main {
 
     .summary-time {
         font-size: 0.65rem;
+        width: auto;
     }
 
     /* Detail panel mobile */
