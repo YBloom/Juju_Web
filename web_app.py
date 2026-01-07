@@ -3,6 +3,8 @@ import logging
 import uuid
 import time
 import sys
+import os
+from pathlib import Path
 from datetime import datetime
 
 try:
@@ -144,9 +146,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Res
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
 import secrets
-import os
 
 # Rate Limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -878,50 +878,6 @@ async def get_bot_qr_code(username: str = Depends(get_current_username)):
         "qr_code": None, 
         "message": "NapCat integration pending. Please check server logs."
     }
-        
-        # 1. Artist Frequency (Individual appearances in any search)
-        artist_counts = Counter()
-        
-        # 2. Solo Frequency (Searches with exactly 1 artist)
-        solo_counts = Counter()
-        
-        # 3. Combo Frequency (String rep of combo)
-        combo_counts = Counter()
-        
-        # 4. View Frequency
-        view_counts = Counter()
-        
-        for l in logs:
-            if l.search_type == "view_event":
-                view_counts[l.query_str] += 1
-                continue
-                
-            if l.search_type == "co-cast" and l.artists:
-                try:
-                    names = json.loads(l.artists)
-                    # Count for individual artist
-                    for n in names:
-                        artist_counts[n] += 1
-                        
-                    # Logic
-                    if len(names) == 1:
-                        solo_counts[names[0]] += 1
-                    elif len(names) > 1:
-                        # Normalized string
-                        combo_str = " & ".join(names)
-                        combo_counts[combo_str] += 1
-                except:
-                    pass
-
-        def format_top(counter, limit=20):
-            return [{"name": k, "count": v} for k, v in counter.most_common(limit)]
-            
-        return {
-            "top_artists": format_top(artist_counts),
-            "top_solo": format_top(solo_counts),
-            "top_combos": format_top(combo_counts),
-            "top_views": format_top(view_counts)
-        }
 
 
 @app.post("/api/feedback")
