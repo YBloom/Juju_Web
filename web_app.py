@@ -20,11 +20,50 @@ class BeijingFormatter(logging.Formatter):
         dt = datetime.fromtimestamp(record.created, tz=ZoneInfo("Asia/Shanghai"))
         if datefmt:
             return dt.strftime(datefmt)
-        return dt.strftime("%Y-%m-%d %H:%M:%S CST")
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
     
     def format(self, record):
-        # 添加更多上下文信息
+        # 1. Ensure message is generated
+        if not hasattr(record, 'message'):
+            record.message = record.getMessage()
+            
+        # 2. 标识是否是系统/Uvicorn 生命周期日志
+        # Use simple string checks on lowercased message
+        msg_lower = record.message.lower()
+        is_system_log = record.name.startswith("uvicorn") or "startup" in msg_lower or "shutdown" in msg_lower
+        
+        # 自定义高亮/格式化逻辑
+        if is_system_log:
+            # 简化无关信息，或者高亮显示
+            if "started server process" in msg_lower:
+                new_msg = f"🚀 [SYSTEM] Server Process Started | PID: {os.getpid()}"
+            elif "application startup complete" in msg_lower:
+                new_msg = "✅ [SYSTEM] Application Startup Complete"
+            elif "shutting down" in msg_lower:
+                new_msg = "🛑 [SYSTEM] Server Shutting Down..."
+            elif "finished server process" in msg_lower:
+                new_msg = "👋 [SYSTEM] Server Process Finished"
+            elif "waiting for application startup" in msg_lower:
+                 new_msg = "⏳ [SYSTEM] Waiting for App Startup..."
+            else:
+                new_msg = None
+                
+            if new_msg:
+                # Update record in place
+                record.msg = new_msg
+                record.message = new_msg
+                record.args = () # Clear args since we handled them
+        
+        # 调用父类 format 生成基础字符串 (包含 asctime 等)
+        # Parent format will re-use record.message if present or re-generate if we didn't touch it
+        # But we must ensure it uses our modified message.
+        # Standard lib format() sets record.message = record.getMessage() at start.
+        # Since we already did that (and potentially modified it), we should be fine IF the parent implementation respects existing record.message.
+        # However, to be extra safe against re-generation crashing if we cleared args:
+        # We manually call formatTime and formatMessage logic if needed, but calling super() is usually fine 
+        # as long as we updated record.msg and args correctly.
         result = super().format(record)
+        
         # 如果消息很长且包含换行,增加缩进
         if len(record.message) > 100 and '\n' in record.message:
             lines = record.message.split('\n')
@@ -32,6 +71,7 @@ class BeijingFormatter(logging.Formatter):
             indent = ' ' * 4
             formatted_msg = '\n'.join([lines[0]] + [indent + line for line in lines[1:]])
             result = result.replace(record.message, formatted_msg)
+            
         return result
 
 # 配置日志
@@ -39,28 +79,27 @@ def setup_logging():
     """配置应用程序日志"""
     # 创建格式化器
     formatter = BeijingFormatter(
+        # 确保时间戳在最前面
         fmt='%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S CST'
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
     
     # 配置根logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     
-    # 移除现有handlers
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
+    # 1. 移除现有handlers
+    if root_logger.handlers:
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
     
-    # 添加控制台handler
+    # 2. 添加控制台handler (stdout) -> 被Supervisor捕获到 web_out.log / web_err.log
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
 
-    # 添加文件handler (带自动清理, 按天轮转, 保留30天)
-    # 即使Supervisor管理了标准输出, 这个应用级日志也是有用的备份和开发调试工具
+    # 3. 添加应用级文件handler
     from logging.handlers import TimedRotatingFileHandler
-    
-    # 确保logs目录存在
     log_dir = Path(__file__).parent / "logs"
     log_dir.mkdir(exist_ok=True)
     
@@ -68,11 +107,29 @@ def setup_logging():
         filename=log_dir / "app.log",
         when="midnight",
         interval=1,
-        backupCount=30, # 保留30天
+        backupCount=30,
         encoding="utf-8"
     )
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
+    
+    # 4. 关键：强制 Uvicorn 使用我们的格式化器
+    # Uvicorn 在 CLI 启动时可能已经配置了 logger，我们需要覆盖它的 handler formatter
+    # 常见的 Uvicorn loggers: "uvicorn", "uvicorn.error", "uvicorn.access"
+    for log_name in ["uvicorn", "uvicorn.error", "uvicorn.access", "uvicorn.asgi"]:
+        logger = logging.getLogger(log_name)
+        # 并不一定所有的 logger 都有 handler (access 可能有, error 可能有)
+        # 如果有 handler，替换 formatter
+        if logger.handlers:
+            for h in logger.handlers:
+                h.setFormatter(formatter)
+        else:
+            # 如果没有handler (且 propagate=False)，它可能不会输出
+            # 我们强制添加 console_handler 以确保格式一致且能看到
+            # 但要注意避免重复 (如果 propagate=True 则根 logger 会处理)
+            # Uvicorn 默认 error propagate=False, access propagate=False
+            if not logger.propagate:
+                logger.addHandler(console_handler)
 
 # Global Service Info
 # Initialize with Beijing Time
