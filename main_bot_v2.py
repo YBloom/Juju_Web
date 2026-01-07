@@ -17,6 +17,18 @@ async def main():
     init_db()
     
     logging.info("Initializing Bot Service...")
+    
+    # Force Config
+    from ncatbot.utils.config import Config as ncat_config
+    ncat_config.set_bot_uin(3132859862)
+    ncat_config.set_ws_uri("ws://127.0.0.1:3001")
+    ncat_config.set_ws_token("NcatBot")
+    ncat_config.set_webui_token("StrongPassword123!") # Must match what we assumed or default?
+    # Actually, NapCat docker default token is usually "NcatBot" if not set, or we set it?
+    # Our docker run command didn't set WEBUI_TOKEN_ENABLE=true or similar?
+    # Actually, NapCat Docker by mlikiowa usually has HTTP/WS enabled.
+    # NcatBot checks security. setting webui_token prevents crash.
+    
     bot = BotService()
     
     try:
