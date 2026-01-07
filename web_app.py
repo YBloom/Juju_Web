@@ -175,6 +175,48 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 import secrets
+import jwt
+from datetime import timedelta
+
+# --- Magic Link Auth Configuration ---
+# JWT 密钥和配置
+JWT_SECRET = os.getenv("JWT_SECRET", "musicalbot-dev-secret-change-in-prod")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_MINUTES = 5  # Token 有效期 5 分钟
+SESSION_COOKIE_NAME = "mb_session"
+SESSION_EXPIRE_DAYS = 30  # Cookie 有效期 30 天
+WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
+
+# 简单的内存 Session 存储 (生产环境可换成 Redis)
+# Simple in-memory session store (use Redis in production)
+_sessions: Dict[str, Dict[str, Any]] = {}
+
+def create_magic_link_token(qq_id: str, nickname: str = "") -> str:
+    """为 Bot 用户生成 Magic Link Token"""
+    payload = {
+        "qq_id": qq_id,
+        "nickname": nickname,
+        "exp": datetime.now(ZoneInfo("Asia/Shanghai")) + timedelta(minutes=JWT_EXPIRE_MINUTES),
+        "iat": datetime.now(ZoneInfo("Asia/Shanghai")),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def verify_magic_link_token(token: str) -> Optional[Dict]:
+    """验证 Magic Link Token"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def get_current_user(request: Request) -> Optional[Dict]:
+    """从 Cookie 获取当前登录用户"""
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    if not session_id:
+        return None
+    return _sessions.get(session_id)
 
 # Rate Limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -1116,7 +1158,91 @@ async def delete_feedback(feedback_id: int, username: str = Depends(get_current_
         session.delete(fb)
         
     return {"status": "ok", "message": "Feedback deleted"}
+
+# --- Magic Link Auth Endpoints ---
+# --- 魔术链接认证端点 ---
+
+@app.get("/auth")
+async def magic_link_auth(token: str = None):
+    """
+    Magic Link 登录端点。
+    Bot 生成带 token 的链接，用户点击后自动登录。
+    """
+    if not token:
+        return HTMLResponse("""
+            <html><body>
+            <h2>❌ 无效的登录链接</h2>
+            <p>请通过 QQ 机器人私聊发送 <code>/web</code> 获取登录链接。</p>
+            </body></html>
+        """, status_code=400)
     
+    # 验证 Token
+    payload = verify_magic_link_token(token)
+    if not payload:
+        return HTMLResponse("""
+            <html><body>
+            <h2>⏰ 链接已过期</h2>
+            <p>登录链接有效期为 5 分钟。请重新发送 <code>/web</code> 获取新链接。</p>
+            </body></html>
+        """, status_code=401)
+    
+    qq_id = payload.get("qq_id")
+    nickname = payload.get("nickname", "")
+    
+    # 创建 Session
+    session_id = secrets.token_urlsafe(32)
+    _sessions[session_id] = {
+        "qq_id": qq_id,
+        "nickname": nickname,
+        "created_at": time.time(),
+    }
+    
+    logger.info(f"🔐 [用户登录] QQ: {qq_id}, Nickname: {nickname}")
+    
+    # 设置 Cookie 并重定向到首页
+    response = HTMLResponse(f"""
+        <html><body>
+        <h2>✅ 登录成功！</h2>
+        <p>欢迎回来，{nickname or qq_id}！正在跳转...</p>
+        <script>setTimeout(() => window.location.href = '/', 1500);</script>
+        </body></html>
+    """)
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=session_id,
+        max_age=SESSION_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
+
+@app.get("/api/me")
+async def get_current_user_info(request: Request):
+    """
+    获取当前登录用户信息。
+    用于前端判断用户是否已登录。
+    """
+    user = get_current_user(request)
+    if not user:
+        return {"logged_in": False}
+    
+    return {
+        "logged_in": True,
+        "qq_id": user.get("qq_id"),
+        "nickname": user.get("nickname"),
+    }
+
+@app.post("/logout")
+async def logout(request: Request):
+    """登出用户"""
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    if session_id and session_id in _sessions:
+        del _sessions[session_id]
+    
+    response = JSONResponse({"status": "ok"})
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return response
+
 @app.head("/")
 async def head_root():
     """Handle HEAD requests for uptime monitoring."""
