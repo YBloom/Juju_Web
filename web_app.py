@@ -38,15 +38,15 @@ class BeijingFormatter(logging.Formatter):
         if is_system_log:
             # 简化无关信息，或者高亮显示
             if "started server process" in msg_lower:
-                new_msg = f"🚀 [SYSTEM] Server Process Started | PID: {os.getpid()}"
+                new_msg = f"🚀 [系统] 服务进程已启动 | PID: {os.getpid()}"
             elif "application startup complete" in msg_lower:
-                new_msg = "✅ [SYSTEM] Application Startup Complete"
+                new_msg = "✅ [系统] 应用启动完成"
             elif "shutting down" in msg_lower:
-                new_msg = "🛑 [SYSTEM] Server Shutting Down..."
+                new_msg = "🛑 [系统] 服务正在停止..."
             elif "finished server process" in msg_lower:
-                new_msg = "👋 [SYSTEM] Server Process Finished"
+                new_msg = "👋 [系统] 服务进程已结束"
             elif "waiting for application startup" in msg_lower:
-                 new_msg = "⏳ [SYSTEM] Waiting for App Startup..."
+                 new_msg = "⏳ [系统] 等待应用启动..."
             else:
                 new_msg = None
                 
@@ -56,14 +56,17 @@ class BeijingFormatter(logging.Formatter):
                 record.message = new_msg
                 record.args = () # Clear args since we handled them
         
+        # 3. 如果是 uvicorn.access 日志，且未被过滤（Filter在Handler层，这里主要修饰格式），尝试汉化
+        if record.name == "uvicorn.access" and not getattr(record, "is_custom_action", False):
+            # 将 "GET /path HTTP/1.1" 200 OK 这种格式稍微美化
+            if '" 200' in record.message:
+                 # We must update record.msg and clear args to prevent super().format() from regenerating the old message
+                 new_msg = f"🌐 [访问] {record.message}"
+                 record.msg = new_msg
+                 record.message = new_msg
+                 record.args = ()
+        
         # 调用父类 format 生成基础字符串 (包含 asctime 等)
-        # Parent format will re-use record.message if present or re-generate if we didn't touch it
-        # But we must ensure it uses our modified message.
-        # Standard lib format() sets record.message = record.getMessage() at start.
-        # Since we already did that (and potentially modified it), we should be fine IF the parent implementation respects existing record.message.
-        # However, to be extra safe against re-generation crashing if we cleared args:
-        # We manually call formatTime and formatMessage logic if needed, but calling super() is usually fine 
-        # as long as we updated record.msg and args correctly.
         result = super().format(record)
         
         # 如果消息很长且包含换行,增加缩进
@@ -75,6 +78,26 @@ class BeijingFormatter(logging.Formatter):
             result = result.replace(record.message, formatted_msg)
             
         return result
+
+# 访问日志过滤器
+class AccessLogFilter(logging.Filter):
+    """过滤掉静态资源和健康检查的日志 (200 OK)"""
+    def filter(self, record):
+        msg = record.getMessage()
+        
+        # 1. 过滤静态资源 (如 /static/js/..., /static/img/...)
+        if "GET /static/" in msg and " 200" in msg:
+            return False
+            
+        # 2. 过滤健康检查/状态查询
+        if "GET /api/meta/status" in msg and " 200" in msg:
+            return False
+            
+        # 3. 过滤 Uptime 检查 (HEAD /)
+        if "HEAD /" in msg and " 200" in msg:
+            return False
+            
+        return True
 
 # 配置日志
 def setup_logging():
@@ -120,6 +143,11 @@ def setup_logging():
     # 常见的 Uvicorn loggers: "uvicorn", "uvicorn.error", "uvicorn.access"
     for log_name in ["uvicorn", "uvicorn.error", "uvicorn.access", "uvicorn.asgi"]:
         logger = logging.getLogger(log_name)
+        
+        # 为 access logger 添加过滤器
+        if log_name == "uvicorn.access":
+             logger.addFilter(AccessLogFilter())
+        
         # 并不一定所有的 logger 都有 handler (access 可能有, error 可能有)
         # 如果有 handler，替换 formatter
         if logger.handlers:
@@ -436,6 +464,9 @@ async def search_events(request: Request, q: str):
     if not q:
         return {"results": []}
     
+    # Log user action
+    logger.info(f"🔍 [用户行为] 搜索演出: {q}")
+    
     # 1. Search ID by name
     # 1. 按名称搜索 ID
     res = await service.get_event_id_by_name(q)
@@ -478,6 +509,9 @@ async def get_recent_ticket_updates(limit: int = 20, types: str = "new,restock,b
         limit: Maximum number of updates to return (default 20, max 100)
         types: Comma-separated list of change types to filter (e.g. "new,restock")
     """
+    # Log user action
+    logger.info("🎫 [用户行为] 查看票务动态 (最近更新)")
+
     # Parse types
     change_types = [t.strip() for t in types.split(",") if t.strip()] if types else None
     
@@ -703,6 +737,9 @@ async def get_event_detail(event_id: str):
         if not event:
             return {"error": "Event not found"}
         
+        # Log user action
+        logger.info(f"📄 [用户行为] 查看演出详情: {event.title} (ID: {event_id})")
+        
         # Manually construct to include tickets logic same as search_events result
         # 手动构建以包含与 search_events 结果相同的票务逻辑
         # Or better: call service.search_events with exact title
@@ -727,6 +764,9 @@ async def get_event_detail(event_id: str):
 @app.get("/api/analytics/heatmap")
 async def get_heatmap(year: int = 2025):
     """Get heatmap data for a specific year (SaojuShow)."""
+    
+    # Log user action
+    logger.info(f"📊 [用户行为] 查看演出热力图 ({year})")
     
     # All years now read from database (2023-2026 all have data in SaojuShow table)
 

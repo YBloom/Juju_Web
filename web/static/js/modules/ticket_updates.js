@@ -98,6 +98,13 @@ function renderSummaryList(updates) {
         pending: '开票'
     };
 
+    // Sort sessions by date (ascending) - 修复日期顺序为从近到远
+    group.sessions.sort((a, b) => {
+        const tA = a.session_time ? new Date(a.session_time).getTime() : 0;
+        const tB = b.session_time ? new Date(b.session_time).getTime() : 0;
+        return tA - tB;
+    });
+
     // Render
     const html = groups.map((group, idx) => {
         const label = statusLabels[group.change_type] || '更新';
@@ -107,8 +114,8 @@ function renderSummaryList(updates) {
         // Date range
         const dates = group.sessions
             .map(s => s.session_time ? new Date(s.session_time) : null)
-            .filter(d => d && !isNaN(d.getTime()))
-            .sort((a, b) => a - b);
+            .filter(d => d && !isNaN(d.getTime()));
+        // Already sorted above
 
         let dateRangeStr = '';
         let spanDays = 0;
@@ -128,7 +135,11 @@ function renderSummaryList(updates) {
         else if (spanDays >= 3) weightClass = 'weight-normal';
 
         const countStr = count > 1 ? `${count}场` : '';
-        const canExpand = count <= EXPAND_THRESHOLD;
+        const canExpand = true; // Always allow expand if we want to see details, or keep threshold
+        // User wants to see list, so maybe just stick to threshold or allow all?
+        // Let's keep logic but maybe threshold was 5?
+        // Actually user wants to see the list sorted.
+
         const groupId = `group-${idx}`;
 
         // Detail rows (only if canExpand)
@@ -138,7 +149,12 @@ function renderSummaryList(updates) {
                 const time = s.session_time ? formatSessionTime(s.session_time) : '-';
                 const price = s.price ? `¥${s.price}` : '';
                 const stock = s.stock !== null ? `余${s.stock}` : '';
-                const cast = s.cast_names?.length ? s.cast_names.join(' ') : '';
+                // Ensure cast is array or parse it if string (just in case)
+                let casts = s.cast_names || [];
+                if (typeof casts === 'string') {
+                    try { casts = JSON.parse(casts); } catch (e) { casts = [casts]; }
+                }
+                const cast = Array.isArray(casts) && casts.length ? casts.join(' ') : '';
                 const isLow = s.stock !== null && s.stock <= 5;
 
                 return `
