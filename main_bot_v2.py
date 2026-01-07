@@ -1,58 +1,48 @@
 
 import asyncio
+"""
+MusicalBot QQ Bot Entry Point (v2)
+使用 ncatbot v4，同步启动方式
+"""
 import logging
-import sys
 from services.db.init import init_db
-from services.bot.service import BotService
 
-# Configure Logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-async def main():
+def main():
     logging.info("Initializing Database...")
     init_db()
     
-    # Force Config Global (Critical for validation check)
+    # Force Config
     from ncatbot.utils.config import ncatbot_config
     ncatbot_config.set_bot_uin("3132859862")
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
-    ncatbot_config.set_ws_token("NcatBot") # Ensure this matches NapCat server
-    ncatbot_config.set_webui_token("StrongPassword123!") # Strong Password to pass security check
     
-    # Disable auto-install logic
-    # Set attributes directly if setters don't exist for these
-    ncatbot_config.start_napcat = False 
-    if hasattr(ncatbot_config, 'skip_ncatbot_install_check'):
-         ncatbot_config.skip_ncatbot_install_check = True
+    # Import and run (同步方式，ncatbot 内部处理 asyncio)
+    from ncatbot.core import BotClient, GroupMessage, PrivateMessage
+    from services.bot.handlers import BotHandler
+    from services.hulaquan.service import HulaquanService
     
-    # Args for run()
-    bot_uin = "3132859862"
+    bot = BotClient()
+    handler = BotHandler(HulaquanService())
     
-    bot = BotService()
+    @bot.group_event()
+    async def on_group_message(msg: GroupMessage):
+        response = await handler.handle_message(msg.raw_message, str(msg.user_id))
+        if response:
+            await bot.api.post_group_msg(msg.group_id, text=response)
     
-    try:
-        # Start with specific parameters to avoid interactive mode
-        await bot.start(
-            bt_uin=bot_uin,
-            active=True, # v4 argument? Check if needed. usually bt_uin is enough
-            enable_webui_interaction=False # Critical for headless
-        )
-    except KeyboardInterrupt:
-        logging.info("Stopping Bot Service...")
-        await bot.stop()
-    except Exception as e:
-        logging.error(f"Bot Crashed: {e}", exc_info=True)
-        await bot.stop()
+    @bot.private_event()
+    async def on_private_message(msg: PrivateMessage):
+        response = await handler.handle_message(msg.raw_message, str(msg.user_id))
+        if response:
+            await bot.api.post_private_msg(msg.user_id, text=response)
+    
+    logging.info("Starting Bot...")
+    bot.run(bt_uin="3132859862", enable_webui_interaction=False)
 
 if __name__ == "__main__":
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    main()
