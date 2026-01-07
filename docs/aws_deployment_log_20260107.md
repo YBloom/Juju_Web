@@ -10,4 +10,7 @@ Date: 2026-01-07
 
 | Step | Command | Description | Status |
 | :--- | :--- | :--- | :--- |
-| Check Conn | `ssh yyj "uname -a"` | Verify SSH connectivity | Pending |
+| Check Conn | `ssh yyj "uname -a"` | Verify SSH connectivity | ✅ Success |
+| Git Sync (Local) | `git push origin v1` | Push local code changes | ✅ Success |
+| Git Sync (Remote) | `ssh yyj "cd /opt/MusicalBot && sudo git pull"` | Pull changes to server | Pending |
+| Deps Install | `ssh yyj "cd /opt/MusicalBot && sudo pip3 install -r requirements.txt"` | Install upgraded ncatbot | Pending |
