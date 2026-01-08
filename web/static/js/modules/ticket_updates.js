@@ -98,15 +98,15 @@ function renderSummaryList(updates) {
         pending: '开票'
     };
 
-    // Sort sessions by date (ascending) - 修复日期顺序为从近到远
-    group.sessions.sort((a, b) => {
-        const tA = a.session_time ? new Date(a.session_time).getTime() : 0;
-        const tB = b.session_time ? new Date(b.session_time).getTime() : 0;
-        return tA - tB;
-    });
-
     // Render
     const html = groups.map((group, idx) => {
+        // Sort sessions by date (ascending) - 日期从近到远
+        group.sessions.sort((a, b) => {
+            const tA = a.session_time ? new Date(a.session_time).getTime() : 0;
+            const tB = b.session_time ? new Date(b.session_time).getTime() : 0;
+            return tA - tB;
+        });
+
         const label = statusLabels[group.change_type] || '更新';
         const timeAgo = formatTimeAgo(group.created_at);
         const count = group.sessions.length;
