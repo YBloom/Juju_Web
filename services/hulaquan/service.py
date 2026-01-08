@@ -359,7 +359,18 @@ class HulaquanService:
                 # 解析场次时间和提取演员列表用于详细展示
                 session_time = self._parse_api_date(t_data.get("start_time"))
                 t_enrich = enrichment.get("tickets", {}).get(tid, {})
+                
+                # Logic: enrichment (new fetch) > existing DB > empty
+                # 逻辑：enrichment (新抓取) > 现有数据库 > 空
                 cast_names_list = [c.get("artist") for c in t_enrich.get("casts", []) if c.get("artist")]
+                
+                if not cast_names_list and not is_new:
+                     # If we didn't fetch new info, but it's an existing ticket, it might already have casts
+                     # 如果没有抓取新信息，但这是一张现有票，它可能已经有卡司了
+                     # Note: ticket object is attached to session, so we can access relationships
+                     # 注意：ticket 对象已附加到 session，所以我们可以访问关系
+                     if ticket.cast_members:
+                         cast_names_list = [c.name for c in ticket.cast_members]
                 
                 # Notifications
                 if is_new:
