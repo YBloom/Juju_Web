@@ -456,6 +456,22 @@ class HulaquanService:
             # Write updates to TicketUpdateLog table for persistence
             # 将更新写入 TicketUpdateLog 表以持久化
             for update in updates:
+                # CRITICAL FIX: If cast_names is empty, try to get it from DB
+                # 关键修复：如果 cast_names 为空，尝试从数据库获取
+                # This handles the case where cast associations were created AFTER the TicketUpdate object
+                # 这处理了在 TicketUpdate 对象创建之后才建立卡司关联的情况
+                final_cast_names = update.cast_names
+                if not final_cast_names:
+                    # Flush to ensure all associations are committed
+                    # 刷新以确保所有关联都已提交
+                    session.flush()
+                    
+                    # Get the ticket and check if it has cast_members now
+                    # 获取票据并检查是否现在有 cast_members
+                    ticket_obj = session.get(HulaquanTicket, update.ticket_id)
+                    if ticket_obj and ticket_obj.cast_members:
+                        final_cast_names = [c.name for c in ticket_obj.cast_members]
+                
                 log_entry = TicketUpdateLog(
                     ticket_id=update.ticket_id,
                     event_id=update.event_id,
@@ -466,7 +482,7 @@ class HulaquanService:
                     price=update.price,
                     stock=update.stock,
                     total_ticket=update.total_ticket,
-                    cast_names=json.dumps(update.cast_names) if update.cast_names else None
+                    cast_names=json.dumps(final_cast_names) if final_cast_names else None
                 )
                 session.add(log_entry)
 
