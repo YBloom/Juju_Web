@@ -4,11 +4,24 @@
     /* Sage Green */
     --primary-hover: #4F664C;
     --accent-color: #D9885E;
-    /* Muted Orange for highlights */
-
-    --bg-color: #FAF9F6;
-    /* Warm Off-white/Cream */
+    /* Terracotta for accents (Autumn Leaf) */
+    --bg-color: #FDFDFB;
+    /* Warm White */
     --card-bg: #FFFFFF;
+
+    /* Status Colors (Nature/Earth Tones) */
+    --status-restock: #D9885E;
+    /* Autumn Leaf (Restock) */
+    --status-restock-bg: rgba(217, 136, 94, 0.1);
+    --status-new: #4A8B99;
+    /* Deep Lake (New) */
+    --status-new-bg: rgba(74, 139, 153, 0.1);
+    --status-pending: #A89F91;
+    /* Warm Stone (Pending) */
+    --status-pending-bg: rgba(168, 159, 145, 0.1);
+    --status-price: #637E60;
+    /* Moss (Price/Default) */
+    --status-price-bg: rgba(99, 126, 96, 0.1);
 
     --text-primary: #3C403B;
     /* Soft Black */
@@ -2051,105 +2064,194 @@ main {
 }
 
 /* === Summary Row Style (Aggregated Updates) === */
-.update-summary-row {
+/* Ticket Updates Module Optimization */
+
+/* 1. Filter Chips (Toggle Style) */
+.filter-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: var(--text-secondary);
+    user-select: none;
+}
+
+.filter-chip:hover {
+    background-color: #f5f5f5;
+}
+
+/* Checkbox hidden technically, operated via label */
+.filter-chip input[type="checkbox"] {
+    display: none;
+}
+
+.filter-chip.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(99, 126, 96, 0.2);
+}
+
+.filter-chip.active:hover {
+    background-color: var(--primary-hover);
+}
+
+/* 2. Visual Identity Badges */
+.summary-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+/* Default (Green/Price) */
+.summary-badge {
+    background-color: var(--status-price-bg);
+    color: var(--status-price);
+}
+
+/* Variants */
+.summary-badge.type-restock {
+    background-color: var(--status-restock-bg);
+    color: var(--status-restock);
+}
+
+.summary-badge.type-new {
+    background-color: var(--status-new-bg);
+    color: var(--status-new);
+}
+
+.summary-badge.type-pending {
+    background-color: var(--status-pending-bg);
+    color: var(--status-pending);
+}
+
+/* 3. Cast Indicator */
+.cast-indicator {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.6;
+}
+
+.title-group {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
+}
+
+/* 4. Desktop Layout Refinements */
+.update-summary-row {
+    background: #fff;
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
     cursor: pointer;
-    transition: background 0.15s;
-    border-left: 3px solid transparent;
+    transition: all 0.2s;
 }
 
 .update-summary-row:hover {
-    background: #f9fafb;
+    background-color: #FAFAF8;
 }
 
-/* Visual Weight Classes - 绿色系 */
-.update-summary-row.weight-wide {
-    border-left-color: var(--primary-color);
-    background: linear-gradient(90deg, rgba(76, 175, 80, 0.06) 0%, transparent 30%);
-}
-
-.update-summary-row.weight-wide .summary-title {
-    font-weight: 700;
-}
-
-.update-summary-row.weight-wide .summary-date-range {
-    color: var(--primary-color);
-    font-weight: 600;
-}
-
-.update-summary-row.weight-normal {
-    border-left-color: #a5d6a7;
-}
-
-.update-summary-row.weight-single .summary-title,
-.update-summary-row.weight-single .summary-date-range {
-    color: #9ca3af;
-}
-
-/* Badge - 统一绿色系 */
-.summary-badge {
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    border: 1px solid var(--primary-color);
-    background: rgba(76, 175, 80, 0.08);
-    color: var(--primary-color);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-/* Title */
 .summary-title {
-    flex: 1;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: auto;
+    /* Push rest to right */
+    display: flex;
+    align-items: center;
+}
+
+.summary-meta {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-family: 'SF Mono', Consolas, monospace;
     font-size: 0.9rem;
-    color: #1f2937;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--text-secondary);
 }
 
-/* Date Range */
-.summary-date-range {
-    font-family: 'SF Mono', 'Consolas', monospace;
-    font-size: 0.8rem;
-    color: #6b7280;
-    white-space: nowrap;
-    width: 130px;
-    text-align: right;
-    flex-shrink: 0;
-}
-
-/* Count */
-.summary-count {
-    font-size: 0.75rem;
-    color: #9ca3af;
-    white-space: nowrap;
-    width: 40px;
-    text-align: right;
-    flex-shrink: 0;
-}
-
-/* Time Ago */
-.summary-time {
-    font-size: 0.7rem;
-    color: #9ca3af;
-    white-space: nowrap;
-    width: 70px;
-    text-align: right;
-    flex-shrink: 0;
-}
-
-/* Arrow */
 .summary-arrow {
-    color: #c0c0c0;
-    font-size: 1rem;
-    width: 12px;
+    color: #ccc;
+    font-weight: bold;
+    width: 20px;
     text-align: center;
+}
+
+/* 5. Mobile Layout (Double Line) */
+@media (max-width: 768px) {
+    .update-summary-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px 15px;
+    }
+
+    .summary-title {
+        width: 100%;
+        margin-right: 0;
+        justify-content: flex-start;
+        font-size: 1rem;
+        /* Larger text */
+    }
+
+    .summary-badge {
+        margin-right: 8px;
+    }
+
+    .summary-meta {
+        width: 100%;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #999;
+        margin-left: 0;
+        /* Reset */
+    }
+
+    .summary-time {
+        margin-left: auto;
+        /* Push to right */
+        text-align: right;
+    }
+
+    /* Arrow position adjustment */
+    .summary-arrow {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        /* Align with title roughly */
+    }
+
+    /* Filter Bar Scroll */
+    .filter-group {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 5px;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-chip {
+        flex-shrink: 0;
+    }
 }
 
 /* Detail Panel (Expandable) */

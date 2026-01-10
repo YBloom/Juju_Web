@@ -59,16 +59,28 @@
                     <i class="material-icons expand-icon">expand_more</i>
                 </div>
                 <div class="updates-body" id="updates-body">
-                    <div class="updates-filters">
-                        <label title="新增加的场次或票档"><input type="checkbox" class="filter-type" value="new" checked><i
-                                class="material-icons">add_circle_outline</i> 上新</label>
-                        <label title="即将开售的场次"><input type="checkbox" class="filter-type" value="pending" checked><i
-                                class="material-icons">schedule</i> 开票</label>
-                        <label title="此前锁定的区域或座位重新开放"><input type="checkbox" class="filter-type" value="back" checked><i
-                                class="material-icons">replay</i> 补票</label>
-                        <label title="因退票或超时未支付而重新上架的票"><input type="checkbox" class="filter-type" value="restock"><i
-                                class="material-icons">sync</i> 回流</label>
-                        <label class="toggle-cast"><input type="checkbox" id="show-cast-toggle"> 显示卡司</label>
+                    <div class="filter-group">
+                        <label class="filter-chip active" title="新增加的场次或票档">
+                            <input type="checkbox" class="filter-type" value="new" checked>
+                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">add_circle_outline</i>
+                            上新
+                        </label>
+                        <label class="filter-chip active" title="即将开售的场次">
+                            <input type="checkbox" class="filter-type" value="pending" checked>
+                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">schedule</i> 开票
+                        </label>
+                        <label class="filter-chip active" title="此前锁定的区域或座位重新开放">
+                            <input type="checkbox" class="filter-type" value="back" checked>
+                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">replay</i> 补票
+                        </label>
+                        <label class="filter-chip active" title="因退票或超时未支付而重新上架的票">
+                            <input type="checkbox" class="filter-type" value="restock" checked>
+                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">sync</i> 回流
+                        </label>
+                        <label class="filter-chip toggle-cast">
+                            <input type="checkbox" id="show-cast-toggle">
+                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">people_outline</i> 显示卡司
+                        </label>
                     </div>
                     <div class="updates-scroll" id="updates-list">
                         <!-- Content will be loaded via JS -->

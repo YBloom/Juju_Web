@@ -16,16 +16,32 @@ export async function initTicketUpdates() {
         header.addEventListener('click', toggleUpdatesCard);
     }
 
-    // Bind filter checkboxes
+    // Bind filter checkboxes (Chips Logic)
     const filterCheckboxes = container.querySelectorAll('.filter-type');
     filterCheckboxes.forEach(cb => {
-        cb.addEventListener('change', () => fetchAndRenderUpdates());
+        cb.addEventListener('change', (e) => {
+            // Toggle active class on parent label
+            if (e.target.checked) {
+                e.target.parentElement.classList.add('active');
+            } else {
+                e.target.parentElement.classList.remove('active');
+            }
+            fetchAndRenderUpdates();
+        });
     });
 
     // Bind show cast toggle
     const showCastToggle = document.getElementById('show-cast-toggle');
     if (showCastToggle) {
-        showCastToggle.addEventListener('change', () => {
+        showCastToggle.addEventListener('change', (e) => {
+            // Toggle active class
+            if (e.target.checked) {
+                e.target.parentElement.classList.add('active');
+            } else {
+                e.target.parentElement.classList.remove('active');
+            }
+
+            // Toggle visibility in details
             document.querySelectorAll('.detail-cast').forEach(el => {
                 el.style.display = showCastToggle.checked ? 'inline' : 'none';
             });
@@ -90,7 +106,7 @@ function renderSummaryList(updates) {
     const groups = Array.from(groupMap.values());
     groups.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-    // Status config - 绿色系统一配色
+    // Status config - 统一命名
     const statusLabels = {
         restock: '回流',
         new: '上新',
@@ -108,38 +124,47 @@ function renderSummaryList(updates) {
         });
 
         const label = statusLabels[group.change_type] || '更新';
+        const badgeClass = `type-${group.change_type}`; // e.g., type-restock
         const timeAgo = formatTimeAgo(group.created_at);
         const count = group.sessions.length;
+
+        // Check if ANY session in this group has cast info
+        const hasCastInfo = group.sessions.some(s => {
+            let c = s.cast_names;
+            if (typeof c === 'string') {
+                // Try parsing, if fails treat as string
+                try {
+                    const parsed = JSON.parse(c);
+                    return Array.isArray(parsed) && parsed.length > 0;
+                } catch (e) { return !!c; }
+            }
+            return Array.isArray(c) && c.length > 0;
+        });
+        const castIndicatorHtml = hasCastInfo
+            ? '<i class="material-icons cast-indicator" title="包含卡司信息">group</i>'
+            : '';
 
         // Date range
         const dates = group.sessions
             .map(s => s.session_time ? new Date(s.session_time) : null)
             .filter(d => d && !isNaN(d.getTime()));
-        // Already sorted above
 
         let dateRangeStr = '';
         let spanDays = 0;
 
-        if (dates.length === 1) {
-            dateRangeStr = formatShortDate(dates[0]);
-        } else if (dates.length > 1) {
-            const minDate = dates[0];
-            const maxDate = dates[dates.length - 1];
-            spanDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
-            dateRangeStr = `${formatShortDate(minDate)} ~ ${formatShortDate(maxDate)}`;
+        if (dates.length > 0) {
+            if (dates.length === 1) {
+                dateRangeStr = formatShortDate(dates[0]);
+            } else {
+                const minDate = dates[0];
+                const maxDate = dates[dates.length - 1];
+                spanDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
+                dateRangeStr = `${formatShortDate(minDate)} ~ ${formatShortDate(maxDate)}`;
+            }
         }
 
-        // Weight class
-        let weightClass = 'weight-single';
-        if (spanDays > 7) weightClass = 'weight-wide';
-        else if (spanDays >= 3) weightClass = 'weight-normal';
-
         const countStr = count > 1 ? `${count}场` : '';
-        const canExpand = true; // Always allow expand if we want to see details, or keep threshold
-        // User wants to see list, so maybe just stick to threshold or allow all?
-        // Let's keep logic but maybe threshold was 5?
-        // Actually user wants to see the list sorted.
-
+        const canExpand = true;
         const groupId = `group-${idx}`;
 
         // Detail rows (only if canExpand)
@@ -175,14 +200,23 @@ function renderSummaryList(updates) {
             ? `toggleDetail('${groupId}')`
             : `window.router?.navigate('/detail/${group.event_id || ''}')`;
 
+        // Mobile Layout Structure: Badge+Title+Cast in one flex flow, Meta in another
         return `
-            <div class="update-summary-row ${weightClass}" data-type="${group.change_type}" onclick="${clickAction}">
-                <span class="summary-badge">${label}</span>
-                <span class="summary-title">《${group.event_title}》</span>
-                <span class="summary-date-range">${dateRangeStr}</span>
-                <span class="summary-count">${countStr}</span>
-                <span class="summary-time">${timeAgo}</span>
-                <span class="summary-arrow" id="${groupId}-arrow">${canExpand ? '▸' : '›'}</span>
+            <div class="update-summary-row" data-type="${group.change_type}" onclick="${clickAction}">
+                <!-- Title Group: Badge + Title + CastIcon -->
+                <div class="summary-title">
+                    <span class="summary-badge ${badgeClass}">${label}</span>
+                    <span style="display:inline-block; margin-left:8px;">《${group.event_title}》</span>
+                    ${castIndicatorHtml}
+                </div>
+                
+                <!-- Meta Group: Date + Count + Time + Arrow -->
+                <div class="summary-meta">
+                    <span class="summary-date-range">${dateRangeStr}</span>
+                    <span class="summary-count">${countStr}</span>
+                    <span class="summary-time">${timeAgo}</span>
+                    <span class="summary-arrow" id="${groupId}-arrow">${canExpand ? '▸' : '›'}</span>
+                </div>
             </div>
             ${detailHtml}
         `;
