@@ -50,7 +50,7 @@ class HulaquanTicket(SQLModel, table=True):
     total_ticket: int = 0
     city: Optional[str] = None
     
-    status: TicketStatus = Field(default=TicketStatus.ACTIVE) # active, sold_out, pending
+    status: str = Field(default="active") # active, sold_out, pending
 
     valid_from: Optional[str] = None # "11-01 12:00"
     
