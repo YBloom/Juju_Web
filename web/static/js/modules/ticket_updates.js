@@ -89,29 +89,55 @@ function renderSummaryList(updates) {
         return;
     }
 
-    // Grouping
-    const groupMap = new Map();
+    // Grouping Strategy: By Event ID only (Merge types)
+    const groupMap = new Map(); // key: event_id, value: groupObj
     const now = new Date();
 
     allUpdates.forEach(u => {
-        const key = `${u.event_title}__${u.change_type}`;
+        // Use event_id as primary key, fallback to title
+        const key = u.event_id || u.event_title;
+
         if (!groupMap.has(key)) {
             groupMap.set(key, {
                 event_id: u.event_id,
                 event_title: u.event_title,
-                change_type: u.change_type,
-                created_at: u.created_at,
-                sessions: []
+                sessionsMap: new Map(), // ticket_id -> latest log
+                latestUpdateAt: new Date(0),
+                changeTypes: new Set() // Track all types involved
             });
         }
-        groupMap.get(key).sessions.push(u);
+
+        const group = groupMap.get(key);
+
+        // Deduplication: Keep the LATEST log per ticket_id
+        if (!group.sessionsMap.has(u.ticket_id)) {
+            group.sessionsMap.set(u.ticket_id, u);
+        } else {
+            const existing = group.sessionsMap.get(u.ticket_id);
+            if (new Date(u.created_at) > new Date(existing.created_at)) {
+                group.sessionsMap.set(u.ticket_id, u);
+            }
+        }
+
+        // Track stats
+        const groupTime = new Date(u.created_at);
+        if (groupTime > group.latestUpdateAt) {
+            group.latestUpdateAt = groupTime;
+            // Use the latest update's type as the primary badge
+            group.primaryType = u.change_type;
+        }
+        group.changeTypes.add(u.change_type);
     });
 
-    let groups = Array.from(groupMap.values());
+    // Convert map to array
+    let groups = Array.from(groupMap.values()).map(g => {
+        g.sessions = Array.from(g.sessionsMap.values());
+        return g;
+    });
 
     // 为每个组计算是否包含未结束的场次
     groups.forEach(group => {
-        // 对每个组内的sessions排序:按场次时间升序
+        // 对每个组内的sessions排序: 按场次时间升序 (Calendar Order)
         group.sessions.sort((a, b) => {
             const tA = a.session_time ? new Date(a.session_time).getTime() : 0;
             const tB = b.session_time ? new Date(b.session_time).getTime() : 0;
@@ -124,40 +150,25 @@ function renderSummaryList(updates) {
             return new Date(s.session_time) >= now;
         });
 
-        // 获取最早的场次时间(用于排序)
-        const validTimes = group.sessions
-            .map(s => s.session_time ? new Date(s.session_time) : null)
-            .filter(d => d && !isNaN(d.getTime()));
-        group.earliestSessionTime = validTimes.length > 0 ? validTimes[0] : null;
+        // 获取最早的场次时间(仅用于展示范围，不再作为排序首要依据)
+        // Earliest session time logic preserved for display
     });
 
-
-
     // 智能排序:
-    // 1. 优先级1: 是否有active场次 (有active的在前)
-    // 2. 优先级2: 最早的场次时间 (升序,最早的在前)
-    // 3. 优先级3: 检测时间 (降序,最新检测的在前)
+    // 1. 优先级1: 是否有 active 场次 (有active的在前)
+    // 2. 优先级2: 更新时间 (降序, 最新更新的在前! 回归“动态”本质)
     groups.sort((a, b) => {
         // 第一优先级: active场次优先
         if (a.hasActiveSessions !== b.hasActiveSessions) {
             return b.hasActiveSessions ? 1 : -1;
         }
 
-        // 第二优先级: 最早的场次时间(升序)
-        if (a.earliestSessionTime && b.earliestSessionTime) {
-            const timeDiff = a.earliestSessionTime.getTime() - b.earliestSessionTime.getTime();
-            if (timeDiff !== 0) return timeDiff;
-        } else if (a.earliestSessionTime) {
-            return -1;  // a有时间,b没有,a在前
-        } else if (b.earliestSessionTime) {
-            return 1;   // b有时间,a没有,b在前
-        }
-
-        // 第三优先级: 检测时间(降序)
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        // 第二优先级: 更新时间(降序)
+        // Fix: Sort by update time
+        return b.latestUpdateAt.getTime() - a.latestUpdateAt.getTime();
     });
 
-    // Status config - 统一命名
+    // Status config
     const statusLabels = {
         restock: '回流',
         new: '上新',
@@ -167,17 +178,18 @@ function renderSummaryList(updates) {
 
     // Render
     const html = groups.map((group, idx) => {
-        // Sessions已在分组阶段按场次时间升序排序
-        const label = statusLabels[group.change_type] || '更新';
-        const badgeClass = `type-${group.change_type}`; // e.g., type-restock
-        const timeAgo = formatTimeAgo(group.created_at);
+        // Determin badge label
+        // If mixed types, maybe show "更新" or the primary (latest) type
+        const label = statusLabels[group.primaryType] || '更新';
+        const badgeClass = `type-${group.primaryType}`;
+
+        const timeAgo = formatTimeAgo(group.latestUpdateAt);
         const count = group.sessions.length;
 
         // Check if ANY session in this group has cast info
         const hasCastInfo = group.sessions.some(s => {
             let c = s.cast_names;
             if (typeof c === 'string') {
-                // Try parsing, if fails treat as string
                 try {
                     const parsed = JSON.parse(c);
                     return Array.isArray(parsed) && parsed.length > 0;
@@ -195,42 +207,34 @@ function renderSummaryList(updates) {
             .filter(d => d && !isNaN(d.getTime()));
 
         let dateRangeStr = '';
-        let spanDays = 0;
-
         if (dates.length > 0) {
             if (dates.length === 1) {
                 dateRangeStr = formatShortDate(dates[0]);
             } else {
                 const minDate = dates[0];
                 const maxDate = dates[dates.length - 1];
-                spanDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
                 dateRangeStr = `${formatShortDate(minDate)} ~ ${formatShortDate(maxDate)}`;
             }
         }
 
-        const count = group.sessions.length;
         const countStr = count > 1 ? `${count}场` : '';
         const canExpand = true;
         const groupId = `group-${idx}`;
 
-        // Detail rows (only if canExpand)
+        // Detail rows
         let detailHtml = '';
         if (canExpand) {
-            const now = new Date();
-
             const detailRows = group.sessions.map(s => {
                 const time = s.session_time ? formatSessionTime(s.session_time) : '-';
                 const price = s.price ? `¥${s.price}` : '';
                 const stock = s.stock !== null ? `余${s.stock}` : '';
-                // Ensure cast is array or parse it if string (just in case)
+
                 let casts = s.cast_names || [];
                 if (typeof casts === 'string') {
                     try { casts = JSON.parse(casts); } catch (e) { casts = [casts]; }
                 }
                 const cast = Array.isArray(casts) && casts.length ? casts.join(' ') : '';
                 const isLow = s.stock !== null && s.stock <= 5;
-
-                // Check if session is expired (past time)
                 const isExpired = s.session_time && new Date(s.session_time) < now;
                 const expiredClass = isExpired ? 'expired' : '';
                 const expiredLabel = isExpired ? '<span class="expired-label">已结束</span>' : '';
@@ -249,22 +253,17 @@ function renderSummaryList(updates) {
             detailHtml = `<div class="detail-panel" id="${groupId}-detail" style="display:none;">${detailRows}</div>`;
         }
 
-        // Click handler
         const clickAction = canExpand
             ? `toggleDetail('${groupId}')`
             : `window.router?.navigate('/detail/${group.event_id || ''}')`;
 
-        // Mobile Layout Structure: Badge+Title+Cast in one flex flow, Meta in another
         return `
-            <div class="update-summary-row" data-type="${group.change_type}" onclick="${clickAction}">
-                <!-- Title Group: Badge + Title + CastIcon -->
+            <div class="update-summary-row" data-type="${group.primaryType}" onclick="${clickAction}">
                 <div class="summary-title">
                     <span class="summary-badge ${badgeClass}">${label}</span>
                     <span style="display:inline-block; margin-left:8px;">《${group.event_title}》</span>
                     ${castIndicatorHtml}
                 </div>
-                
-                <!-- Meta Group: Date + Count + Time + Arrow -->
                 <div class="summary-meta">
                     <span class="summary-date-range">${dateRangeStr}</span>
                     <span class="summary-count">${countStr}</span>
@@ -278,7 +277,6 @@ function renderSummaryList(updates) {
 
     container.innerHTML = html || '<div class="no-updates">暂无票务动态</div>';
 
-    // Expose toggle function
     window.toggleDetail = (groupId) => {
         const detail = document.getElementById(`${groupId}-detail`);
         const arrow = document.getElementById(`${groupId}-arrow`);
