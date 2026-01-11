@@ -149,8 +149,11 @@ function renderSummaryList(updates) {
     });
 
     // 如果启用"隐藏已结束",过滤掉所有场次都已结束的组
+    console.log('[TicketUpdates] hideExpired:', hideExpired, ', groups before filter:', groups.length);
+    console.log('[TicketUpdates] groups hasActiveSessions:', groups.map(g => ({ title: g.event_title.substring(0, 10), hasActive: g.hasActiveSessions })));
     if (hideExpired) {
         groups = groups.filter(g => g.hasActiveSessions);
+        console.log('[TicketUpdates] groups after filter:', groups.length);
     }
 
     // 智能排序:
