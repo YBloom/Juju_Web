@@ -59,31 +59,37 @@
                     <i class="material-icons expand-icon">expand_more</i>
                 </div>
                 <div class="updates-body" id="updates-body">
-                    <div class="filter-group">
-                        <label class="filter-chip active" title="新增加的场次或票档">
-                            <input type="checkbox" class="filter-type" value="new" checked>
-                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">add_circle_outline</i>
-                            上新
-                        </label>
-                        <label class="filter-chip active" title="即将开售的场次">
-                            <input type="checkbox" class="filter-type" value="pending" checked>
-                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">schedule</i> 开票
-                        </label>
-                        <label class="filter-chip active" title="此前锁定的区域或座位重新开放">
-                            <input type="checkbox" class="filter-type" value="back" checked>
-                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">replay</i> 补票
-                        </label>
-                        <label class="filter-chip active" title="因退票或超时未支付而重新上架的票">
-                            <input type="checkbox" class="filter-type" value="restock" checked>
-                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">sync</i> 回流
-                        </label>
-                        <label class="filter-chip toggle-cast">
-                            <input type="checkbox" id="show-cast-toggle">
-                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">people_outline</i> 显示卡司
-                        </label>
-                        <label class="filter-chip active" title="隐藏场次时间已过的演出">
+                    <div class="filter-group" style="flex-wrap: wrap; align-items: flex-start;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; flex: 1;">
+                            <label class="filter-chip active" title="新增加的场次或票档">
+                                <input type="checkbox" class="filter-type" value="new" checked>
+                                <i class="material-icons"
+                                    style="margin-right:4px; font-size:1.1em;">add_circle_outline</i>
+                                上新
+                            </label>
+                            <label class="filter-chip active" title="即将开售的场次">
+                                <input type="checkbox" class="filter-type" value="pending" checked>
+                                <i class="material-icons" style="margin-right:4px; font-size:1.1em;">schedule</i> 开票
+                            </label>
+                            <label class="filter-chip active" title="此前锁定的区域或座位重新开放">
+                                <input type="checkbox" class="filter-type" value="back" checked>
+                                <i class="material-icons" style="margin-right:4px; font-size:1.1em;">replay</i> 补票
+                            </label>
+                            <label class="filter-chip active" title="因退票或超时未支付而重新上架的票">
+                                <input type="checkbox" class="filter-type" value="restock" checked>
+                                <i class="material-icons" style="margin-right:4px; font-size:1.1em;">sync</i> 回流
+                            </label>
+                            <label class="filter-chip toggle-cast">
+                                <input type="checkbox" id="show-cast-toggle">
+                                <i class="material-icons" style="margin-right:4px; font-size:1.1em;">people_outline</i>
+                                显示卡司
+                            </label>
+                        </div>
+                        <!-- 次级开关：隐藏已结束 -->
+                        <label class="filter-chip active" title="隐藏场次时间已过的演出"
+                            style="font-size: 0.72em; padding: 4px 8px; opacity: 0.6; border-style: dashed; margin-left: auto;">
                             <input type="checkbox" id="hide-expired-toggle" checked>
-                            <i class="material-icons" style="margin-right:4px; font-size:1.1em;">visibility_off</i>
+                            <i class="material-icons" style="font-size: 1em; margin-right: 2px;">visibility_off</i>
                             隐藏已结束
                         </label>
                     </div>
