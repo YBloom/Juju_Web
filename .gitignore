@@ -251,3 +251,5 @@ dev.sh
 .shared
 
 logs
+docs/juquan_insights.md
+.gitignore
