@@ -176,13 +176,17 @@ class SaojuService:
         """
         Dedicated method for Hulaquan Service to populate cast info from LOCAL DB ONLY.
         Strictly NO network I/O.
+        从本地数据库获取卡司信息，无网络 I/O。
         """
         if not search_name or not session_time:
             return []
             
         with session_scope() as session:
-            # We query by time first (most selective)
-            stmt = select(SaojuShow).where(SaojuShow.date == session_time)
+            # 使用时间窗口匹配 (±1秒)，以容忍微秒精度差异
+            # Use time window matching (±1 second) to tolerate microsecond precision differences
+            time_start = session_time.replace(microsecond=0) - timedelta(seconds=1)
+            time_end = session_time.replace(microsecond=0) + timedelta(seconds=2)  # +2秒包含完整的下一秒
+            stmt = select(SaojuShow).where(SaojuShow.date >= time_start, SaojuShow.date < time_end)
             if city:
                 stmt = stmt.where(SaojuShow.city == city)
                 
