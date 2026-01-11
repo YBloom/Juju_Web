@@ -732,7 +732,6 @@ async def get_all_artists():
     await saoju_service._ensure_artist_map()
     artists = list(saoju_service.data.get("artists_map", {}).keys())
     return {"artists": artists}
-    return {"artists": artists}
 
 @app.get("/api/meta/status")
 async def get_service_status():

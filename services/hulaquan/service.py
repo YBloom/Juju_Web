@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple, Set
 
 import aiohttp
-from sqlmodel import Session, select, or_
+from sqlmodel import Session, select, or_, col
 
 from services.db.connection import session_scope
 from services.hulaquan.tables import (
@@ -1105,7 +1105,7 @@ class HulaquanService:
         
         with session_scope() as session:
             # Build query
-            stmt = select(TicketUpdateLog).order_by(TicketUpdateLog.created_at.desc())
+            stmt = select(TicketUpdateLog).order_by(col(TicketUpdateLog.created_at).desc())
             
             # Apply type filter if specified
             if change_types:

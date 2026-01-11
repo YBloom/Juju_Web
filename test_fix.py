@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.12
+#!/usr/bin/env python3
 """
 Quick test to verify the service can load and API works
 快速测试验证服务可以加载且API正常工作
