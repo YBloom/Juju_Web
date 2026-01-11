@@ -48,6 +48,20 @@ export async function initTicketUpdates() {
         });
     }
 
+    // Bind hide expired toggle
+    const hideExpiredToggle = document.getElementById('hide-expired-toggle');
+    if (hideExpiredToggle) {
+        hideExpiredToggle.addEventListener('change', (e) => {
+            // Toggle active class
+            if (e.target.checked) {
+                e.target.parentElement.classList.add('active');
+            } else {
+                e.target.parentElement.classList.remove('active');
+            }
+            fetchAndRenderUpdates();
+        });
+    }
+
     await fetchAndRenderUpdates();
 }
 
@@ -75,6 +89,7 @@ async function fetchAndRenderUpdates() {
 function renderSummaryList(updates) {
     const container = document.getElementById('updates-list');
     const showCast = document.getElementById('show-cast-toggle')?.checked ?? false;
+    const hideExpired = document.getElementById('hide-expired-toggle')?.checked ?? true;
 
     // 直接使用API返回的真实数据
     let allUpdates = updates || [];
@@ -89,6 +104,8 @@ function renderSummaryList(updates) {
 
     // Grouping
     const groupMap = new Map();
+    const now = new Date();
+
     allUpdates.forEach(u => {
         const key = `${u.event_title}__${u.change_type}`;
         if (!groupMap.has(key)) {
@@ -103,8 +120,58 @@ function renderSummaryList(updates) {
         groupMap.get(key).sessions.push(u);
     });
 
-    const groups = Array.from(groupMap.values());
-    groups.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    let groups = Array.from(groupMap.values());
+
+    // 为每个组计算是否包含未结束的场次
+    groups.forEach(group => {
+        // 对每个组内的sessions排序:按场次时间升序
+        group.sessions.sort((a, b) => {
+            const tA = a.session_time ? new Date(a.session_time).getTime() : 0;
+            const tB = b.session_time ? new Date(b.session_time).getTime() : 0;
+            return tA - tB;
+        });
+
+        // 检查该组是否有未结束的场次
+        group.hasActiveSessions = group.sessions.some(s => {
+            if (!s.session_time) return false;
+            return new Date(s.session_time) >= now;
+        });
+
+        // 获取最早的场次时间(用于排序)
+        const validTimes = group.sessions
+            .map(s => s.session_time ? new Date(s.session_time) : null)
+            .filter(d => d && !isNaN(d.getTime()));
+        group.earliestSessionTime = validTimes.length > 0 ? validTimes[0] : null;
+    });
+
+    // 如果启用"隐藏已结束",过滤掉所有场次都已结束的组
+    if (hideExpired) {
+        groups = groups.filter(g => g.hasActiveSessions);
+    }
+
+    // 智能排序:
+    // 1. 优先级1: 是否有active场次 (有active的在前)
+    // 2. 优先级2: 最早的场次时间 (升序,最早的在前)
+    // 3. 优先级3: 检测时间 (降序,最新检测的在前)
+    groups.sort((a, b) => {
+        // 第一优先级: active场次优先
+        if (a.hasActiveSessions !== b.hasActiveSessions) {
+            return b.hasActiveSessions ? 1 : -1;
+        }
+
+        // 第二优先级: 最早的场次时间(升序)
+        if (a.earliestSessionTime && b.earliestSessionTime) {
+            const timeDiff = a.earliestSessionTime.getTime() - b.earliestSessionTime.getTime();
+            if (timeDiff !== 0) return timeDiff;
+        } else if (a.earliestSessionTime) {
+            return -1;  // a有时间,b没有,a在前
+        } else if (b.earliestSessionTime) {
+            return 1;   // b有时间,a没有,b在前
+        }
+
+        // 第三优先级: 检测时间(降序)
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
 
     // Status config - 统一命名
     const statusLabels = {
@@ -116,13 +183,7 @@ function renderSummaryList(updates) {
 
     // Render
     const html = groups.map((group, idx) => {
-        // Sort sessions by date (ascending) - 日期从近到远
-        group.sessions.sort((a, b) => {
-            const tA = a.session_time ? new Date(a.session_time).getTime() : 0;
-            const tB = b.session_time ? new Date(b.session_time).getTime() : 0;
-            return tA - tB;
-        });
-
+        // Sessions已在分组阶段按场次时间升序排序
         const label = statusLabels[group.change_type] || '更新';
         const badgeClass = `type-${group.change_type}`; // e.g., type-restock
         const timeAgo = formatTimeAgo(group.created_at);
