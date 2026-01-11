@@ -567,15 +567,18 @@ async def get_recent_ticket_updates(request: Request, limit: int = 20, types: st
     updates = await service.get_recent_updates(limit=limit, change_types=change_types)
     
     # Convert to dict for JSON response
+    # Use model_dump(mode='json') to properly serialize datetime objects
+    # 使用 model_dump(mode='json') 正确序列化 datetime 对象
     # 添加缓存控制headers，防止移动端浏览器缓存旧数据
     return JSONResponse(
-        content={"results": [u.dict() for u in updates]},
+        content={"results": [u.model_dump(mode='json') for u in updates]},
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
             "Pragma": "no-cache",
             "Expires": "0"
         }
     )
+
 
 @app.get("/api/events/co-cast")
 async def get_co_casts(casts: str, only_student: bool = False):
