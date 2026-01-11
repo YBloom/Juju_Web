@@ -487,7 +487,7 @@ async def list_all_events(request: Request):
             "title": e.title,
             "location": e.location or "",
             "city": e.city or "",
-            "update_time": e.update_time,
+            "update_time": e.update_time.isoformat() if e.update_time else None,
             "total_stock": e.total_stock,
             "price_range": e.price_range,
             "schedule_range": e.schedule_range,
@@ -501,6 +501,7 @@ async def list_all_events(request: Request):
             "Cache-Control": "public, max-age=30, must-revalidate"
         }
     )
+
 
 @app.get("/api/events/search")
 @limiter.limit("60/minute", key_func=key_func_remote)
@@ -522,7 +523,7 @@ async def search_events(request: Request, q: str):
         # Fallback: search multiple
         # 后备：搜索多个
         events = await service.search_events(q)
-        return {"results": [e.dict() for e in events]}
+        return {"results": [e.model_dump(mode='json') for e in events]}
     
     # 2. If ID found, get full details
     # 2. 如果找到 ID，获取完整详细信息
@@ -532,7 +533,7 @@ async def search_events(request: Request, q: str):
     # Re-using search_events which does strict or partial match
     # 重用执行严格或部分匹配的 search_events
     events = await service.search_events(title)
-    return {"results": [e.dict() for e in events]}
+    return {"results": [e.model_dump(mode='json') for e in events]}
 
 @app.get("/api/events/date")
 async def get_events_by_date(date: str):
@@ -543,7 +544,7 @@ async def get_events_by_date(date: str):
     try:
         dt = datetime.strptime(date, "%Y-%m-%d")
         tickets = await service.get_events_by_date(dt)
-        return {"results": [t.dict() for t in tickets]}
+        return {"results": [t.model_dump(mode='json') for t in tickets]}
     except ValueError:
         return {"error": "Invalid date format. Use YYYY-MM-DD"}
 
@@ -940,7 +941,7 @@ async def get_saoju_changes(limit: int = 50, username: str = Depends(get_current
         logs = session.exec(stmt).all()
         return {
             "count": len(logs),
-            "results": [l.dict() for l in logs]
+            "results": [l.model_dump(mode='json') for l in logs]
         }
 
 @app.get("/api/admin/analytics/searches")
@@ -1060,7 +1061,7 @@ async def get_feedbacks(limit: int = 50, username: str = Depends(get_current_use
         items = session.exec(stmt).all()
         return {
             "count": len(items),
-            "results": [i.dict() for i in items]
+            "results": [i.model_dump(mode='json') for i in items]
         }
 
 
@@ -1080,7 +1081,7 @@ async def get_public_feedbacks():
         ).limit(50)
         items = session.exec(stmt).all()
         return {
-            "results": [i.dict() for i in items]
+            "results": [i.model_dump(mode='json') for i in items]
         }
 
 @app.post("/api/admin/feedback/{feedback_id}/reply")
@@ -1159,7 +1160,7 @@ async def get_ignored_feedbacks(limit: int = 100, username: str = Depends(get_cu
         items = session.exec(stmt).all()
         return {
             "count": len(items),
-            "results": [i.dict() for i in items]
+            "results": [i.model_dump(mode='json') for i in items]
         }
 
 @app.delete("/api/admin/feedback/{feedback_id}")
