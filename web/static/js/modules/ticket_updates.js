@@ -48,19 +48,7 @@ export async function initTicketUpdates() {
         });
     }
 
-    // Bind hide expired toggle
-    const hideExpiredToggle = document.getElementById('hide-expired-toggle');
-    if (hideExpiredToggle) {
-        hideExpiredToggle.addEventListener('change', (e) => {
-            // Toggle active class
-            if (e.target.checked) {
-                e.target.parentElement.classList.add('active');
-            } else {
-                e.target.parentElement.classList.remove('active');
-            }
-            fetchAndRenderUpdates();
-        });
-    }
+
 
     await fetchAndRenderUpdates();
 }
@@ -89,7 +77,6 @@ async function fetchAndRenderUpdates() {
 function renderSummaryList(updates) {
     const container = document.getElementById('updates-list');
     const showCast = document.getElementById('show-cast-toggle')?.checked ?? false;
-    const hideExpired = document.getElementById('hide-expired-toggle')?.checked ?? true;
 
     // 直接使用API返回的真实数据
     let allUpdates = updates || [];
@@ -144,10 +131,7 @@ function renderSummaryList(updates) {
         group.earliestSessionTime = validTimes.length > 0 ? validTimes[0] : null;
     });
 
-    // 如果启用"隐藏已结束",过滤掉所有场次都已结束的组
-    if (hideExpired) {
-        groups = groups.filter(g => g.hasActiveSessions);
-    }
+
 
     // 智能排序:
     // 1. 优先级1: 是否有active场次 (有active的在前)
@@ -205,18 +189,8 @@ function renderSummaryList(updates) {
             ? '<i class="material-icons cast-indicator" title="包含卡司信息">group</i>'
             : '';
 
-        // 根据 hideExpired 设置决定用于显示的场次
-        const now = new Date();
-        let displaySessions = group.sessions;
-        if (hideExpired) {
-            displaySessions = group.sessions.filter(s => {
-                if (!s.session_time) return true;
-                return new Date(s.session_time) >= now;
-            });
-        }
-
-        // Date range (基于过滤后的场次)
-        const dates = displaySessions
+        // Date range
+        const dates = group.sessions
             .map(s => s.session_time ? new Date(s.session_time) : null)
             .filter(d => d && !isNaN(d.getTime()));
 
@@ -234,7 +208,7 @@ function renderSummaryList(updates) {
             }
         }
 
-        const count = displaySessions.length; // 使用过滤后的数量
+        const count = group.sessions.length;
         const countStr = count > 1 ? `${count}场` : '';
         const canExpand = true;
         const groupId = `group-${idx}`;
@@ -244,16 +218,7 @@ function renderSummaryList(updates) {
         if (canExpand) {
             const now = new Date();
 
-            // 根据 hideExpired 设置决定显示哪些场次
-            let sessionsToShow = group.sessions;
-            if (hideExpired) {
-                sessionsToShow = group.sessions.filter(s => {
-                    if (!s.session_time) return true; // 没有时间的保留
-                    return new Date(s.session_time) >= now; // 只保留未结束的
-                });
-            }
-
-            const detailRows = sessionsToShow.map(s => {
+            const detailRows = group.sessions.map(s => {
                 const time = s.session_time ? formatSessionTime(s.session_time) : '-';
                 const price = s.price ? `¥${s.price}` : '';
                 const stock = s.stock !== null ? `余${s.stock}` : '';

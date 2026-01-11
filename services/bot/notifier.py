@@ -4,9 +4,9 @@ import logging
 import json
 from datetime import datetime, timedelta
 from typing import List
-from sqlmodel import select, col
+from sqlmodel import select, col, and_, or_
 from services.db.connection import session_scope
-from services.hulaquan.tables import TicketUpdateLog, HulaquanSubscription
+from services.hulaquan.tables import TicketUpdateLog, HulaquanSubscription, HulaquanTicket
 from services.saoju.service import SaojuService
 
 log = logging.getLogger(__name__)
@@ -42,9 +42,31 @@ class BotNotifier:
         
         updates = []
         with session_scope() as session:
-            stmt = select(TicketUpdateLog).where(
-                TicketUpdateLog.created_at > check_start
-            ).order_by(TicketUpdateLog.created_at.asc())
+            # Join Ticket to verify real-time status
+            stmt = select(TicketUpdateLog).join(HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id)
+            
+            stmt = stmt.where(TicketUpdateLog.created_at > check_start)
+            
+            # Status Filter (Active/Pending AND (Pending OR Stock>0))
+            stmt = stmt.where(
+                or_(
+                    HulaquanTicket.status == 'pending',
+                    and_(
+                        HulaquanTicket.status == 'active',
+                        HulaquanTicket.stock > 0
+                    )
+                )
+            )
+            
+            # Time Filter
+            stmt = stmt.where(
+                or_(
+                    HulaquanTicket.session_time >= now,
+                    HulaquanTicket.session_time == None
+                )
+            )
+            
+            stmt = stmt.order_by(TicketUpdateLog.created_at.asc())
             
             updates = session.exec(stmt).all()
             # Eager load data to avoid DetachedInstanceError after session close

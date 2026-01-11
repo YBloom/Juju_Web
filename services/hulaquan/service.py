@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple, Set
 
 import aiohttp
-from sqlmodel import Session, select, or_, col
+from sqlmodel import Session, select, or_, and_, col
 
 from services.db.connection import session_scope
 from services.hulaquan.tables import (
@@ -1104,8 +1104,35 @@ class HulaquanService:
         limit = min(limit, 100)
         
         with session_scope() as session:
-            # Build query
-            stmt = select(TicketUpdateLog).order_by(col(TicketUpdateLog.created_at).desc())
+            # Build query with JOIN to check real-time status
+            # 使用 JOIN 构建查询以检查实时状态
+            now = timezone_now()
+            
+            # Select Log, Join Ticket
+            stmt = select(TicketUpdateLog).join(HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id)
+            
+            # Filter 1: Real-time Status (Active/Pending AND (Pending OR Stock>0))
+            # 过滤 1: 实时状态 (Active/Pending 且 (Pending 或 Stock>0))
+            stmt = stmt.where(
+                or_(
+                    HulaquanTicket.status == 'pending',
+                    and_(
+                        HulaquanTicket.status == 'active',
+                        HulaquanTicket.stock > 0
+                    )
+                )
+            )
+            
+            # Filter 2: Future Session Logic
+            # 过滤 2: 未来场次逻辑
+            stmt = stmt.where(
+                or_(
+                    HulaquanTicket.session_time >= now,
+                    HulaquanTicket.session_time == None
+                )
+            )
+            
+            stmt = stmt.order_by(col(TicketUpdateLog.created_at).desc())
             
             # Apply type filter if specified
             if change_types:
