@@ -170,6 +170,7 @@ function renderSummaryList(updates) {
         // Detail rows (only if canExpand)
         let detailHtml = '';
         if (canExpand) {
+            const now = new Date();
             const detailRows = group.sessions.map(s => {
                 const time = s.session_time ? formatSessionTime(s.session_time) : '-';
                 const price = s.price ? `¥${s.price}` : '';
@@ -182,12 +183,18 @@ function renderSummaryList(updates) {
                 const cast = Array.isArray(casts) && casts.length ? casts.join(' ') : '';
                 const isLow = s.stock !== null && s.stock <= 5;
 
+                // Check if session is expired (past time)
+                const isExpired = s.session_time && new Date(s.session_time) < now;
+                const expiredClass = isExpired ? 'expired' : '';
+                const expiredLabel = isExpired ? '<span class="expired-label">已结束</span>' : '';
+
                 return `
-                    <div class="detail-row" onclick="event.stopPropagation(); window.router?.navigate('/detail/${s.event_id || group.event_id}')">
+                    <div class="detail-row ${expiredClass}" onclick="event.stopPropagation(); window.router?.navigate('/detail/${s.event_id || group.event_id}')">
                         <span class="detail-time">${time}</span>
                         <span class="detail-price">${price}</span>
                         <span class="detail-stock ${isLow ? 'low-stock' : ''}">${stock}</span>
                         <span class="detail-cast" style="display: ${showCast ? 'inline' : 'none'}">${cast}</span>
+                        ${expiredLabel}
                     </div>
                 `;
             }).join('');

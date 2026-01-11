@@ -2303,9 +2303,34 @@ main {
     color: #9ca3af;
     flex: 1;
     text-align: right;
-    white-space: nowrap;
+    whitespace: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Expired Session Styles */
+.detail-row.expired {
+    opacity: 0.5;
+    background: #f5f5f5;
+}
+
+.detail-row.expired:hover {
+    background: #ebebeb;
+}
+
+.detail-row.expired .detail-time,
+.detail-row.expired .detail-price,
+.detail-row.expired .detail-stock {
+    color: #9ca3af;
+}
+
+.expired-label {
+    font-size: 0.7rem;
+    color: #6b7280;
+    background: #e5e7eb;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: auto;
 }
 
 /* Filters - 绿色系统一配色 */
