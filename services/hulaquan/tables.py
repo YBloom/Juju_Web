@@ -1,7 +1,15 @@
 from typing import Optional, List
+from enum import Enum
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from services.utils.timezone import now as timezone_now
+
+
+class TicketStatus(str, Enum):
+    ACTIVE = "active"
+    SOLD_OUT = "sold_out"
+    PENDING = "pending"
+    EXPIRED = "expired"
 
 class TicketCastAssociation(SQLModel, table=True):
     ticket_id: str = Field(foreign_key="hulaquanticket.id", primary_key=True)
@@ -42,7 +50,8 @@ class HulaquanTicket(SQLModel, table=True):
     total_ticket: int = 0
     city: Optional[str] = None
     
-    status: str = "active" # active, sold_out, pending
+    status: TicketStatus = Field(default=TicketStatus.ACTIVE) # active, sold_out, pending
+
     valid_from: Optional[str] = None # "11-01 12:00"
     
     event: Optional[HulaquanEvent] = Relationship(back_populates="tickets")

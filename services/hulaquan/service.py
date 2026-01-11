@@ -8,6 +8,7 @@ from typing import List, Dict, Optional, Tuple, Set
 
 import aiohttp
 from sqlmodel import Session, select, or_, and_, col
+from sqlalchemy.orm import joinedload
 
 from services.db.connection import session_scope
 from services.hulaquan.tables import (
@@ -17,7 +18,8 @@ from services.hulaquan.tables import (
     TicketCastAssociation,
     HulaquanSubscription,
     HulaquanAlias,
-    TicketUpdateLog
+    TicketUpdateLog,
+    TicketStatus
 )
 from services.hulaquan.models import (
     EventInfo, 
@@ -688,49 +690,56 @@ class HulaquanService:
         end_of_day = start_of_day + timedelta(days=1)
         
         with session_scope() as session:
-            statement = select(HulaquanTicket).where(
-                HulaquanTicket.session_time >= start_of_day,
-                HulaquanTicket.session_time < end_of_day
+            # Optimized: Eager load Event to prevent N+1 queries
+            statement = (
+                select(HulaquanTicket)
+                .options(joinedload(HulaquanTicket.event))
+                .where(
+                    HulaquanTicket.session_time >= start_of_day,
+                    HulaquanTicket.session_time < end_of_day
+                )
             )
             if city:
                 statement = statement.where(HulaquanTicket.city == city)
             
             tickets = session.exec(statement).all()
+            if not tickets:
+                return []
+            
+            # Optimized: Bulk fetch Casts for all retrieved tickets
+            # This reduces N queries to 1 query
+            tids = [t.id for t in tickets]
+            cast_map = {} # tid -> List[CastInfo]
+            
+            if tids:
+                stmt_c = (
+                    select(TicketCastAssociation.ticket_id, HulaquanCast.name, TicketCastAssociation.role)
+                    .join(HulaquanCast)
+                    .where(TicketCastAssociation.ticket_id.in_(tids))
+                )
+                cast_rows = session.exec(stmt_c).all()
+                for tid, cname, role in cast_rows:
+                    if tid not in cast_map:
+                        cast_map[tid] = []
+                    cast_map[tid].append(CastInfo(name=cname, role=role))
+
             result = []
             
-            # Helper to get event for rules
-            # We need to fetch associated events to use location/title rules
-            # Optimized: fetch needed events in one go or lazy load
-            # Since SqlModel lazy loads relationships by default if not detached, we can access t.event
-            
             for t in tickets:
-                if t.status == "expired": continue
+                # No filtering for expired tickets here as requested for Date View
                 
-                # Ensure event is loaded for location/rules
-                # t.event might be sync or async depending on setup, but typically sync access in session context
+                # Event is already eager loaded via joinedload
                 event = t.event
-                # Fallback if lazy load fails or not set (shouldn't happen with foreign key)
-                if not event:
-                    event = session.get(HulaquanEvent, t.event_id)
                 
                 # Enrich City
                 final_city = self._enrich_ticket_city(t, event) if event else t.city
                 
-                # Fetch cast info
-                # 获取演员信息
-                cast_infos = []
-                stmt_c = (
-                    select(HulaquanCast, TicketCastAssociation.role)
-                    .join(TicketCastAssociation)
-                    .where(TicketCastAssociation.ticket_id == t.id)
-                )
-                cast_results = session.exec(stmt_c).all()
-                for c_obj, role in cast_results:
-                    cast_infos.append(CastInfo(name=c_obj.name, role=role))
+                # Use pre-fetched cast info
+                cast_infos = cast_map.get(t.id, [])
                 
                 result.append(TicketInfo(
                     id=t.id,
-                    event_id=t.event_id,  # 添加event_id用于前端跳转
+                    event_id=t.event_id,
                     title=t.title,
                     session_time=t.session_time,
                     price=t.price,
@@ -959,27 +968,38 @@ class HulaquanService:
         return await loop.run_in_executor(None, self._get_event_details_by_id_sync, event_id)
 
     def _get_event_details_by_id_sync(self, event_id: str) -> List[EventInfo]:
+        from sqlalchemy.orm import selectinload
         with session_scope() as session:
-            event = session.get(HulaquanEvent, event_id)
+            # Optimized: Eager load tickets to avoid N+1 if accessed
+            stmt = select(HulaquanEvent).options(selectinload(HulaquanEvent.tickets)).where(HulaquanEvent.id == event_id)
+            event = session.exec(stmt).first()
+            
             if not event:
                 return []
             
-            # Reuse logic from search_events for ticket processing
-            # 重用 search_events 的逻辑进行票务处理
-            tickets = []
-            for t in event.tickets:
-                if t.status == "expired": continue
-                
-                # Fetch cast info
-                cast_infos = []
+            # Optimized: Bulk fetch Casts for all tickets of this event
+            tickets_list = event.tickets
+            tids = [t.id for t in tickets_list if t.status != TicketStatus.EXPIRED]
+            
+            cast_map = {}
+            if tids:
                 stmt_c = (
-                    select(HulaquanCast, TicketCastAssociation.role)
-                    .join(TicketCastAssociation)
-                    .where(TicketCastAssociation.ticket_id == t.id)
+                    select(TicketCastAssociation.ticket_id, HulaquanCast.name, TicketCastAssociation.role)
+                    .join(HulaquanCast)
+                    .where(TicketCastAssociation.ticket_id.in_(tids))
                 )
-                cast_results = session.exec(stmt_c).all()
-                for c_obj, role in cast_results:
-                    cast_infos.append(CastInfo(name=c_obj.name, role=role))
+                cast_rows = session.exec(stmt_c).all()
+                for tid, cname, role in cast_rows:
+                    if tid not in cast_map:
+                        cast_map[tid] = []
+                    cast_map[tid].append(CastInfo(name=cname, role=role))
+            
+            tickets = []
+            for t in tickets_list:
+                if t.status == TicketStatus.EXPIRED: continue
+                
+                # Fetch cast info (from map)
+                cast_infos = cast_map.get(t.id, [])
 
                 tickets.append(TicketInfo(
                     id=t.id,
@@ -1115,9 +1135,9 @@ class HulaquanService:
             # 过滤 1: 实时状态 (Active/Pending 且 (Pending 或 Stock>0))
             stmt = stmt.where(
                 or_(
-                    HulaquanTicket.status == 'pending',
+                    HulaquanTicket.status == TicketStatus.PENDING,
                     and_(
-                        HulaquanTicket.status == 'active',
+                        HulaquanTicket.status == TicketStatus.ACTIVE,
                         HulaquanTicket.stock > 0
                     )
                 )
