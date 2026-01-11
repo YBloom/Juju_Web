@@ -345,9 +345,11 @@ class HulaquanService:
                 title = t_data.get("title", "")
                 
                 if not title and total_ticket == 0: continue
-                if status == "expired": continue
+                # Allow 'expired' status to pass through to update DB
+                # 允许 'expired' 状态通过以更新数据库
                 
                 ticket = session.get(HulaquanTicket, tid)
+
                 is_new = False
                 
                 if not ticket:
@@ -485,6 +487,29 @@ class HulaquanService:
                     cast_names=json.dumps(final_cast_names) if final_cast_names else None
                 )
                 session.add(log_entry)
+
+            # 3. Cleanup Orphaned Tickets (Diff Cleanup)
+            # 3. 清理孤儿票据（差集清理）
+            # Tickets in DB for this event but NOT in current API response
+            # 数据库中有但当前 API 响应中没有的票据
+            api_ticket_ids = set()
+            for t_data in ticket_details:
+                if t_data.get("id"):
+                    api_ticket_ids.add(str(t_data.get("id")))
+
+            db_tickets = session.exec(select(HulaquanTicket).where(HulaquanTicket.event_id == event_id)).all()
+            for db_t in db_tickets:
+                if db_t.id not in api_ticket_ids:
+                    # Logic: If API doesn't return it, it's removed/hidden by platform.
+                    # We should remove it or mark as expired. 
+                    # Given user wants to keep history but "remove outdated data", deletion seems cleaner for "vanished" tickets,
+                    # while "expired" status handles tickets clearly marked as expired by API.
+                    # 逻辑：如果 API 没有返回它，说明它已被平台移除/隐藏。
+                    # 我们应该删除它或标记为过期。
+                    # 鉴于用户希望保留历史记录但“删除过时数据”，对于“消失”的票据，删除似乎更干净。
+                    # 而“过期”状态用于处理 API 明确标记为过期的票据。
+                    log.info(f"Removing orphaned ticket {db_t.id} ({db_t.title}) from event {event_id}")
+                    session.delete(db_t)
 
             session.commit()
         return updates
@@ -801,6 +826,58 @@ class HulaquanService:
                     results.append(self._format_event_info(e, tickets_minimal))
             return results
 
+    async def fix_legacy_data(self):
+        """
+        Maintenance method to fix legacy data validation.
+        维护方法，用于修复存量数据的有效性。
+        Fixes orphaned tickets from old events that are no longer in recommendation list.
+        修复不再出现在推荐列表中的旧事件的孤立票据。
+        Constraint: session_time < now AND status != 'expired' -> status = 'expired'
+        约束：场次时间 < 现在 且 状态 != 'expired' -> 设为 'expired'
+        """
+        log.info("Starting legacy data maintenance...")
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._fix_legacy_data_sync)
+        log.info("Legacy data maintenance complete.")
+
+    def _fix_legacy_data_sync(self):
+        from zoneinfo import ZoneInfo
+        
+        with session_scope() as session:
+            # Find all active/pending tickets with past session_time
+            # 查找所有 session_time 为过去且状态为 active/pending 的票据
+            now = timezone_now()
+            now_naive = now.replace(tzinfo=None)  # For comparison with naive datetimes
+            shanghai_tz = ZoneInfo("Asia/Shanghai")
+            
+            statement = select(HulaquanTicket).where(
+                HulaquanTicket.status.in_(["active", "pending"])
+            )
+            tickets = session.exec(statement).all()
+            
+            count = 0
+            for t in tickets:
+                # Double check with timezone handling
+                # 双重检查并处理时区问题
+                if t.session_time:
+                    # Check if datetime is naive or aware
+                    if t.session_time.tzinfo is None:
+                        # Naive: localize to Shanghai then compare
+                        session_time_aware = t.session_time.replace(tzinfo=shanghai_tz)
+                        if session_time_aware < now:
+                            t.status = "expired"
+                            session.add(t)
+                            count += 1
+                    else:
+                        # Already aware: direct comparison
+                        if t.session_time < now:
+                            t.status = "expired"
+                            session.add(t)
+                            count += 1
+            
+            session.commit()
+            log.info(f"Fixed {count} expired legacy tickets.")
+
     async def get_aliases(self) -> List[HulaquanAlias]:
         """Get all theater aliases.
         获取所有剧院别名。
@@ -837,38 +914,7 @@ class HulaquanService:
             
             session.commit()
 
-    async def get_recent_updates(self, limit: int = 20, change_types: List[str] = None) -> List[TicketUpdate]:
-        """Fetch recent ticket updates from the log.
-        从日志中获取最近的票务更新。
-        """
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._get_recent_updates_sync, limit, change_types)
 
-    def _get_recent_updates_sync(self, limit: int = 20, change_types: List[str] = None) -> List[TicketUpdate]:
-        with session_scope() as session:
-            stmt = select(TicketUpdateLog).order_by(TicketUpdateLog.detected_at.desc())
-            
-            if change_types:
-                stmt = stmt.where(TicketUpdateLog.change_type.in_(change_types))
-            
-            stmt = stmt.limit(limit)
-            logs = session.exec(stmt).all()
-            
-            results = []
-            for log in logs:
-                results.append(TicketUpdate(
-                    ticket_id=log.ticket_id,
-                    event_id=log.event_id,
-                    event_title=log.event_title or "未知剧目",
-                    change_type=log.change_type,
-                    message=log.message or "",
-                    session_time=log.session_time,
-                    price=log.price,
-                    stock=log.stock,
-                    total_ticket=log.total_ticket,
-                    cast_names=json.loads(log.cast_names) if log.cast_names else []
-                ))
-            return results
 
     async def get_event_id_by_name(self, name: str) -> Optional[Tuple[str, str]]:
         """
