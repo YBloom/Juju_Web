@@ -50,8 +50,10 @@ export async function initTicketUpdates() {
 
     // Bind hide expired toggle
     const hideExpiredToggle = document.getElementById('hide-expired-toggle');
+    console.log('[TicketUpdates] hideExpiredToggle element:', hideExpiredToggle);
     if (hideExpiredToggle) {
         hideExpiredToggle.addEventListener('change', (e) => {
+            console.log('[TicketUpdates] hide-expired-toggle changed:', e.target.checked);
             // Toggle active class
             if (e.target.checked) {
                 e.target.parentElement.classList.add('active');
@@ -60,6 +62,8 @@ export async function initTicketUpdates() {
             }
             fetchAndRenderUpdates();
         });
+    } else {
+        console.warn('[TicketUpdates] hide-expired-toggle element NOT FOUND!');
     }
 
     await fetchAndRenderUpdates();
