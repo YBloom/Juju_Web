@@ -493,8 +493,14 @@ async def list_all_events(request: Request):
             "schedule_range": e.schedule_range,
             # "tickets" excluded
         })
-        
-    return {"results": results}
+    
+    # 添加适度缓存控制：允许30秒缓存，平衡性能与数据新鲜度
+    return JSONResponse(
+        content={"results": results},
+        headers={
+            "Cache-Control": "public, max-age=30, must-revalidate"
+        }
+    )
 
 @app.get("/api/events/search")
 @limiter.limit("60/minute", key_func=key_func_remote)
@@ -542,7 +548,7 @@ async def get_events_by_date(date: str):
         return {"error": "Invalid date format. Use YYYY-MM-DD"}
 
 @app.get("/api/tickets/recent-updates")
-async def get_recent_ticket_updates(limit: int = 20, types: str = "new,restock,back,pending"):
+async def get_recent_ticket_updates(request: Request, limit: int = 20, types: str = "new,restock,back,pending"):
     """
     Get recent ticket updates for the ticket dashboard.
     获取最近的票务更新用于票务动态展示。
@@ -561,7 +567,15 @@ async def get_recent_ticket_updates(limit: int = 20, types: str = "new,restock,b
     updates = await service.get_recent_updates(limit=limit, change_types=change_types)
     
     # Convert to dict for JSON response
-    return {"results": [u.dict() for u in updates]}
+    # 添加缓存控制headers，防止移动端浏览器缓存旧数据
+    return JSONResponse(
+        content={"results": [u.dict() for u in updates]},
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 @app.get("/api/events/co-cast")
 async def get_co_casts(casts: str, only_student: bool = False):
