@@ -77,3 +77,27 @@ ssh yyj "sudo bash /opt/MusicalBot/scripts/safe_pull.sh"
 ## Troubleshooting
 - **Permission Denied**: Ensure you are using `sudo` for supervisor/docker/git commands on server.
 - **Port Busy**: Check if another instance is running (`ps aux | grep web_app.py`).
+
+## Running Python Scripts on Server
+
+> [!IMPORTANT]
+> 服务器使用虚拟环境 `.venv`，直接使用 `python3` 可能缺少依赖（如 `sqlmodel`）。
+
+**正确方式：使用虚拟环境的 Python**
+```bash
+cd /opt/MusicalBot
+PYTHONPATH=/opt/MusicalBot .venv/bin/python scripts/your_script.py
+```
+
+**示例：运行数据清理脚本**
+```bash
+ssh yyj
+cd /opt/MusicalBot
+PYTHONPATH=/opt/MusicalBot .venv/bin/python scripts/cleanup_cast_data.py --apply
+```
+
+**常见错误**
+| 错误 | 原因 | 解决方案 |
+| :--- | :--- | :--- |
+| `ModuleNotFoundError: No module named 'sqlmodel'` | 使用了系统 Python | 使用 `.venv/bin/python` |
+| `Permission denied` | 脚本无执行权限 | 用 `python scripts/xxx.py` 而不是 `./scripts/xxx.py` |
