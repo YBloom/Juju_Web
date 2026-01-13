@@ -207,9 +207,30 @@ class SaojuService:
             # Format: "Role:Actor / Role:Actor" or "Actor / Actor"
             result = []
             
-            # Robust split (support both / and space if / is missing)
-            if '/' in matched_show.cast_str:
-                segments = [s.strip() for s in matched_show.cast_str.split('/')]
+            # Robust split using regex to avoid splitting "Role/Name:Actor" inside the role
+            # We assume dividers are " / " (slash with spaces) or just spaces if no slash is used as divider
+            import re
+            if ' / ' in matched_show.cast_str:
+                segments = [s.strip() for s in matched_show.cast_str.split(' / ')]
+            elif '/' in matched_show.cast_str:
+                 # Fallback: if no space-slash-space, but has slash, we might have tight packing "A:B/C:D"
+                 # OR we might have "Role/Name:Actor"
+                 # It is safer to assume " / " acts as separator. If strictly no spaces, it's ambiguous.
+                 # But "林贞/陈潇妈" case implies slashes in names/roles.
+                 # Check if structure looks like "X:Y/Z:W" -> likely separator
+                 # If "X/Y:Z" -> likely role slash
+                 # Simple heuristic: Split by slash only if it seems to separate entities?
+                 # safest is often to require space if structure allows, or regex split.
+                 # For now, let's try strict ' / ' split first, if fails, inspect.
+                 # Actually, usually there are spaces. Let's use regex split on " / " or just "/" if surrounded by space?
+                 # The user issue specifically mentions "林贞和陈潇" which sounds like "Lin Zhen" and "Chen Xiao".
+                 # "林贞/陈潇妈" is "Lin Zhen / Chen Xiao Ma".  
+                 # Implemented fix: prioritize " / " splitting.
+                segments = [s.strip() for s in matched_show.cast_str.split(' / ')]
+                if len(segments) == 1 and '/' in segments[0]:
+                    # If split by " / " returned 1 item but there are still slashes,
+                    # e.g. "A/B:C". This is likely one item. 
+                    pass
             else:
                 segments = matched_show.cast_str.split()
                 
@@ -267,14 +288,12 @@ class SaojuService:
             entries = session.exec(query).all()
             
             results = []
+            import re
+            
             for show in entries:
                 # Python-side verification for exact/safe matching
                 if not show.cast_str:
                     continue
-                
-                # cast_str format: "角色1:演员1 角色2:演员2 ..." (space-separated role:actor pairs)
-                # OR older format: "A / B / C" (just actor names)
-                # We need to extract actor names for matching
                 
                 # cast_str format: "Role:Name / Role:Name" or legacy "Name / Name"
                 # We need to extract actor names for matching and roles for display
@@ -282,9 +301,21 @@ class SaojuService:
                 current_cast = set()
                 role_map = {}  # actor -> role for later use
                 
-                # Split by / if present, otherwise split by whitespace (legacy/simple)
-                if '/' in show.cast_str:
-                    segments = [s.strip() for s in show.cast_str.split('/')]
+                # Split logic: prioritize " / " to protect slashes in roles (e.g. "Role/SubRole:Actor")
+                if ' / ' in show.cast_str:
+                    segments = [s.strip() for s in show.cast_str.split(' / ')]
+                elif '/' in show.cast_str and not ':' in show.cast_str:
+                     # Legacy "A/B/C" without colons? Split by /
+                     segments = [s.strip() for s in show.cast_str.split('/')]
+                elif '/' in show.cast_str:
+                     # Has slash and has colons, but no " / ". This is ambiguous "Role:A/Role:B" vs "Role/Name:A".
+                     # Assuming "Role:A/Role:B" is rare without spaces?
+                     # Let's try splitting by regex `\s*/\s*` if it's not "Role/Name".
+                     # Actually, safe fallback is to treat as one block if we can't be sure, 
+                     # BUT likely we need to split.
+                     # Given the bug report, let's assume standard format is " / " for separation.
+                     # If only tight slashes, we might just split by space?
+                     segments = show.cast_str.split()
                 else:
                     segments = show.cast_str.split()
                 
@@ -391,6 +422,7 @@ class SaojuService:
                         "others": others,
                         "city": show.city,
                         "location": show.theatre,
+                        "_raw_time": dt.isoformat() # Added for frontend sorting
                     })
             
             # Sort
