@@ -223,7 +223,7 @@ verify_id_mapping.py
 architecture_proposal.md
 docs/progress_diagnosis.rst
 docs/saoju_api.txt
-
+docs/design
 # 一次性迁移脚本 (已完成使命)
 scripts/import_v0_json.py
 scripts/migrate_json_to_db.py
