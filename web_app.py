@@ -469,6 +469,12 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 # --- API Endpoints ---
 # --- API 端点 ---
 
+# Register Auth Router
+
+# Register Subscription Router
+
+# Register Marketplace Router
+
 @app.get("/api/events/list")
 @limiter.limit("60/minute", key_func=key_func_remote)
 @limiter.limit("1000/minute", key_func=key_func_local)
@@ -1045,6 +1051,16 @@ async def submit_feedback(request: Request):
             contact=contact
         )
         session.add(fb)
+    
+    # 异步发送邮件通知（不阻塞响应）
+    async def send_notification():
+        try:
+            from services.email.service import notify_feedback_received
+            await notify_feedback_received(fb_type, content, contact)
+        except Exception as e:
+            logger.warning(f"发送反馈通知邮件失败: {e}")
+    
+    asyncio.create_task(send_notification())
         
     return {"status": "ok", "message": "Feedback submitted"}
 
@@ -1176,6 +1192,38 @@ async def delete_feedback(feedback_id: int, username: str = Depends(get_current_
         
     return {"status": "ok", "message": "Feedback deleted"}
 
+@app.post("/api/admin/feedback/{feedback_id}/resolve")
+async def resolve_feedback(feedback_id: int, username: str = Depends(get_current_username)):
+    """Mark a feedback as resolved (closed)."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+            
+        fb.status = "closed"
+        session.add(fb)
+        
+    return {"status": "ok", "message": "Feedback resolved"}
+
+@app.post("/api/admin/feedback/{feedback_id}/reopen")
+async def reopen_feedback(feedback_id: int, username: str = Depends(get_current_username)):
+    """Reopen a resolved feedback."""
+    from services.hulaquan.tables import Feedback
+    from services.db.connection import session_scope
+    
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            return JSONResponse(status_code=404, content={"error": "Not found"})
+            
+        fb.status = "open"
+        session.add(fb)
+        
+    return {"status": "ok", "message": "Feedback reopened"}
+
 # --- Magic Link Auth Endpoints ---
 # --- 魔术链接认证端点 ---
 
@@ -1233,32 +1281,8 @@ async def magic_link_auth(token: str = None):
     )
     return response
 
-@app.get("/api/me")
-async def get_current_user_info(request: Request):
-    """
-    获取当前登录用户信息。
-    用于前端判断用户是否已登录。
-    """
-    user = get_current_user(request)
-    if not user:
-        return {"logged_in": False}
-    
-    return {
-        "logged_in": True,
-        "qq_id": user.get("qq_id"),
-        "nickname": user.get("nickname"),
-    }
-
-@app.post("/logout")
-async def logout(request: Request):
-    """登出用户"""
-    session_id = request.cookies.get(SESSION_COOKIE_NAME)
-    if session_id and session_id in _sessions:
-        del _sessions[session_id]
-    
-    response = JSONResponse({"status": "ok"})
-    response.delete_cookie(SESSION_COOKIE_NAME)
-    return response
+# Removed old auth endpoints (replaced by web.routers.auth)
+# @app.get("/api/me") and @app.post("/logout") are now in router
 
 @app.head("/")
 async def head_root():

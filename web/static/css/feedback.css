@@ -636,6 +636,18 @@
     color: #1565c0;
 }
 
+/* 已解决标签样式 */
+.wall-tag.resolved {
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+/* 已解决的反馈卡片样式 */
+.wall-card.resolved {
+    border-left: 3px solid #4caf50;
+}
+
 .wall-time {
     float: right;
     font-size: 0.75rem;

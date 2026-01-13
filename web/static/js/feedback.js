@@ -248,10 +248,16 @@ async function loadFeedbackWall() {
                 `;
             }
 
+            // 已解决状态标签
+            const resolvedTag = item.status === 'closed'
+                ? '<span class="wall-tag resolved">✅ 已解决</span>'
+                : '';
+
             return `
-                <div class="wall-card">
+                <div class="wall-card ${item.status === 'closed' ? 'resolved' : ''}">
                     <div class="wall-header">
                         <span class="wall-tag ${typeInfo.cls}">${typeInfo.label}</span>
+                        ${resolvedTag}
                         <span class="wall-time">${timeStr}</span>
                     </div>
                     <div class="wall-content">${escapeHtml(item.content)}</div>

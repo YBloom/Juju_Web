@@ -773,12 +773,18 @@
                             </button>
                         `;
                     } else {
-                        // Show Reply and Ignore Buttons
+                        // Show Reply, Resolve, and Ignore Buttons
+                        const isResolved = item.status === 'closed';
+                        const resolveBtn = isResolved
+                            ? `<button onclick="reopenFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#2e7d32; border-color:#81c784;" title="重新打开">🔄 重开</button>`
+                            : `<button onclick="resolveFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#fff; background:#4caf50; border-color:#4caf50;" title="标记为已解决">✅</button>`;
+
                         actionBtns = `
                             <button onclick="openReplyModal(${item.id}, '${escapeHtml(item.content.replace(/'/g, "\\'"))}', ${item.is_public}, ${item.admin_reply ? `'` + escapeHtml(item.admin_reply.replace(/'/g, "\\'")) + `'` : 'null'})" class="btn" style="font-size:0.8rem; padding:4px 8px; margin-right:5px;">
                                 ${item.admin_reply ? '编辑回复' : '回复 / 公开'}
                             </button>
-                            <button onclick="ignoreFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#c62828; border-color:#e0e0e0;" title="忽略此反馈">
+                            ${resolveBtn}
+                            <button onclick="ignoreFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#c62828; border-color:#e0e0e0; margin-left:5px;" title="忽略此反馈">
                                 🚫
                             </button>
                         `;
@@ -791,6 +797,7 @@
                                 ${typeLabel}
                             </span>
                             ${publicBadge}
+                            ${item.status === 'closed' ? '<span style="font-size:0.75rem; background:#e8f5e9; color:#2e7d32; padding:2px 4px; border-radius:4px; margin-left:4px;">✅ 已解决</span>' : ''}
                         </td>
                         <td style="padding: 12px 16px; border-bottom: 1px solid #eee; line-height: 1.5; max-width: 400px;">
                             <div style="${currentFeedbackView === 'ignored' ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHtml(item.content)}</div>
@@ -816,6 +823,28 @@
             if (!confirm('确定要忽略这条反馈吗？它将移动到忽略清单。')) return;
             try {
                 const res = await fetch(`/api/admin/feedback/${id}/ignore`, { method: 'POST' });
+                if (res.ok) {
+                    loadFeedbacks();
+                } else {
+                    alert('操作失败');
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        async function resolveFeedback(id) {
+            try {
+                const res = await fetch(`/api/admin/feedback/${id}/resolve`, { method: 'POST' });
+                if (res.ok) {
+                    loadFeedbacks();
+                } else {
+                    alert('操作失败');
+                }
+            } catch (e) { alert('网络错误'); }
+        }
+
+        async function reopenFeedback(id) {
+            try {
+                const res = await fetch(`/api/admin/feedback/${id}/reopen`, { method: 'POST' });
                 if (res.ok) {
                     loadFeedbacks();
                 } else {
