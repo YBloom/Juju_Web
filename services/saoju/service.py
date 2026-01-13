@@ -213,24 +213,10 @@ class SaojuService:
             if ' / ' in matched_show.cast_str:
                 segments = [s.strip() for s in matched_show.cast_str.split(' / ')]
             elif '/' in matched_show.cast_str:
-                 # Fallback: if no space-slash-space, but has slash, we might have tight packing "A:B/C:D"
-                 # OR we might have "Role/Name:Actor"
-                 # It is safer to assume " / " acts as separator. If strictly no spaces, it's ambiguous.
-                 # But "林贞/陈潇妈" case implies slashes in names/roles.
-                 # Check if structure looks like "X:Y/Z:W" -> likely separator
-                 # If "X/Y:Z" -> likely role slash
-                 # Simple heuristic: Split by slash only if it seems to separate entities?
-                 # safest is often to require space if structure allows, or regex split.
-                 # For now, let's try strict ' / ' split first, if fails, inspect.
-                 # Actually, usually there are spaces. Let's use regex split on " / " or just "/" if surrounded by space?
-                 # The user issue specifically mentions "林贞和陈潇" which sounds like "Lin Zhen" and "Chen Xiao".
-                 # "林贞/陈潇妈" is "Lin Zhen / Chen Xiao Ma".  
-                 # Implemented fix: prioritize " / " splitting.
-                segments = [s.strip() for s in matched_show.cast_str.split(' / ')]
-                if len(segments) == 1 and '/' in segments[0]:
-                    # If split by " / " returned 1 item but there are still slashes,
-                    # e.g. "A/B:C". This is likely one item. 
-                    pass
+                # If has '/' but no ' / ', this is likely space-separated format with role names containing slashes
+                # e.g. "程小时:舒荣波 陆光:杨浩然 林贞/陈潇妈:沈恬"
+                # Split by whitespace to preserve the slash in role names
+                segments = matched_show.cast_str.split()
             else:
                 segments = matched_show.cast_str.split()
                 
