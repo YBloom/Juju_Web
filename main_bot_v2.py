@@ -21,6 +21,7 @@ def main():
     # Force Config
     from ncatbot.utils.config import ncatbot_config
     ncatbot_config.set_bot_uin("3132859862")
+    ncatbot_config.set_root("3022402752")
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
     
     # Import and run (同步方式，ncatbot 内部处理 asyncio)
