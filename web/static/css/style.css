@@ -2433,6 +2433,16 @@ main {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
+/* Global Summary Styles (Applied to all) */
+.summary-event-title {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.summary-time {
+    font-family: 'SF Mono', Consolas, monospace;
+}
+
 /* Desktop Compat: Single Line Layout */
 @media (min-width: 1024px) {
     .update-summary-row {
@@ -2800,7 +2810,7 @@ main {
     color: #9ca3af;
     flex: 1;
     text-align: right;
-    whitespace: nowrap;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
