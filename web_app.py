@@ -941,7 +941,7 @@ async def admin_dashboard(username: str = Depends(get_current_username)):
 async def get_admin_logs(file: str = "web_out.log", lines: int = 500, username: str = Depends(get_current_username)):
     """Read system logs from /var/log/musicalbot/ (Protected)."""
     # Security: whitelist allowed files to prevent path traversal
-    ALLOWED_FILES = ["web_out.log", "web_err.log", "auto_update.log"]
+    ALLOWED_FILES = ["web_out.log", "web_err.log", "auto_update.log", "bot_out.log", "bot_err.log"]
     if file not in ALLOWED_FILES:
         raise HTTPException(status_code=400, detail="Invalid log file")
     
