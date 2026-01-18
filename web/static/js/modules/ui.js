@@ -954,37 +954,15 @@ async function renderUserProfile(container, user) {
     });
 }
 
-window.doLogout = async () => {
+};
+
+// Export logout function
+export const doLogout = window.doLogout = async () => {
     if (confirm('确定要退出登录吗？')) {
         await api.logout();
         window.location.reload();
     }
 };
-
-state.currentDateTickets = allTickets;
-state.currentDate = date;
-
-let html = `
-        <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)"><div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">📅 ${date} - 查询到 ${tickets.length} 个场次</div></div>
-        <div style="background:#f8f9fa; padding:15px 20px; border-radius:8px; margin-bottom:15px; border:1px solid #e0e0e0;">
-            <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:center;">
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9em;"><input type="checkbox" id="date-filter-available"><span>只看有票</span></label>
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:0.9em; font-weight:600; color:#666;">城市：</span><select id="date-filter-city" style="padding:6px 12px; border:1px solid #ddd; border-radius:6px; font-size:0.85em;"><option value="">全部</option>${cities.map(city => `<option value="${city}">${city}</option>`).join('')}</select></div>
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:0.9em; font-weight:600; color:#666;">时间：</span><select id="date-filter-time" style="padding:6px 12px; border:1px solid #ddd; border-radius:6px; font-size:0.85em;"><option value="">全部</option>${times.map(time => `<option value="${time}">${time}</option>`).join('')}</select></div>
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:0.9em; font-weight:600; color:#666;">搜索：</span><input type="text" id="date-filter-search" placeholder="剧目或演员名" style="padding:6px 12px; border:1px solid #ddd; border-radius:6px; font-size:0.85em; width:150px;"></div>
-            </div>
-        </div>
-        <div id="date-table-container"><table class="data-table"><thead><tr><th width="40">序号</th><th width="60">时间</th><th width="60">城市</th><th>剧目</th><th width="80">余票</th><th width="180">卡司</th><th width="120">价格</th></tr></thead><tbody id="date-table-body"></tbody></table></div>
-    `;
-
-container.innerHTML = html;
-document.getElementById('date-filter-available').addEventListener('change', () => applyDateFilters(date));
-document.getElementById('date-filter-city').addEventListener('change', () => applyDateFilters(date));
-document.getElementById('date-filter-time').addEventListener('change', () => applyDateFilters(date));
-document.getElementById('date-filter-search').addEventListener('input', () => applyDateFilters(date));
-
-renderDateTableRows(allTickets);
-}
 
 function renderDateTableRows(tickets) {
     const tbody = document.getElementById('date-table-body');
