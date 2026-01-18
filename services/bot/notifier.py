@@ -19,18 +19,18 @@ class BotNotifier:
 
     async def start(self):
         self.running = True
-        log.info("Bot Notifier started.")
+        log.info("🔔 [通知服务] 通知推送服务已启动")
         while self.running:
             try:
                 await self._check_and_push()
                 await asyncio.sleep(10) # Check every 10 seconds
             except Exception as e:
-                log.error(f"Notifier Loop Error: {e}", exc_info=True)
+                log.error(f"❌ [通知服务] 循环执行异常: {e}", exc_info=True)
                 await asyncio.sleep(30)
 
     async def stop(self):
         self.running = False
-        log.info("Bot Notifier stopped.")
+        log.info("🛑 [通知服务] 通知推送服务已停止")
 
     async def _check_and_push(self):
         # 1. Fetch new logs since last check
@@ -86,7 +86,7 @@ class BotNotifier:
             self._last_check_time = now
             return
 
-        log.info(f"Notifier: Found {len(updates_data)} new updates.")
+        log.info(f"📢 [通知服务] 发现 {len(updates_data)} 条新更新待推送")
         
         for update in updates_data:
             await self._process_update(update)
@@ -125,7 +125,7 @@ class BotNotifier:
             try:
                 user_id = int(user_id_str)
                 # Using send_private_msg
-                log.info(f"Pushing update {update['id']} to user {user_id}")
+                log.info(f"📤 [推送] 正在推送更新 #{update['id']} 给用户 {user_id}")
                 await self.bot.send_private_msg(user_id=user_id, message=msg_text)
             except Exception as e:
-                log.error(f"Failed to push to {sub.user_id}: {e}")
+                log.error(f"❌ [推送] 推送给用户 {user_id} 失败: {e}")

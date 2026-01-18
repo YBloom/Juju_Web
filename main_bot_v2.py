@@ -15,7 +15,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 def main():
-    logging.info("Initializing Database...")
+    logging.info("🚀 [启动] 正在初始化数据库...")
     init_db()
     
     # Force Config
@@ -48,7 +48,7 @@ def main():
         # Set bot api for notification engine
         notification_engine.bot_api = bot.api
         
-        log.info("Starting scheduled sync task...")
+        log.info("⏰ [定时任务] 定时同步任务已启动")
         while True:
             try:
                 # 1. Sync data and detect updates
@@ -58,15 +58,15 @@ def main():
                 # 2. Process updates through notification engine
                 if updates:
                     enqueued = await notification_engine.process_updates(updates)
-                    log.info(f"Enqueued {enqueued} notifications from {len(updates)} updates")
+                    log.info(f"📬 [通知] 已入队 {enqueued} 条通知 (来自 {len(updates)} 条更新)")
                 
                 # 3. Consume send queue
                 sent = await notification_engine.consume_queue()
                 if sent > 0:
-                    log.info(f"Sent {sent} notifications")
+                    log.info(f"✅ [通知] 已发送 {sent} 条通知")
                     
             except Exception as e:
-                log.error(f"Scheduled sync task error: {e}")
+                log.error(f"❌ [错误] 定时同步任务异常: {e}")
             
             # Wait 5 minutes
             await asyncio.sleep(300)
@@ -87,7 +87,7 @@ def main():
         if not _scheduled_task_running:
             asyncio.create_task(scheduled_sync_task())
     
-    logging.info("Starting Bot...")
+    logging.info("🤖 [启动] Bot 正在启动...")
     bot.run(bt_uin="3132859862", enable_webui_interaction=False)
 
 if __name__ == "__main__":

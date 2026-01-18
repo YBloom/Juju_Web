@@ -53,7 +53,7 @@ class BotHandler:
                 if user and user.bot_interaction_mode:
                     return user.bot_interaction_mode
         except Exception as e:
-            log.warning(f"Failed to fetch user mode for {user_id}: {e}")
+            log.warning(f"⚠️ [用户] 获取用户 {user_id} 交互模式失败: {e}")
         return "hybrid"
 
     async def handle_message(self, message: str, user_id: str, nickname: str = "") -> Optional[str]:
@@ -64,7 +64,7 @@ class BotHandler:
         uid_str = str(user_id)
         
         # Debug Log
-        log.info(f"Bot received message from {user_id}: {msg}")
+        log.info(f"💬 [消息] 收到来自 {user_id} 的消息: {msg}")
         
         # --- Help Command ---
         if msg.lower() in ["/help", "help", "帮助", "菜单"]:

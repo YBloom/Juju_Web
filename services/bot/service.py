@@ -40,7 +40,7 @@ class BotService:
 
     async def start(self, **kwargs):
         """Start the bot client."""
-        log.info("Starting Bot Service...")
+        log.info("🤖 [Bot服务] 正在启动 Bot 服务...")
         
         # Start Notifier
         asyncio.create_task(self.notifier.start())
