@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# MusicalBot 一键更新脚本 (服务器端使用)
-# 用法: sudo ./update.sh
+# MusicalBot Web 异步更新脚本 (服务器端使用)
+# 用法: sudo ./update_web.sh
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -11,7 +11,7 @@ NC='\033[0m'
 
 PROJECT_DIR="/opt/MusicalBot"
 
-echo -e "${GREEN}=== MusicalBot 代码更新 ===${NC}"
+echo -e "${GREEN}=== MusicalBot Web 服务更新 ===${NC}"
 
 # 1. 进入项目目录
 cd $PROJECT_DIR || { echo -e "${RED}项目目录不存在${NC}"; exit 1; }

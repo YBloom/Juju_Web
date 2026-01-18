@@ -6,17 +6,21 @@
 
 | 脚本 | 位置 | 执行环境 | 用途 |
 |------|------|----------|------|
-| `update_bot.sh` | 项目根目录 | **本地** | Bot 一键部署 (commit → push → pull → restart) |
-| `scripts/update.sh` | scripts/ | **服务器** | 服务器端 Web 更新 (pull → pip → restart) |
+| `update_bot.sh` | 项目根目录 | **服务器** | Bot 拉取并重启 (pull → restart bot) |
+| `scripts/update_web.sh` | scripts/ | **服务器** | Web 拉取并更新 (pull → pip → restart web) |
+| `scripts/update_all.sh` | scripts/ | **服务器** | 全部更新 (pull → pip → restart all) |
 
 ### 使用示例
 
 ```bash
-# 本地部署 Bot (最常用)
-./update_bot.sh "feat: add new command"
+# 本地推送并远程更新 Bot
+git push origin v1 && ssh yyj "cd /opt/MusicalBot && sudo ./update_bot.sh"
 
 # 服务器端更新 Web (SSH 后执行)
-sudo ./scripts/update.sh
+sudo ./scripts/update_web.sh
+
+# 服务器端更新全部 (SSH 后执行)
+sudo ./scripts/update_all.sh
 ```
 
 ---
@@ -57,10 +61,13 @@ sudo ./scripts/update.sh
 
 ```bash
 # Bot 部署 (从本地)
-./update_bot.sh "commit message"
+git push origin v1 && ssh yyj "cd /opt/MusicalBot && sudo ./update_bot.sh"
 
 # Web 部署 (从本地)
-git push origin v1 && ssh yyj "cd /opt/MusicalBot && sudo git pull && sudo supervisorctl restart musicalbot_web"
+git push origin v1 && ssh yyj "cd /opt/MusicalBot && sudo ./scripts/update_web.sh"
+
+# 全部更新 (从本地)
+git push origin v1 && ssh yyj "cd /opt/MusicalBot && sudo ./scripts/update_all.sh"
 ```
 
 **注意**: 所有服务器端命令都需要 `sudo`，脚本已内置。
