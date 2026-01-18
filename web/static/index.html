@@ -13,6 +13,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css?v=20260112_7">
     <link rel="stylesheet" href="/static/css/feedback.css?v=20260112_7">
+    <link rel="stylesheet" href="/static/css/error.css">
 
     <!-- Pinyin Library for Autocomplete -->
     <script src="https://unpkg.com/pinyin-pro@3.18.2/dist/index.js"></script>
@@ -557,6 +558,24 @@
         </div>
         <p id="close-hint" class="close-hint">(点击任意处关闭)</p>
         <div id="confetti-container"></div>
+    </div>
+
+    <!-- Global Error Overlay -->
+    <div id="global-error-overlay" class="error-overlay">
+        <div class="error-card">
+            <div class="error-icon">
+                <i class="material-icons">wifi_off</i>
+            </div>
+            <h2 class="error-title">网络连接似乎断开了</h2>
+            <p class="error-message">请检查您的网络设置。</p>
+
+            <div class="error-detail"></div>
+
+            <button class="error-retry-btn" onclick="window.location.reload()">
+                <i class="material-icons">refresh</i>
+                刷新页面
+            </button>
+        </div>
     </div>
 
     <!-- Heatmap Logic -->

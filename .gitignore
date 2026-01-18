@@ -253,3 +253,4 @@ dev.sh
 logs
 docs/juquan_insights.md
 .gitignore
+web/static/error_test.html

@@ -1,8 +1,12 @@
 
 import { router } from './modules/router.js';
 import { state } from './modules/state.js';
+import { initErrorHandler } from './modules/error_handler.js';
 import * as ui from './modules/ui.js';
 import { loadHeatmap, updateLabCardStats } from './modules/heatmap.js?v=20260118_2';
+
+// Init Global Error Handler
+initErrorHandler();
 
 // ... (existing code)
 
