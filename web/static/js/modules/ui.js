@@ -954,7 +954,6 @@ async function renderUserProfile(container, user) {
     });
 }
 
-};
 
 // Export logout function
 export const doLogout = window.doLogout = async () => {
