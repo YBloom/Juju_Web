@@ -63,6 +63,26 @@ class BotHandler:
         msg = message.strip()
         uid_str = str(user_id)
         
+        # Debug Log
+        log.info(f"Bot received message from {user_id}: {msg}")
+        
+        # --- Help Command ---
+        if msg.lower() in ["/help", "help", "帮助", "菜单"]:
+            return (
+                "🤖 MusicalBot 帮助菜单\n"
+                "------------------\n"
+                "📅 查询排期:\n"
+                "  /date [日期] [城市]\n"
+                "  例: /date 2026-01-01 上海\n\n"
+                "🔍 查询剧目:\n"
+                "  查票 [剧目名]\n"
+                "  例: 查票 粉丝来信\n\n"
+                "🔐 Web 控制台:\n"
+                "  发送 /web 或 /登录 获取登录链接\n\n"
+                "⚙️ 设置:\n"
+                "  请在 Web 控制台中配置通知偏好"
+            )
+        
         # --- Auth / Login ---
         if msg == "/web" or msg == "/登录":
             token = create_magic_link_token(uid_str, nickname)
