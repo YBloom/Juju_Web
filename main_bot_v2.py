@@ -70,17 +70,17 @@ def main():
             # Wait 5 minutes
             await asyncio.sleep(300)
     
-    @bot.group_event()
+    @bot.on_group_message()
     async def on_group_message(msg: GroupMessage):
-        response = await handler.handle_message(msg.raw_message, str(msg.user_id))
+        response = await handler.handle_group_message(msg.group_id, int(msg.user_id), msg.raw_message, nickname=getattr(msg.sender, 'nickname', ''))
         if response:
-            await bot.api.post_group_msg(msg.group_id, text=response)
+            await bot.api.post_group_msg(group_id=msg.group_id, text=response)
     
-    @bot.private_event()
+    @bot.on_private_message()
     async def on_private_message(msg: PrivateMessage):
-        response = await handler.handle_message(msg.raw_message, str(msg.user_id))
+        response = await handler.handle_message(msg.raw_message, str(msg.user_id), nickname=getattr(msg.sender, 'nickname', ''))
         if response:
-            await bot.api.post_private_msg(msg.user_id, text=response)
+            await bot.api.post_private_msg(user_id=msg.user_id, text=response)
         
         # Start scheduled task on first message (ensures bot.api is ready)
         if not _scheduled_task_running:
