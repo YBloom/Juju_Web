@@ -2,12 +2,13 @@
 import { router } from './modules/router.js';
 import { state } from './modules/state.js';
 import * as ui from './modules/ui.js';
-import { loadHeatmap } from './modules/heatmap.js';
+import { loadHeatmap, updateLabCardStats } from './modules/heatmap.js?v=20260118_2';
+
+// ... (existing code)
+
 
 // Expose functions to global scope for HTML event handlers
 window.router = router;
-window.changeSort = ui.changeSort;
-window.toggleColumn = ui.toggleColumn;
 window.applyFilters = ui.applyFilters;
 window.searchInCoCast = ui.searchInCoCast;
 window.addCastInput = ui.addCastInput;
@@ -19,12 +20,18 @@ window.doDateSearch = ui.doDateSearch;
 window.applyDateFilters = ui.applyDateFilters;
 window.applyDetailFilters = ui.applyDetailFilters;
 window.jumpToDetail = ui.jumpToDetail;
+window.doLogout = ui.doLogout;
+window.showAddSubModal = ui.showAddSubModal;
+window.hideAddSubModal = ui.hideAddSubModal;
+window.selectSubType = ui.selectSubType;
+window.doAddSubscription = ui.doAddSubscription;
+window.handleDeleteSubscription = ui.handleDeleteSubscription;
 
 // Expose state for debugging if needed
 window.appState = state;
 
 document.addEventListener('DOMContentLoaded', () => {
-    ui.renderColumnToggles();
+    // ui.renderColumnToggles(); // Removed in v2.1 (No Table Header)
     ui.fetchUpdateStatus();
     ui.initActorAutocomplete();
 
@@ -57,11 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     router.on('/lab', () => {
         ui.showTabContent('tab-lab');
+        updateLabCardStats();
     });
 
     router.on('/lab/heatmap', () => {
         ui.showTabContent('tab-lab-heatmap');
         loadHeatmap();
+    });
+
+    router.on('/user', () => {
+        ui.showTabContent('tab-user');
+        ui.initUserTab();
+    });
+
+    router.on('/user/subscriptions', () => {
+        ui.showTabContent('tab-user-subscriptions');
+        ui.initSubscriptionManagement();
     });
 
     // Global search hook

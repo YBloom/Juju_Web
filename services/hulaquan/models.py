@@ -47,6 +47,7 @@ class TicketUpdate(BaseModel):
     total_ticket: Optional[int] = None
     cast_names: Optional[List[str]] = None  # ["江东旭", "韦岸"]
     created_at: Optional[datetime] = None # detection time
+    valid_from: Optional[str] = None # 开票时间
     
 class SearchResult(BaseModel):
     events: List[EventInfo]

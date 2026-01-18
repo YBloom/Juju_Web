@@ -377,42 +377,60 @@ class HulaquanService:
                          cast_names_list = [c.name for c in ticket.cast_members]
                 
                 # Notifications
+                raw_valid_from = t_data.get("valid_from")
+                valid_from = None
+                if raw_valid_from:
+                    try:
+                        # Normalize to YYYY-MM-DD HH:mm
+                        valid_from = standardize_datetime(raw_valid_from, return_str=True, with_second=False)
+                    except Exception:
+                        valid_from = raw_valid_from # Fallback to raw if parsing fails
+
                 if is_new:
                     if status == "pending":
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="pending", message=f"⏲️开票: {title}",
                             session_time=session_time, price=price, stock=left_ticket, 
-                            total_ticket=total_ticket, cast_names=cast_names_list
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
                     elif left_ticket > 0:
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="new", message=f"🆕上新: {title} 余票{left_ticket}/{total_ticket}",
                             session_time=session_time, price=price, stock=left_ticket, 
-                            total_ticket=total_ticket, cast_names=cast_names_list
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
                 else:
+                    # Detect status changes
                     if status == "pending" and ticket.status != "pending":
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="pending", message=f"⏲️开票: {title}",
                             session_time=session_time, price=price, stock=left_ticket, 
-                            total_ticket=total_ticket, cast_names=cast_names_list
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
+                        ))
+                    elif ticket.status == "pending" and status == "active":
+                        # CRITICAL: Pending -> Active transition means OPENED FOR SALE
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="new", message=f"🚀正式开票: {title}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
                     elif ticket.stock == 0 and left_ticket > 0:
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="restock", message=f"♻️回流: {title} 余票{left_ticket}/{total_ticket}",
                             session_time=session_time, price=price, stock=left_ticket, 
-                            total_ticket=total_ticket, cast_names=cast_names_list
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
                     elif left_ticket > ticket.stock:
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="back", message=f"➕票增: {title} 余票{left_ticket}/{total_ticket}",
                             session_time=session_time, price=price, stock=left_ticket, 
-                            total_ticket=total_ticket, cast_names=cast_names_list
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
 
                 # Updates
@@ -421,7 +439,7 @@ class HulaquanService:
                 ticket.total_ticket = total_ticket
                 ticket.price = price
                 ticket.status = status
-                ticket.valid_from = t_data.get("valid_from")
+                ticket.valid_from = valid_from
                 ticket.session_time = session_time  # Already parsed above
                 
                 # Apply Enrichment (City)
@@ -486,7 +504,8 @@ class HulaquanService:
                     price=update.price,
                     stock=update.stock,
                     total_ticket=update.total_ticket,
-                    cast_names=json.dumps(final_cast_names) if final_cast_names else None
+                    cast_names=json.dumps(final_cast_names) if final_cast_names else None,
+                    valid_from=update.valid_from
                 )
                 session.add(log_entry)
 
@@ -818,6 +837,16 @@ class HulaquanService:
                 
                 # Actually, let's just use the logic from get_all_events but cleaner.
                 
+                # Filter Expired: Skip events where all sessions are in the past
+                # 过滤已过期：跳过所有场次均已过期的演出
+                all_sessions = [t.session_time for t in e.tickets if t.session_time]
+                if all_sessions:
+                    # Check if the latest session is still in the past
+                    # 检查最晚的场次是否仍在过去
+                    # Using naive comparison assuming session_time is naive (local) and system is local
+                    if max(all_sessions) < datetime.now():
+                        continue
+
                 # Calculate basic info
                 total_stock = sum(t.stock for t in e.tickets)
                 
@@ -833,6 +862,26 @@ class HulaquanService:
                     ) for t in e.tickets if t.status != "expired"]
                     
                     results.append(self._format_event_info(e, tickets_minimal))
+            
+            # Sort Logic:
+            # 1. City Count (Popular cities first)
+            # 2. Update Time (Recently updated first)
+            
+            # Compute City Counts
+            city_counts = {}
+            for r in results:
+                c = r.city or "其他"
+                city_counts[c] = city_counts.get(c, 0) + 1
+            
+            # Sort
+            def sort_key(item):
+                c_count = city_counts.get(item.city or "其他", 0)
+                # Ensure update_time is comparable (handle None)
+                u_time = item.update_time.timestamp() if item.update_time else 0
+                return (c_count, u_time)
+
+            results.sort(key=sort_key, reverse=True)
+
             return results
 
     async def fix_legacy_data(self):
@@ -1128,8 +1177,8 @@ class HulaquanService:
             # 使用 JOIN 构建查询以检查实时状态
             now = timezone_now()
             
-            # Select Log, Join Ticket
-            stmt = select(TicketUpdateLog).join(HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id)
+            # Modify select to include Ticket for data fallback (esp. valid_from)
+            stmt = select(TicketUpdateLog, HulaquanTicket).join(HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id)
             
             # Filter 1: Real-time Status (Active/Pending AND (Pending OR Stock>0))
             # 过滤 1: 实时状态 (Active/Pending 且 (Pending 或 Stock>0))
@@ -1161,11 +1210,11 @@ class HulaquanService:
             # Apply limit
             stmt = stmt.limit(limit)
             
-            logs = session.exec(stmt).all()
+            results = session.exec(stmt).all()
             
             # Convert to TicketUpdate objects
             updates = []
-            for log in logs:
+            for log, ticket in results:
                 cast_names_list = None
                 if log.cast_names:
                     try:
@@ -1181,10 +1230,11 @@ class HulaquanService:
                     message=log.message,
                     session_time=log.session_time,
                     price=log.price,
-                    stock=log.stock,
+                    stock=log.stock, # Snapshot stock (Updated at log time)
                     total_ticket=log.total_ticket,
                     cast_names=cast_names_list,
-                    created_at=log.created_at
+                    created_at=log.created_at,
+                    valid_from=log.valid_from or ticket.valid_from # Fallback to current ticket valid_from
                 ))
             
             return updates

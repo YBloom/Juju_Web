@@ -470,10 +470,20 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 # --- API 端点 ---
 
 # Register Auth Router
+from web.routers.auth import router as auth_router
+app.include_router(auth_router)
 
 # Register Subscription Router
+from web.routers.subscription import router as subscription_router
+app.include_router(subscription_router)
 
 # Register Marketplace Router
+from web.routers.marketplace import router as marketplace_router
+app.include_router(marketplace_router)
+
+# Register User Settings Router
+from web.routers.user import router as user_router
+app.include_router(user_router)
 
 @app.get("/api/events/list")
 @limiter.limit("60/minute", key_func=key_func_remote)
@@ -896,6 +906,26 @@ async def get_heatmap(year: int = 2025):
     }
 
 
+@app.get("/api/analytics/summary")
+async def get_analytics_summary():
+    """Get global analytics summary (e.g. total shows)."""
+    # Simple cached count or live count
+    # For now, live count from SaojuShow is fast enough (20k rows is tiny)
+    from services.hulaquan.tables import SaojuShow
+    from services.db.connection import session_scope
+    from sqlmodel import select, func
+    
+    total = 0
+    with session_scope() as session:
+        # Count all
+        # Optimization: select(func.count(SaojuShow.id))
+        stmt = select(func.count()).select_from(SaojuShow)
+        total = session.exec(stmt).one()
+        
+    return {
+        "total_shows": total
+    }
+
 # --- Frontend Routes ---
 # --- 前端路由 ---
 
@@ -1228,18 +1258,14 @@ async def reopen_feedback(feedback_id: int, username: str = Depends(get_current_
 # --- 魔术链接认证端点 ---
 
 @app.get("/auth")
-async def magic_link_auth(token: str = None):
-    """
-    Magic Link 登录端点。
-    Bot 生成带 token 的链接，用户点击后自动登录。
-    """
-    if not token:
-        return HTMLResponse("""
-            <html><body>
-            <h2>❌ 无效的登录链接</h2>
-            <p>请通过 QQ 机器人私聊发送 <code>/web</code> 获取登录链接。</p>
-            </body></html>
-        """, status_code=400)
+async def magic_link_auth_legacy_dummy(token: str = None):
+    # Backward compatibility redirect or just inform user
+    # Ideally should redirect to /auth/magic-link?token=... but we changed the path style.
+    # New style: /auth/magic-link?token=XXX
+    from fastapi.responses import RedirectResponse
+    if token:
+        return RedirectResponse(f"/auth/magic-link?token={token}")
+    return HTMLResponse("Invalid Link", status_code=400)
     
     # 验证 Token
     payload = verify_magic_link_token(token)

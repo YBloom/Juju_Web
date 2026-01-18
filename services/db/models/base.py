@@ -72,3 +72,25 @@ class SendQueueStatus(str, Enum):
     SENT = "sent"
     FAILED = "failed"
     RETRYING = "retrying"
+
+
+class TradeType(str, Enum):
+    """交易类型."""
+    SELL = "sell"      # 出票
+    BUY = "buy"        # 求票
+    EXCHANGE = "exchange"  # 换票
+
+
+class TradeStatus(str, Enum):
+    """交易状态."""
+    OPEN = "open"           # 开启 (可交易)
+    LOCKED = "locked"       # 锁定 (正在沟通)
+    COMPLETED = "completed" # 完成
+    CANCELLED = "cancelled" # 取消
+
+
+class ItemDirection(str, Enum):
+    """挂单细项方向."""
+    HAVE = "have"  # 持有 (我有)
+    WANT = "want"  # 期待 (我想要)
+

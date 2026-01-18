@@ -2,7 +2,7 @@
 import { state } from './state.js';
 import { api } from './api.js';
 import { router } from './router.js';
-import { getCityScore, formatDateStr, formatDateDisplay, getNormalizedTitle, getPrice } from './utils.js';
+import { getCityScore, formatDateStr, formatDateDisplay, getNormalizedTitle, getPrice, escapeHtml } from './utils.js';
 import { initTicketUpdates } from './ticket_updates.js';
 
 // --- Tab Management ---
@@ -73,9 +73,8 @@ export async function fetchUpdateStatus() {
 
         html += ' | Saoju.net缓存: 24小时内有效';
 
-        // Add Service Info
         if (data.service_info) {
-            html += `<div style="margin-top:4px;"><a href="#" id="version-link" class="version-link">${data.service_info.version || 'v1.0'}</a> | 启动于: ${data.service_info.start_time || '未知'}</div>`;
+            html += `<div style="margin-top:4px;"><a href="#" id="version-link" class="version-link">${escapeHtml(data.service_info.version || 'v1.0')}</a> | 启动于: ${escapeHtml(data.service_info.start_time || '未知')}</div>`;
         }
 
         statusEl.innerHTML = html;
@@ -97,7 +96,7 @@ export async function initHlqTab() {
         // Initialize Ticket Updates Dashboard
         initTicketUpdates();
     } catch (e) {
-        container.innerHTML = `<div style="color:red;padding:20px;text-align:center">加载失败: ${e.message}</div>`;
+        container.innerHTML = `<div style="color:red;padding:20px;text-align:center">加载失败: ${escapeHtml(e.message)}</div>`;
     }
 }
 
@@ -106,203 +105,142 @@ export async function initHlqTab() {
 export function renderCityFilterOptions() {
     const cities = [...new Set(state.allEvents.map(e => e.city).filter(c => c))].sort();
     const toolbar = document.querySelector('.toolbar');
-    let select = document.getElementById('city-filter');
-    if (!select) {
-        const div = document.createElement('div');
-        div.style.marginRight = '15px';
-        div.innerHTML = `<select id="city-filter" style="padding: 5px 10px; border-radius: 8px; border: 1px solid #ddd;"><option value="">所有城市</option></select>`;
-        const colConfig = toolbar.querySelector('.column-config');
-        if (colConfig) toolbar.insertBefore(div, colConfig);
-        else toolbar.appendChild(div);
-        select = document.getElementById('city-filter');
-        select.addEventListener('change', () => applyFilters());
+
+    // Legacy support: if toolbar exists, use it as container, otherwise check for new container
+    let container = document.getElementById('top-filter-container');
+
+    // Clean up old toolbar if it exists and we haven't migrated
+    if (toolbar && !container) {
+        toolbar.innerHTML = ''; // Clear legacy toolbar
+        toolbar.id = 'top-filter-container'; // Reuse element
+        toolbar.className = 'filter-pills-scroll-wrapper'; // Use new wrapper class
+        toolbar.style.marginBottom = '20px';
+        container = toolbar;
     }
 
-    select.innerHTML = '<option value="">所有城市</option>';
+    if (!container) return; // Should likely exist in index.html, but safety check
+
+    // Generate Pills HTML
+    // Fixed "All" pill
+    const allActive = !document.getElementById('city-filter-value')?.value; // Simplified state check needed? 
+    // Actually, let's use a simpler approach: Just render completely new HTML
+
+    let html = `<div class="filter-pills-container" style="padding: 4px 2px;">
+        <div class="filter-pill ${!state.cityFilter ? 'active' : ''}" data-city="">
+            全部城市
+        </div>`;
+
     cities.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.innerText = c;
-        select.appendChild(opt);
-    });
-}
-
-export function sortEvents(events) {
-    if (!events || events.length === 0) return events;
-
-    const cityCounts = {};
-    events.forEach(e => {
-        if (e.city) cityCounts[e.city] = (cityCounts[e.city] || 0) + 1;
+        const isActive = state.cityFilter === c;
+        html += `<div class="filter-pill ${isActive ? 'active' : ''}" data-city="${escapeHtml(c)}">
+            ${escapeHtml(c)}
+        </div>`;
     });
 
-    return events.sort((a, b) => {
-        if (state.sortField !== 'city') {
-            let valA = a[state.sortField];
-            let valB = b[state.sortField];
-            if (state.sortField === 'stock') {
-                valA = a.total_stock || 0;
-                valB = b.total_stock || 0;
-                return state.sortAsc ? valA - valB : valB - valA;
-            }
-            if (typeof valA === 'string') valA = valA.toLowerCase();
-            if (typeof valB === 'string') valB = valB.toLowerCase();
-            if (valA < valB) return state.sortAsc ? -1 : 1;
-            if (valA > valB) return state.sortAsc ? 1 : -1;
-        }
+    html += `</div>`;
+    container.innerHTML = html;
 
-        const countA = cityCounts[a.city] || 0;
-        const countB = cityCounts[b.city] || 0;
-        if (countA !== countB) return countB - countA;
-
-        if (a.city !== b.city) return a.city.localeCompare(b.city, 'zh');
-
-        const getStartDate = (range) => {
-            if (!range) return new Date(0);
-            // 提取第一个日期格式 (YYYY.MM.DD 或 YYYY-MM-DD)
-            const match = range.match(/(\d{4})[.-](\d{1,2})[.-](\d{1,2})/);
-            if (match) {
-                const dateStr = match[0].replace(/\./g, '-');
-                const d = new Date(dateStr);
-                return isNaN(d.getTime()) ? new Date(0) : d;
-            }
-            return new Date(0);
-        };
-        const dateA = getStartDate(a.schedule_range);
-        const dateB = getStartDate(b.schedule_range);
-        return dateB - dateA;
+    // Add listeners
+    container.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            const city = pill.dataset.city || '';
+            // Handle "All" case vs specific city
+            state.cityFilter = city;
+            renderCityFilterOptions(); // Re-render to update active state
+            applyFilters();
+        });
     });
 }
 
 export function applyFilters() {
-    let filtered = state.allEvents;
+    const events = state.allEvents || [];
+    if (events.length === 0) {
+        renderEventTable([]);
+        return;
+    }
 
-    const searchBox = document.getElementById('global-search');
-    if (searchBox) {
-        const q = searchBox.value.trim().toLowerCase();
-        if (q) {
-            filtered = filtered.filter(e =>
-                (e.title && e.title.toLowerCase().includes(q)) ||
-                (e.location && e.location.toLowerCase().includes(q)) ||
-                (e.city && e.city.includes(q))
-            );
+    const currentCity = state.cityFilter;
+    // Global Search
+    const searchInput = document.getElementById('global-search');
+    const searchValue = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    const filtered = events.filter(e => {
+        // City Filter
+        if (currentCity && e.city !== currentCity) return false;
+
+        // Search Filter
+        if (searchValue) {
+            const title = e.title ? e.title.toLowerCase() : '';
+            const city = e.city ? e.city.toLowerCase() : '';
+            const location = e.location ? e.location.toLowerCase() : '';
+            if (!title.includes(searchValue) && !city.includes(searchValue) && !location.includes(searchValue)) {
+                return false;
+            }
         }
-    }
+        return true;
+    });
 
-    const townVal = document.getElementById('city-filter') ? document.getElementById('city-filter').value : '';
-    if (townVal) {
-        filtered = filtered.filter(t => t.city === townVal);
-    }
-
-    state.displayEvents = sortEvents(filtered);
-    renderEventTable(state.displayEvents);
+    renderEventTable(filtered);
 }
-
-export function renderColumnToggles() {
-    const toolbar = document.querySelector('.toolbar');
-    if (!toolbar.querySelector('.column-config')) {
-        const div = document.createElement('div');
-        div.className = 'column-config';
-        div.style.display = 'flex';
-        div.style.gap = '10px';
-        div.style.alignItems = 'center';
-
-        const cols = [
-            { id: 'city', label: '城市' },
-            { id: 'update', label: '排期' },
-            { id: 'title', label: '剧名' },
-            { id: 'location', label: '场馆' },
-            { id: 'stock', label: '余票' },
-            { id: 'price', label: '票价' },
-        ];
-
-        let html = '<span style="font-size:0.9em;color:var(--text-secondary)">显示列: </span>';
-        cols.forEach(c => {
-            const checked = state.visibleColumns[c.id] ? 'checked' : '';
-            html += `<label style="font-size:0.85em;cursor:pointer"><input type="checkbox" data-col="${c.id}" ${checked}> ${c.label}</label>`;
-        });
-
-        div.innerHTML = html;
-        toolbar.appendChild(div);
-
-        div.querySelectorAll('input').forEach(input => {
-            input.addEventListener('change', (e) => toggleColumn(e.target.dataset.col));
+// Search listener
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('global-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            // Debounce could be good, but for now direct call
+            applyFilters();
         });
     }
-}
+});
 
-export function toggleColumn(colId) {
-    state.visibleColumns[colId] = !state.visibleColumns[colId];
-    localStorage.setItem('hlq_columns', JSON.stringify(state.visibleColumns));
-    renderEventTable(state.displayEvents);
-}
-
-export function changeSort(field) {
-    if (state.sortField === field) {
-        state.sortAsc = !state.sortAsc;
-    } else {
-        state.sortField = field;
-        state.sortAsc = true;
-    }
-    applyFilters();
-}
-
-function renderEventTable(events) {
+export function renderEventTable(events) {
     const container = document.getElementById('hlq-list-container');
     if (!events || events.length === 0) {
         container.innerHTML = '<div style="padding:50px;text-align:center;color:#aaa">暂无符合条件的演出</div>';
         return;
     }
 
-    const col = state.visibleColumns;
-
-    let html = `
-    <div class="data-table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    ${col.city ? '<th width="60" data-sort="city" class="sortable">城市</th>' : ''}
-                    ${col.update ? '<th width="180">排期</th>' : ''}
-                    ${col.title ? '<th data-sort="title" class="sortable">剧目</th>' : ''}
-                    ${col.stock ? '<th width="100" data-sort="stock" class="sortable">总余票</th>' : ''}
-                    ${col.price ? '<th width="120">票价范围</th>' : ''}
-                    ${col.location ? '<th>场馆</th>' : ''}
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    // New Div Layout
+    let html = `<div class="event-list-main">`;
 
     events.forEach(e => {
         const scheduleRange = e.schedule_range || '-';
-        html += `<tr data-navigate="/detail/${e.id}">`;
-        if (col.city) html += `<td class="city-cell" data-label="城市">${e.city}</td>`;
-        if (col.update) html += `<td class="time-cell" data-label="排期">${scheduleRange}</td>`;
-        if (col.title) {
-            let showTitle = e.title;
+        let showTitle = e.title;
+        // Clean title: remove book title marks if present
+        if (e.title) {
             const titleMatch = e.title.match(/[《](.*?)[》]/);
             if (titleMatch && titleMatch[1]) showTitle = titleMatch[1];
-            html += `<td class="title-cell" data-label="剧目">
-                <span class="title-link" style="color:var(--primary-color); font-weight:600; cursor:pointer; display:inline-block; padding:6px 0;">
-                    《${showTitle}》
-                </span>
-            </td>`;
         }
-        if (col.stock) html += `<td class="stock-cell" data-label="总余票">${e.total_stock}</td>`;
-        if (col.price) html += `<td class="price-cell" data-label="票价范围">${e.price_range}</td>`;
-        if (col.location) html += `<td data-label="场馆">${e.location || '-'}</td>`;
-        html += `</tr>`;
+
+        // v2.1 Layout
+        // Left: City (Mobile: Gray, Fixed Width)
+        // Center: Title (Bold)
+        // Right/Bottom: Date
+
+        html += `
+        <div class="event-row" data-event-id="${e.id}">
+            <!-- Left: City -->
+            <div class="event-city">${escapeHtml(e.city)}</div>
+            
+            <!-- Center: Info -->
+            <div class="event-info">
+                <div class="event-title">${escapeHtml(showTitle)}</div>
+                <div class="event-date">${escapeHtml(scheduleRange)}</div>
+            </div>
+            
+            <!-- Right: Arrow (Optional, maybe for Desktop) -->
+            <div class="event-arrow">›</div>
+        </div>`;
     });
 
-    html += '</tbody></table></div>';
+    html += '</div>';
     container.innerHTML = html;
 
-    const table = container.querySelector('table');
-    table.querySelectorAll('.sortable').forEach(th => {
-        th.addEventListener('click', () => changeSort(th.dataset.sort));
-    });
-    table.querySelectorAll('tr[data-navigate]').forEach(tr => {
-        tr.addEventListener('click', () => router.navigate(tr.dataset.navigate));
-        const link = tr.querySelector('.title-link');
-        if (link) link.addEventListener('click', (e) => { e.stopPropagation(); router.navigate(tr.dataset.navigate); });
+    // Add Listeners
+    container.querySelectorAll('.event-row').forEach(row => {
+        row.addEventListener('click', () => {
+            if (row.dataset.eventId) router.navigate(`/detail/${row.dataset.eventId}`);
+        });
     });
 }
 
@@ -354,11 +292,11 @@ function renderDetailView(event) {
 
     let html = `
         <div style="background:#fcfcfc; padding:20px; border-radius:10px; border:1px solid #eee; margin-bottom:20px">
-            <h2 style="margin-top:0; color:var(--primary-color)">${event.title}</h2>
+            <h2 style="margin-top:0; color:var(--primary-color)">${escapeHtml(event.title)}</h2>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; gap:20px; color:#666">
-                    <span>📍 ${event.location || '未知场馆'}</span>
-                    <span>📅 排期: ${event.schedule_range || '待定'}</span>
+                    <span>📍 ${escapeHtml(event.location || '未知场馆')}</span>
+                    <span>📅 排期: ${escapeHtml(event.schedule_range || '待定')}</span>
                 </div>
                 <div style="font-size:0.85em; color:var(--text-secondary); opacity:0.8;">
                     💡 点击场次可跳转呼啦圈购票
@@ -437,17 +375,26 @@ function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
             timeStr = showYear ? `${year}年${month}月${day}日 周${weekday} ${hours}:${minutes}` : `${month}月${day}日 周${weekday} ${hours}:${minutes}`;
         }
 
-        const castStr = hasCast && t.cast && t.cast.length > 0 ? t.cast.map(c => `<span class="cast-link" data-name="${c.name}" style="color:var(--primary-color); cursor:pointer; text-decoration:underline;">${c.name}</span>`).join(' | ') : '-';
+        const castStr = hasCast && t.cast && t.cast.length > 0 ? t.cast.map(c => `<span class="cast-link" data-name="${escapeHtml(c.name)}" style="color:var(--primary-color); cursor:pointer; text-decoration:underline;">${escapeHtml(c.name)}</span>`).join(' | ') : '-';
 
         let priceStr = t.price_label && t.price_label !== `¥${t.price}` ? t.price_label : (t.original_price && t.original_price !== t.price ? `${t.price}（原价${t.original_price}）` : `¥${t.price}`);
         const isSoldOut = (t.stock !== undefined ? t.stock : 0) === 0 || t.status === 'sold_out';
+
+        let validFromInfo = '';
+        if (t.valid_from) {
+            validFromInfo = `<div style="font-size:0.8rem; color:#f59e0b; margin-top:4px; display:flex; align-items:center; gap:4px;">
+                <span class="material-icons" style="font-size:1rem;">alarm</span>
+                ${escapeHtml(t.valid_from)} 开票
+            </div>`;
+        }
+
         const sessionId = t.session_id || (t.session_time ? new Date(t.session_time).getTime() : '');
 
         html += `<tr class="${isSoldOut ? 'sold-out' : ''}" data-session-id="${sessionId}" style="cursor:pointer">
-            <td class="time-cell" data-label="演出时间">${timeStr}</td>
-            <td class="stock-cell" data-label="库存">${t.stock}/${t.total_ticket}</td>
+            <td class="time-cell" data-label="演出时间">${escapeHtml(timeStr)}${validFromInfo}</td>
+            <td class="stock-cell" data-label="库存">${escapeHtml(t.stock)}/${escapeHtml(t.total_ticket)}</td>
             ${hasCast ? `<td class="cast-cell" data-label="卡司">${castStr}</td>` : ''}
-            <td class="price-cell" data-label="价格">${priceStr}</td>
+            <td class="price-cell" data-label="价格">${escapeHtml(priceStr)}</td>
         </tr>`;
     });
 
@@ -724,24 +671,24 @@ function renderCoCastResults(results, source, casts) {
         lastYear = currentYear;
         lastDate = datePart;
 
-        const titleDisplay = (!isSaoju && r.event_id) ? `<span class="jump-detail" data-id="${r.event_id}" data-sess="${r.session_id || ''}" style="cursor:pointer; color:var(--primary-color); font-weight:600; text-decoration:underline;">${r.title}</span>` : r.title;
+        const titleDisplay = (!isSaoju && r.event_id) ? `<span class="jump-detail" data-id="${r.event_id}" data-sess="${r.session_id || ''}" style="cursor:pointer; color:var(--primary-color); font-weight:600; text-decoration:underline;">${escapeHtml(r.title)}</span>` : escapeHtml(r.title);
 
         const othersContent = (r.others && r.others.length > 0)
             ? `<div class="cast-list-layout">${r.others.map(c => {
-                let text = c;
-                let title = c;
+                let text = escapeHtml(c);
+                let title = escapeHtml(c);
                 if (c.includes(':')) {
                     const parts = c.split(':');
                     const role = parts[0];
                     const name = parts[1];
-                    text = `${name}<span class="cast-role-tiny">${role}</span>`;
-                    title = `${name} 饰 ${role}`;
+                    text = `${escapeHtml(name)}<span class="cast-role-tiny">${escapeHtml(role)}</span>`;
+                    title = `${escapeHtml(name)} 饰 ${escapeHtml(role)}`;
                 }
                 return `<div class="cast-item" title="${title}">${text}</div>`;
             }).join('')}</div>`
             : '-';
 
-        html += `<tr>${col.index ? `<td data-label="#">${idx + 1}</td>` : ''}<td class="time-cell" data-label="日期/时间">${dateDisplay}</td><td class="city-cell" data-label="城市">${r.city || '-'}</td><td class="title-cell" data-label="剧目">${titleDisplay}</td><td data-label="角色">${r.role || '-'}</td>${col.location ? `<td data-label="剧场">${r.location || '-'}</td>` : ''}${col.others ? `<td class="cast-cell" data-label="其TA卡司">${othersContent}</td>` : ''}</tr>`;
+        html += `<tr>${col.index ? `<td data-label="#">${idx + 1}</td>` : ''}<td class="time-cell" data-label="日期/时间">${dateDisplay}</td><td class="city-cell" data-label="城市">${escapeHtml(r.city || '-')}</td><td class="title-cell" data-label="剧目">${titleDisplay}</td><td data-label="角色">${escapeHtml(r.role || '-')}</td>${col.location ? `<td data-label="剧场">${escapeHtml(r.location || '-')}</td>` : ''}${col.others ? `<td class="cast-cell" data-label="其TA卡司">${othersContent}</td>` : ''}</tr>`;
     });
 
     html += '</tbody></table></div>';
@@ -765,9 +712,9 @@ function calculateCoCastStats(results, casts) {
     // Dynamic Header Text
     let headerText = '';
     if (casts.length === 1) {
-        headerText = `${casts[0]} 收录演出共 <span style="color:var(--primary-color); font-size:1.3rem; margin:0 4px">${total}</span> 场`;
+        headerText = `${escapeHtml(casts[0])} 收录演出共 <span style="color:var(--primary-color); font-size:1.3rem; margin:0 4px">${total}</span> 场`;
     } else {
-        headerText = `${casts.join(' & ')} 同台共 <span style="color:var(--primary-color); font-size:1.3rem; margin:0 4px">${total}</span> 场`;
+        headerText = `${escapeHtml(casts.join(' & '))} 同台共 <span style="color:var(--primary-color); font-size:1.3rem; margin:0 4px">${total}</span> 场`;
     }
 
     const groupMap = {};
@@ -790,12 +737,12 @@ function calculateCoCastStats(results, casts) {
         const group = groupMap[title];
         html += `<div class="cocast-stat-card">
                     <div class="cocast-stat-card-header">
-                        <span class="cocast-show-title">《${title}》</span>
+                        <span class="cocast-show-title">《${escapeHtml(title)}》</span>
                         <span class="cocast-show-count">${group.total}场</span>
                     </div>`;
         Object.keys(group.roles).sort((a, b) => group.roles[b] - group.roles[a]).forEach(role => {
             html += `<div class="cocast-role-row">
-                        <span>${role}</span>
+                        <span>${escapeHtml(role)}</span>
                         <span class="cocast-role-count">${group.roles[role]}场</span>
                     </div>`;
         });
@@ -839,12 +786,161 @@ function renderDateResults(tickets, date) {
 
     const allTickets = tickets.sort((a, b) => new Date(a.session_time) - new Date(b.session_time));
     const cities = [...new Set(allTickets.map(t => t.city).filter(c => c))].sort();
-    const times = [...new Set(allTickets.map(t => { if (!t.session_time) return null; const d = new Date(t.session_time); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }).filter(v => v))].sort();
+});
+}
 
-    state.currentDateTickets = allTickets;
-    state.currentDate = date;
+// --- User Profile ---
 
-    let html = `
+export async function initUserTab() {
+    const container = document.getElementById('user-profile-container');
+    container.innerHTML = '<div class="loading-spinner"></div>';
+
+    try {
+        const user = await api.checkLogin();
+        if (!user || !user.logged_in) {
+            renderLoginPrompt(container);
+        } else {
+            // Fetch comprehensive settings
+            const settings = await api.fetchUserSettings();
+            renderUserProfile(container, settings || user); // Fallback to auth user if settings fail?
+        }
+    } catch (e) {
+        console.error("User init error:", e);
+        renderLoginPrompt(container);
+    }
+}
+
+function renderLoginPrompt(container) {
+    container.innerHTML = `
+        <div style="text-align:center; padding:40px 20px;">
+            <div style="font-size:3rem; margin-bottom:20px;">🔒</div>
+            <h3 style="margin:0 0 10px 0; color:var(--text-primary);">未登录</h3>
+            <p style="color:var(--text-secondary); margin-bottom:30px;">请通过 QQ 机器人发送 <code>/web</code> 获取登录链接</p>
+            <div style="padding:15px; background:#f5f5f5; border-radius:12px; display:inline-block; font-family:monospace; color:#666;">
+                /web
+            </div>
+        </div>
+    `;
+}
+
+async function renderUserProfile(container, user) {
+    const mode = user.bot_interaction_mode || 'hybrid';
+
+    const modeOptions = [
+        {
+            value: 'hybrid',
+            label: '混合模式 (推荐)',
+            desc: '显示精简列表 (Top 5) + 详情链接。平衡信息量与屏占比。',
+            icon: 'view_agenda'
+        },
+        {
+            value: 'lite',
+            label: '极简模式',
+            desc: '仅显示统计信息 + 详情链接。最少打扰。',
+            icon: 'link'
+        },
+        {
+            value: 'legacy',
+            label: '传统模式',
+            desc: '显示完整长列表文本。适合习惯旧版交互的用户。',
+            icon: 'article'
+        }
+    ];
+
+    container.innerHTML = `
+        <div class="user-card" style="background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.05); overflow:hidden;">
+            <div style="padding:30px 20px; text-align:center; border-bottom:1px solid #f0f0f0; background:linear-gradient(to bottom, #fff, #fafafa);">
+                <div style="width:80px; height:80px; background:#eee; border-radius:50%; margin:0 auto 15px; display:flex; align-items:center; justify-content:center; font-size:2rem; overflow:hidden;">
+                    ${user.avatar_url ? `<img src="${escapeHtml(user.avatar_url)}" style="width:100%;height:100%;object-fit:cover;">` : (user.nickname ? user.nickname[0].toUpperCase() : 'U')}
+                </div>
+                <h2 style="margin:0; font-size:1.4rem; font-weight:700;">${escapeHtml(user.nickname || 'Bot User')}</h2>
+                <div style="margin-top:5px; color:#999; font-size:0.9rem;">ID: ${escapeHtml(user.user_id)}</div>
+            </div>
+            
+            <div style="padding:20px;">
+                <h3 style="font-size:1.1rem; margin:0 0 15px 0; display:flex; align-items:center;">
+                    <i class="material-icons" style="margin-right:8px; color:var(--primary-color);">smart_toy</i> 
+                    Bot 交互设置
+                </h3>
+                
+                <div class="mode-selector" style="display:flex; flex-direction:column; gap:12px;">
+                    ${modeOptions.map(opt => `
+                        <label class="mode-option ${mode === opt.value ? 'selected' : ''}" style="display:flex; align-items:flex-start; padding:15px; border:2px solid transparent; border-radius:12px; background:#f8f9fa; cursor:pointer; transition:all 0.2s;">
+                            <input type="radio" name="bot_mode" value="${opt.value}" ${mode === opt.value ? 'checked' : ''} style="display:none;">
+                            <div style="margin-right:15px; margin-top:2px; color:${mode === opt.value ? 'var(--primary-color)' : '#bbb'};">
+                                <i class="material-icons">${opt.icon}</i>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-weight:600; margin-bottom:4px; color:var(--text-primary);">${opt.label}</div>
+                                <div style="font-size:0.85rem; color:var(--text-secondary); line-height:1.4;">${opt.desc}</div>
+                            </div>
+                            <div class="check-mark" style="width:20px; height:20px; border-radius:50%; border:2px solid ${mode === opt.value ? 'var(--primary-color)' : '#ddd'}; display:flex; align-items:center; justify-content:center;">
+                                ${mode === opt.value ? `<div style="width:10px; height:10px; background:var(--primary-color); border-radius:50%;"></div>` : ''}
+                            </div>
+                        </label>
+                    `).join('')}
+                </div>
+                
+                <div id="save-status" style="margin-top:15px; text-align:center; min-height:20px; font-size:0.9rem;"></div>
+            </div>
+
+            <div style="padding:20px; border-top:1px solid #f0f0f0;">
+                <button onclick="router.navigate('/user/subscriptions')" style="width:100%; padding:15px; border:none; background:#f0f7ff; color:var(--primary-color); font-weight:600; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;">
+                    <i class="material-icons">notifications</i> 管理订阅
+                </button>
+                <button onclick="doLogout()" style="width:100%; padding:15px; border:none; background:#fff1f0; color:#ff4d4f; font-weight:600; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <i class="material-icons">logout</i> 退出登录
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Bind events
+    container.querySelectorAll('input[name="bot_mode"]').forEach(input => {
+        input.addEventListener('change', async (e) => {
+            const newMode = e.target.value;
+            const statusEl = document.getElementById('save-status');
+
+            // Update UI immediately for responsiveness
+            container.querySelectorAll('.mode-option').forEach(el => {
+                const isSelected = el.querySelector('input').value === newMode;
+                el.classList.toggle('selected', isSelected);
+                el.style.borderColor = isSelected ? 'var(--primary-color)' : 'transparent';
+                el.style.background = isSelected ? 'rgba(99, 126, 96, 0.05)' : '#f8f9fa';
+
+                const icon = el.children[1];
+                icon.style.color = isSelected ? 'var(--primary-color)' : '#bbb';
+
+                const check = el.children[3];
+                check.style.borderColor = isSelected ? 'var(--primary-color)' : '#ddd';
+                check.innerHTML = isSelected ? `<div style="width:10px; height:10px; background:var(--primary-color); border-radius:50%;"></div>` : '';
+            });
+
+            try {
+                statusEl.innerHTML = '<span style="color:#666;">⏳ 正在保存...</span>';
+                await api.updateUserSettings({ bot_interaction_mode: newMode });
+                statusEl.innerHTML = '<span style="color:var(--primary-color);">✅ 设置已保存</span>';
+                setTimeout(() => statusEl.innerHTML = '', 2000);
+            } catch (err) {
+                statusEl.innerHTML = '<span style="color:red;">❌ 保存失败，请重试</span>';
+                console.error(err);
+                // Revert UI? Maybe not necessary for simple toggle, just show error.
+            }
+        });
+    });
+}
+
+window.doLogout = async () => {
+    if (confirm('确定要退出登录吗？')) {
+        await api.logout();
+        window.location.reload();
+    }
+};
+
+state.currentDateTickets = allTickets;
+state.currentDate = date;
+
+let html = `
         <div style="margin-bottom:15px;padding:10px;background:#f0f7ff;border-radius:8px;border-left:4px solid var(--primary-color)"><div style="font-size:1.1em;font-weight:600;color:var(--primary-color);margin-bottom:5px">📅 ${date} - 查询到 ${tickets.length} 个场次</div></div>
         <div style="background:#f8f9fa; padding:15px 20px; border-radius:8px; margin-bottom:15px; border:1px solid #e0e0e0;">
             <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:center;">
@@ -857,13 +953,13 @@ function renderDateResults(tickets, date) {
         <div id="date-table-container"><table class="data-table"><thead><tr><th width="40">序号</th><th width="60">时间</th><th width="60">城市</th><th>剧目</th><th width="80">余票</th><th width="180">卡司</th><th width="120">价格</th></tr></thead><tbody id="date-table-body"></tbody></table></div>
     `;
 
-    container.innerHTML = html;
-    document.getElementById('date-filter-available').addEventListener('change', () => applyDateFilters(date));
-    document.getElementById('date-filter-city').addEventListener('change', () => applyDateFilters(date));
-    document.getElementById('date-filter-time').addEventListener('change', () => applyDateFilters(date));
-    document.getElementById('date-filter-search').addEventListener('input', () => applyDateFilters(date));
+container.innerHTML = html;
+document.getElementById('date-filter-available').addEventListener('change', () => applyDateFilters(date));
+document.getElementById('date-filter-city').addEventListener('change', () => applyDateFilters(date));
+document.getElementById('date-filter-time').addEventListener('change', () => applyDateFilters(date));
+document.getElementById('date-filter-search').addEventListener('input', () => applyDateFilters(date));
 
-    renderDateTableRows(allTickets);
+renderDateTableRows(allTickets);
 }
 
 function renderDateTableRows(tickets) {
@@ -907,15 +1003,20 @@ function renderDateTableRows(tickets) {
 
         html += `<tr class="${isSoldOut ? 'sold-out' : ''} ${groupClass}" data-session-id="${t.session_id || timeKey}"><td style="text-align:center; color:#999; font-size:0.85em;">${index + 1}</td>`;
         if (isSameGroup) {
-            html += `<td class="time-cell"></td><td class="city-cell"></td><td class="title-cell"></td><td class="stock-cell">${t.stock}/${t.total_ticket}</td><td class="cast-cell"></td>`;
+            html += `<td class="time-cell"></td><td class="city-cell"></td><td class="title-cell"></td><td class="stock-cell">${escapeHtml(t.stock)}/${escapeHtml(t.total_ticket)}</td><td class="cast-cell"></td>`;
         } else {
-            html += `<td class="time-cell">${timeStr}</td><td class="city-cell">${t.city || '-'}</td><td class="title-cell" style="cursor:pointer; color:var(--primary-color); font-weight:600;" onclick="jumpToDetail('${t.event_id || t.id}', '${t.session_id || ''}')">${showTitle}</td><td class="stock-cell">${t.stock}/${t.total_ticket}</td><td class="cast-cell">${castStr}</td>`;
+            html += `<td class="time-cell">${escapeHtml(timeStr)}</td><td class="city-cell">${escapeHtml(t.city || '-')}</td><td class="title-cell clickable-title" style="cursor:pointer; color:var(--primary-color); font-weight:600;" data-event-id="${t.event_id || t.id}" data-session-id="${t.session_id || ''}">${escapeHtml(showTitle)}</td><td class="stock-cell">${escapeHtml(t.stock)}/${escapeHtml(t.total_ticket)}</td><td class="cast-cell">${escapeHtml(castStr)}</td>`;
         }
-        html += `<td class="price-cell" style="color:#e67e22; font-weight:bold;">${priceStr}</td></tr>`;
+        html += `<td class="price-cell" style="color:#e67e22; font-weight:bold;">${escapeHtml(priceStr)}</td></tr>`;
         lastGroupKey = currentGroupKey;
     });
 
     tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;">没有符合条件的场次</td></tr>';
+
+    // Add Listeners
+    tbody.querySelectorAll('.clickable-title').forEach(el => {
+        el.addEventListener('click', () => jumpToDetail(el.dataset.eventId, el.dataset.sessionId));
+    });
 }
 
 export function applyDateFilters(date) {
@@ -983,3 +1084,323 @@ export function setQuickDate(type) {
     input.value = formatDateStr(target);
     doDateSearch();
 }
+
+// --- User Management ---
+
+export async function initUserTab() {
+    const container = document.getElementById('user-profile-container');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading-spinner"></div><div style="text-align:center;margin-top:10px;color:#888;">正在加载账户信息...</div>';
+
+    try {
+        const res = await api.checkLogin();
+        if (res.authenticated && res.user) {
+            state.user = res.user;
+            renderUserTab(res.user);
+        } else {
+            state.user = null;
+            renderLoginPrompt();
+        }
+    } catch (e) {
+        console.error("Auth check failed:", e);
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:red;">
+            <i class="material-icons" style="font-size:48px;margin-bottom:10px;">error_outline</i><br>
+            加载失败，请检查网络
+        </div>`;
+    }
+}
+
+function renderUserTab(user) {
+    const container = document.getElementById('user-profile-container');
+
+    const avatarUrl = user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.nickname || 'User') + '&background=random';
+
+    let html = `
+        <div class="user-card" style="background:#fff; border-radius:18px; padding:30px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.05); text-align:center; margin-bottom:20px;">
+            <div class="user-avatar" style="width:80px; height:80px; border-radius:50%; overflow:hidden; margin:0 auto 15px; border:3px solid #f0f0f0;">
+                <img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;" alt="Avatar">
+            </div>
+            <h2 style="margin:0 0 5px; color:#333;">${escapeHtml(user.nickname || '未命名用户')}</h2>
+            <div style="color:#888; font-size:0.9rem;">QQ: ${escapeHtml(user.user_id)}</div>
+            
+            <div style="margin-top:20px; display:flex; justify-content:center; gap:15px;">
+                <div style="background:#f9f9f9; padding:10px 20px; border-radius:10px;">
+                    <div style="font-weight:700; color:var(--primary-color); font-size:1.2rem;">${user.trust_score || 0}</div>
+                    <div style="font-size:0.8rem; color:#666;">信誉分</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-list" style="display:flex; flex-direction:column; gap:15px;">
+            <button class="action-btn" style="background:#fff; border:1px solid #eee; padding:15px; border-radius:12px; display:flex; align-items:center; justify-content:space-between; font-size:1rem; cursor:pointer;" onclick="router.navigate('/user/subscriptions')">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="background:#e3f2fd; color:#1976d2; padding:8px; border-radius:8px;"><i class="material-icons">notifications</i></div>
+                    <span>我的订阅管理</span>
+                </div>
+                <i class="material-icons" style="color:#ccc;">chevron_right</i>
+            </button>
+            
+            <button class="action-btn" onclick="doLogout()" style="background:#fff; border:1px solid #fee; color:#d32f2f; padding:15px; border-radius:12px; font-size:1rem; cursor:pointer; margin-top:10px;">
+                退出登录
+            </button>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+function renderLoginPrompt() {
+    const container = document.getElementById('user-profile-container');
+    container.innerHTML = `
+        <div style="text-align:center; padding:40px 20px;">
+            <i class="material-icons" style="font-size:64px; color:#ddd; margin-bottom:20px;">account_circle</i>
+            <h3 style="margin:0 0 10px; color:#333;">请先登录</h3>
+            <p style="color:#666; line-height:1.6;">
+                为了保护您的隐私，Web 端账号需与 QQ 绑定。<br>
+                请向机器人发送指令：
+            </p>
+            <div style="background:#f0f0f0; display:inline-block; padding:10px 20px; border-radius:8px; margin:15px 0; font-family:monospace; font-size:1.2rem; letter-spacing:1px; color:#333;">
+                /web
+            </div>
+            <p style="color:#666; font-size:0.9rem;">
+                点击机器人回复的链接，即可自动登录。
+            </p>
+        </div>
+    `;
+}
+
+export async function doLogout() {
+    if (!confirm("确定要退出登录吗？")) return;
+
+    try {
+        await api.logout();
+        state.user = null;
+        initUserTab(); // Re-init to show login prompt
+    } catch (e) {
+        alert("登出失败: " + e.message);
+    }
+}
+
+// --- Subscription Management ---
+
+export async function initSubscriptionManagement() {
+    const container = document.getElementById('subscriptions-container');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading-spinner"></div>';
+
+    try {
+        const subs = await api.fetchSubscriptions();
+        renderSubscriptionList(subs);
+    } catch (e) {
+        console.error("Failed to load subscriptions:", e);
+        container.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">
+            <i class="material-icons" style="font-size:48px; margin-bottom:10px;">error_outline</i>
+            <p>获取订阅列表失败，请检查登录状态。</p>
+            <button class="secondary-btn" onclick="initSubscriptionManagement()" style="margin-top:10px;">重试</button>
+        </div>`;
+    }
+
+    initSubscriptionAutocomplete();
+}
+
+function renderSubscriptionList(subs) {
+    const container = document.getElementById('subscriptions-container');
+    if (subs.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:60px 20px; color:#999; background:#fff; border-radius:24px; margin-top:20px;">
+                <i class="material-icons" style="font-size:64px; margin-bottom:15px; color:#eee;">notifications_none</i>
+                <p style="margin:0;">您还没有任何订阅</p>
+                <p style="font-size:0.9rem; margin-top:5px;">订阅后，当有新票务动态时我们会通知您</p>
+                <button class="primary-btn" onclick="showAddSubModal()" style="margin-top:20px; padding:10px 20px; border-radius:20px;">立即添加</button>
+            </div>
+        `;
+        return;
+    }
+
+    const html = subs.map(sub => renderSubscriptionItem(sub)).join('');
+    container.innerHTML = `<div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">${html}</div>`;
+}
+
+function renderSubscriptionItem(sub) {
+    const target = sub.targets[0] || {};
+    const options = sub.options || {};
+
+    const icon = target.kind === 'play' ? 'theater_comedy' : 'person';
+    const typeLabel = target.kind === 'play' ? '剧目' : '演员';
+
+    const freqLabels = {
+        'realtime': '实时',
+        'hourly': '每小时',
+        'daily': '每日'
+    };
+
+    return `
+        <div class="sub-item" style="background:#fff; border-radius:18px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.03); display:flex; align-items:center; gap:15px;">
+            <div style="background:#f5f5f5; color:#666; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                <i class="material-icons">${icon}</i>
+            </div>
+            
+            <div style="flex:1; overflow:hidden;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.8rem; color:var(--primary-color); background:rgba(108, 92, 231, 0.1); padding:2px 6px; border-radius:4px;">${typeLabel}</span>
+                    <strong style="font-size:1.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(target.name || '未知')}</strong>
+                </div>
+                <div style="margin-top:5px; font-size:0.85rem; color:#888; display:flex; align-items:center; gap:10px;">
+                    <span><i class="material-icons" style="font-size:0.9rem; vertical-align:text-bottom;">public</i> ${escapeHtml(target.city_filter || '全国')}</span>
+                    <span><i class="material-icons" style="font-size:0.9rem; vertical-align:text-bottom;">history</i> ${freqLabels[options.freq] || '实时'}</span>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:10px;">
+                <button class="icon-btn" onclick="handleDeleteSubscription(${sub.id})" style="color:#ff7675; background:rgba(255, 118, 117, 0.1); border:none; width:36px; height:36px; border-radius:10px; cursor:pointer;">
+                    <i class="material-icons" style="font-size:20px;">delete_outline</i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+export function showAddSubModal() {
+    const modal = document.getElementById('add-sub-modal');
+    if (modal) {
+        modal.classList.add('active');
+        // Reset form
+        document.getElementById('sub-target-input').value = '';
+        document.getElementById('sub-target-id').value = '';
+        document.getElementById('sub-target-name').value = '';
+        document.getElementById('sub-city-input').value = '';
+        selectSubType('play');
+    }
+}
+
+export function hideAddSubModal() {
+    const modal = document.getElementById('add-sub-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+export function selectSubType(type) {
+    const playOpt = document.getElementById('type-opt-play');
+    const actorOpt = document.getElementById('type-opt-actor');
+    const label = document.getElementById('target-label');
+    const input = document.getElementById('sub-target-input');
+    const typeInput = document.getElementById('selected-sub-type');
+
+    typeInput.value = type;
+
+    if (type === 'play') {
+        playOpt.style.borderColor = 'var(--primary-color)';
+        playOpt.querySelector('i').style.color = 'var(--primary-color)';
+        actorOpt.style.borderColor = '#eee';
+        actorOpt.querySelector('i').style.color = '#666';
+        label.innerText = '剧目名称';
+        input.placeholder = '输入剧名并选择...';
+    } else {
+        actorOpt.style.borderColor = 'var(--primary-color)';
+        actorOpt.querySelector('i').style.color = 'var(--primary-color)';
+        playOpt.style.borderColor = '#eee';
+        playOpt.querySelector('i').style.color = '#666';
+        label.innerText = '演员姓名';
+        input.placeholder = '输入演员名并选择...';
+    }
+
+    // Clear autocomplete
+    document.getElementById('sub-autocomplete-results').style.display = 'none';
+    input.value = '';
+    document.getElementById('sub-target-id').value = '';
+    document.getElementById('sub-target-name').value = '';
+}
+
+export async function doAddSubscription() {
+    const type = document.getElementById('selected-sub-type').value;
+    const targetId = document.getElementById('sub-target-id').value;
+    const targetName = document.getElementById('sub-target-name').value || document.getElementById('sub-target-input').value;
+    const city = document.getElementById('sub-city-input').value;
+    const freq = document.getElementById('sub-freq-select').value;
+
+    if (!targetName) {
+        alert("请输入订阅目标名称");
+        return;
+    }
+
+    const data = {
+        targets: [{
+            kind: type,
+            target_id: targetId || null,
+            name: targetName,
+            city_filter: city || null
+        }],
+        options: {
+            freq: freq
+        }
+    };
+
+    try {
+        await api.createSubscription(data);
+        hideAddSubModal();
+        initSubscriptionManagement(); // Refresh
+        alert("订阅成功！");
+    } catch (e) {
+        alert("订阅失败: " + e.message);
+    }
+}
+
+export async function handleDeleteSubscription(id) {
+    if (!confirm("确定要删除这项订阅吗？")) return;
+
+    try {
+        await api.deleteSubscription(id);
+        initSubscriptionManagement(); // Refresh
+    } catch (e) {
+        alert("删除失败: " + e.message);
+    }
+}
+
+function initSubscriptionAutocomplete() {
+    const input = document.getElementById('sub-target-input');
+    const results = document.getElementById('sub-autocomplete-results');
+    const targetIdInput = document.getElementById('sub-target-id');
+    const targetNameInput = document.getElementById('sub-target-name');
+
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        const type = document.getElementById('selected-sub-type').value;
+        const val = input.value.trim().toLowerCase();
+
+        if (!val) {
+            results.style.display = 'none';
+            return;
+        }
+
+        let matches = [];
+        if (type === 'play') {
+            matches = state.allEvents.filter(e =>
+                e.title.toLowerCase().includes(val)
+            ).slice(0, 5);
+        } else {
+            matches = state.artists.filter(a =>
+                a.name.toLowerCase().includes(val) || (a.pinyin && a.pinyin.includes(val))
+            ).slice(0, 5);
+        }
+
+        if (matches.length > 0) {
+            results.innerHTML = matches.map(m => `
+                <div class="suggestion-item" onclick="selectSubSuggestion('${escapeHtml(m.title || m.name)}', '${m.id}')" style="padding:10px 15px; cursor:pointer; border-bottom:1px solid #f9f9f9;">
+                    ${escapeHtml(m.title || m.name)}
+                </div>
+            `).join('');
+            results.style.display = 'block';
+        } else {
+            results.style.display = 'none';
+        }
+    });
+}
+
+window.selectSubSuggestion = (name, id) => {
+    document.getElementById('sub-target-input').value = name;
+    document.getElementById('sub-target-id').value = id;
+    document.getElementById('sub-target-name').value = name;
+    document.getElementById('sub-autocomplete-results').style.display = 'none';
+};

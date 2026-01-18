@@ -22,6 +22,22 @@ export function formatDateDisplay(dateStr) {
     return `${arr[0]}年${arr[1]}月${arr[2]}日`;
 }
 
+export function formatSessionTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+        const d = new Date(isoStr);
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
+        const week = weekMap[d.getDay()];
+        return `${m}月${day}日 周${week} ${h}:${min}`;
+    } catch (e) {
+        return isoStr;
+    }
+}
+
 export function getNormalizedTitle(t) {
     if (!t.title) return '';
     const match = t.title.match(/[《](.*?)[》]/);
@@ -33,6 +49,16 @@ export function getPrice(p) {
     if (!p) return 0;
     const str = String(p).replace(/[^\d.]/g, '');
     return parseFloat(str) || 0;
+}
+
+export function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // Debounce function if needed in future

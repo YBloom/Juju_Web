@@ -17,6 +17,16 @@ class User(TimeStamped, SoftDelete, SQLModel, table=True):
     active: bool = Field(default=True, nullable=False)
     transactions_success: int = Field(default=0, nullable=False, index=True)
     trust_score: int = Field(default=0, nullable=False, index=True)
+
+    # Web Auth Fields
+    auth_provider: Optional[str] = Field(default="qq", max_length=32, description="oauth provider (qq, google, etc)")
+    auth_id: Optional[str] = Field(default=None, max_length=128, description="unique id from provider")
+    email: Optional[str] = Field(default=None, max_length=255, index=True)
+    avatar_url: Optional[str] = Field(default=None, max_length=512)
+
+    # Bot Settings
+    bot_interaction_mode: str = Field(default="hybrid", max_length=20, description="hybrid, lite, legacy")
+
     extra_json: Optional[dict] = Field(
         default=None,
         sa_column=Column(JSON, nullable=True),

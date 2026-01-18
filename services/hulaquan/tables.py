@@ -152,5 +152,6 @@ class TicketUpdateLog(SQLModel, table=True):
     stock: Optional[int] = None
     total_ticket: Optional[int] = None
     cast_names: Optional[str] = None  # JSON string: ["江东旭", "韦岸"]
+    valid_from: Optional[str] = None
     
     created_at: datetime = Field(default_factory=timezone_now, index=True)

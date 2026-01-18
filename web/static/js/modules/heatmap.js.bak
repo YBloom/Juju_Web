@@ -192,20 +192,3 @@ function bindYearSelector() {
 window.addEventListener('resize', () => {
     if (heatmapChart) heatmapChart.resize();
 });
-
-export async function updateLabCardStats() {
-    const totalEl = document.getElementById('lab-total-shows');
-    if (!totalEl) return;
-
-    // Check if already loaded to avoid flickering if possible, or just overwrite
-    if (totalEl.innerText !== '...') return; // Simple debounce
-
-    try {
-        const response = await fetch('/api/analytics/summary');
-        if (!response.ok) throw new Error("API Error");
-        const data = await response.json();
-        totalEl.innerText = data.total_shows.toLocaleString();
-    } catch (err) {
-        console.error("Failed to load lab stats:", err);
-    }
-}

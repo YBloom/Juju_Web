@@ -59,6 +59,7 @@ class SubscriptionOption(TimeStamped, SQLModel, table=True):
     freq: SubscriptionFrequency = Field(default=SubscriptionFrequency.REALTIME, nullable=False)
     allow_broadcast: bool = Field(default=True, nullable=False)
     last_notified_at: Optional[datetime] = Field(default=None)
+    silent_hours: Optional[str] = Field(default=None, max_length=32, description="e.g. '23:00-08:00' for quiet hours")
 
     subscription: Mapped["Subscription"] = Relationship(
         back_populates="options",

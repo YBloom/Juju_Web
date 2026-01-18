@@ -9,19 +9,29 @@
     /* Warm White */
     --card-bg: #FFFFFF;
 
-    /* Status Colors (Nature/Earth Tones) */
-    --status-restock: #D9885E;
-    /* Autumn Leaf (Restock) */
-    --status-restock-bg: rgba(217, 136, 94, 0.1);
-    --status-new: #4A8B99;
-    /* Deep Lake (New) */
-    --status-new-bg: rgba(74, 139, 153, 0.1);
-    --status-pending: #A89F91;
-    /* Warm Stone (Pending) */
-    --status-pending-bg: rgba(168, 159, 145, 0.1);
-    --status-price: #637E60;
-    /* Moss (Price/Default) */
-    --status-price-bg: rgba(99, 126, 96, 0.1);
+    /* Status Colors (Refined High-Signal) */
+    --status-red-bg: #FEF2F2;
+    --status-red-text: #DC2626;
+    --status-red-border: #FECaca;
+
+    --status-orange-bg: #FFF7ED;
+    --status-orange-text: #C2410C;
+    --status-orange-border: #FED7AA;
+
+    --status-blue-bg: #EFF6FF;
+    --status-blue-text: #2563EB;
+    --status-blue-border: #BFDBFE;
+
+    --status-green-bg: #F0FDF4;
+    --status-green-text: #15803D;
+
+    /* Snippet Text Colors */
+    --text-urgency: #DC2626;
+    /* 余票极少 */
+    --text-warning: #C2410C;
+    /* 余票紧张 */
+    --text-safe: #6B7280;
+    /* 充足 (Muted) */
 
     --text-primary: #3C403B;
     /* Soft Black */
@@ -1446,6 +1456,16 @@ main {
     /* Use text color for border */
 }
 
+.updates-table .summary-time {
+    font-size: 0.85rem;
+    color: #999;
+    min-width: 60px;
+    /* Fixed width for alignment */
+    text-align: right;
+    display: inline-block;
+    font-family: var(--font-number);
+}
+
 .updates-table .cast-cell {
     font-size: 0.85rem;
     color: #6b7280;
@@ -2108,7 +2128,39 @@ main {
     background-color: var(--primary-hover);
 }
 
-/* 2. Visual Identity Badges */
+/* 9. Ticket Updates - Collapse/Expand Logic */
+.updates-body {
+    display: none;
+    transition: all 0.3s ease;
+}
+
+.ticket-updates-card.expanded .updates-body {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+.updates-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.expand-icon {
+    transition: transform 0.3s ease;
+}
+
+/* Keyframe for smooth appearance if needed */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .summary-badge {
     padding: 4px 10px;
     border-radius: 6px;
@@ -2119,25 +2171,145 @@ main {
 }
 
 /* Default (Green/Price) */
+/* Default (Fallback) */
 .summary-badge {
-    background-color: var(--status-price-bg);
-    color: var(--status-price);
+    background-color: var(--bg-color);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
 }
 
-/* Variants */
+/* Variants - High Signal */
+.summary-badge.type-back {
+    color: var(--status-red-text);
+    background-color: var(--status-red-bg);
+    border: 1px solid var(--status-red-border);
+}
+
 .summary-badge.type-restock {
-    background-color: var(--status-restock-bg);
-    color: var(--status-restock);
+    color: var(--status-orange-text);
+    background-color: var(--status-orange-bg);
+    border: 1px solid var(--status-orange-border);
 }
 
-.summary-badge.type-new {
-    background-color: var(--status-new-bg);
-    color: var(--status-new);
-}
-
+.summary-badge.type-new,
 .summary-badge.type-pending {
-    background-color: var(--status-pending-bg);
-    color: var(--status-pending);
+    color: var(--status-blue-text);
+    background-color: var(--status-blue-bg);
+    border: 1px solid var(--status-blue-border);
+}
+
+/* Hero Badge for Opening (Significant) - Orange */
+.summary-badge.type-pending-hero {
+    background-color: #EA580C;
+    /* Deep Orange */
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(234, 88, 12, 0.4);
+    font-weight: 700;
+    padding: 4px 12px;
+    letter-spacing: 1px;
+}
+
+.summary-badge.type-new-hero {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(99, 126, 96, 0.4);
+    font-weight: 700;
+    padding: 4px 12px;
+    letter-spacing: 1px;
+}
+
+/* Detail Row Grid Layout */
+.detail-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 1px dashed #eee;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-date {
+    width: 60px;
+    font-weight: 500;
+    font-family: var(--font-number);
+}
+
+.detail-week {
+    width: 40px;
+    color: #888;
+    font-size: 0.85em;
+}
+
+.detail-hm {
+    width: 50px;
+    font-family: var(--font-number);
+    color: #555;
+}
+
+.detail-price {
+    width: 60px;
+    color: var(--status-red-text);
+    font-weight: 600;
+    font-family: var(--font-number);
+}
+
+.detail-stock {
+    width: 50px;
+    color: #999;
+    font-size: 0.85em;
+}
+
+.detail-cast {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 10px;
+    color: #666;
+}
+
+.detail-extra {
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+.snippet-row {
+    margin-top: 8px;
+    display: block;
+    width: 100%;
+}
+
+.snippet-item {
+    display: inline-block;
+}
+
+.snippet-separator {
+    color: var(--border-color);
+    font-weight: bold;
+    margin: 0 8px;
+}
+
+.snippet-date {
+    font-weight: 500;
+}
+
+.snippet-stock {
+    color: var(--text-secondary);
+}
+
+.snippet-stock.urgent {
+    color: var(--text-urgency);
+    font-weight: 700;
+}
+
+.snippet-stock.warning {
+    color: var(--text-warning);
 }
 
 /* 3. Cast Indicator */
@@ -2150,108 +2322,433 @@ main {
     opacity: 0.6;
 }
 
+/* Default hidden */
+.detail-cast {
+    display: none;
+}
+
+/* Shown when container has modifier class */
+.updates-list.show-cast-mode .detail-cast,
+.updates-scroll.show-cast-mode .detail-cast {
+    display: inline;
+}
+
 .title-group {
     display: flex;
     align-items: center;
 }
 
 /* 4. Desktop Layout Refinements */
+/* 4. Desktop Layout Refinements */
+
+/* Container Constraint */
+main {
+    max-width: 900px;
+    margin: 20px auto 40px;
+    background: var(--card-bg);
+    min-height: 600px;
+    box-shadow: var(--shadow-soft);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+/* Pills Filter System */
+.filter-pills-scroll-wrapper {
+    width: 100%;
+    overflow-x: hidden;
+    /* Hide scrollbar by default, use custom if needed or touch */
+    padding-bottom: 4px;
+}
+
+.filter-pills-container {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 8px;
+    padding: 4px 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.filter-pills-container::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 30px;
+    background-color: #f3f4f6;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.filter-pill:hover {
+    background-color: #e5e7eb;
+}
+
+.filter-pill.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 10px rgba(99, 126, 96, 0.2);
+}
+
+.filter-pill .material-icons {
+    font-size: 1.1rem;
+    margin-right: 6px;
+}
+
+/* Update Summary Row - Flex Layout */
 .update-summary-row {
     background: #fff;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--divider-light, #f5f5f5);
+    /* Use lighter divider */
     padding: 16px 20px;
     display: flex;
-    align-items: center;
-    gap: 15px;
+    flex-direction: column;
+    /* Mobile Default: Stack */
+    gap: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    position: relative;
+    border-radius: 8px;
+    /* Subtle radius for hover effect */
+    margin: 0 10px;
+    /* Spacing from edges */
 }
 
 .update-summary-row:hover {
-    background-color: #FAFAF8;
+    background: linear-gradient(to right, #fdfbf7, #fff);
+    /* Subtle gradient */
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-.summary-title {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-right: auto;
-    /* Push rest to right */
-    display: flex;
-    align-items: center;
-}
-
-.summary-meta {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    font-family: 'SF Mono', Consolas, monospace;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.summary-arrow {
-    color: #ccc;
-    font-weight: bold;
-    width: 20px;
-    text-align: center;
-}
-
-/* 5. Mobile Layout (Double Line) */
-@media (max-width: 768px) {
+/* Desktop Compat: Single Line Layout */
+@media (min-width: 1024px) {
     .update-summary-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 12px 15px;
-    }
-
-    .summary-title {
-        width: 100%;
-        margin-right: 0;
-        justify-content: flex-start;
-        font-size: 1rem;
-        /* Larger text */
-    }
-
-    .summary-badge {
-        margin-right: 8px;
-    }
-
-    .summary-meta {
-        width: 100%;
+        flex-direction: row;
+        align-items: center;
         justify-content: space-between;
-        font-size: 0.8rem;
-        color: #999;
-        margin-left: 0;
-        /* Reset */
+        gap: 20px;
     }
 
-    .summary-time {
-        margin-left: auto;
-        /* Push to right */
+    .summary-top-line {
+        width: auto !important;
+        /* Allow shrink */
+        flex: 0 0 auto;
+        margin-bottom: 0 !important;
+    }
+
+    .snippet-row {
+        margin-top: 0 !important;
+        flex: 1;
+        display: flex !important;
+        align-items: center;
+        justify-content: flex-end;
+        /* Align snippets to right */
         text-align: right;
     }
 
-    /* Arrow position adjustment */
-    .summary-arrow {
-        position: absolute;
-        right: 15px;
-        top: 15px;
-        /* Align with title roughly */
+    /* Pills sidebar adaptation - User requested vertical or top */
+    /* Let's keep Horizontal for now as it fits 900px well, but maybe center it */
+    .filter-pills-container {
+        justify-content: flex-start;
+        /* Or center? Start is safer for overflow */
     }
 
-    /* Filter Bar Scroll */
-    .filter-group {
-        width: 100%;
-        overflow-x: auto;
-        padding-bottom: 5px;
+    .summary-meta {
+        /* Fixed width to ensure "Total Count" aligns perfectly */
+        flex: 0 0 130px !important;
+        justify-content: flex-end;
+        padding-left: 0 !important;
+        margin-left: 0 !important;
+        gap: 10px;
+    }
+
+    .summary-time {
+        min-width: 80px;
+        /* Accommodate "3小时前" */
+        text-align: right;
+        display: inline-block;
+    }
+}
+
+/* 5. Mobile Layout (Polished Card Style) */
+@media (max-width: 768px) {
+    .update-summary-row {
+        flex-direction: row;
+        /* Allow text wrap flow */
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        /* Tighter gap */
+        padding: 10px 12px;
+        /* Compact padding */
+        margin: 0 10px 8px 10px;
+        /* Reduced margin */
+        background: #fff;
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    }
+
+    .summary-top-line {
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+
+    .summary-title {
+        display: flex;
+        flex-direction: row;
+        /* Row layout */
         flex-wrap: nowrap;
-        -webkit-overflow-scrolling: touch;
+        /* NO WRAP */
+        align-items: center;
+        gap: 6px;
+        font-size: 0.95rem;
+        /* Slightly smaller */
+        line-height: 1.3;
+        font-weight: 600;
+        color: #333;
+        width: 100%;
     }
 
-    .filter-chip {
+    /* Badge alignment on mobile */
+    .summary-badge {
+        display: inline-flex;
+        align-self: center;
+        flex-shrink: 0;
+        font-size: 0.7rem;
+        /* Smaller badge */
+        padding: 1px 5px;
+        /* Compact badge */
+        margin: 0;
+    }
+
+    /* Title styling for truncation */
+    .summary-event-title {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+        font-weight: 700;
+        display: inline-block;
+    }
+
+    /* Open time tag styling */
+    .open-time-tag {
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        margin-left: auto;
+    }
+
+    .summary-title span:nth-child(2) {
+        margin-left: 0 !important;
+    }
+
+    /* Meta Info Row - merged line */
+    .summary-meta {
+        display: flex;
+        align-items: center;
+        width: auto;
+        /* Auto width */
+        margin-left: auto;
+        /* Push to right */
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+        font-size: 0.8rem;
+        color: #888;
+        gap: 8px;
+    }
+
+    .summary-time {
+        margin-left: 0;
+        color: #bbb;
+        font-size: 0.7rem;
+    }
+
+    /* Snippet Row on mobile - merged line */
+    .snippet-row {
+        margin-top: 0;
+        font-size: 0.8rem;
+        color: #666;
+        flex: 1;
+        /* Take left space */
+        min-width: 0;
+        /* Allow shrink */
+    }
+
+    /* Arrow position for mobile - static now to save space */
+    .summary-arrow {
+        position: static;
+        /* In flow */
+        transform: none;
+        opacity: 0.3;
+        font-size: 1rem;
+        margin-left: 4px;
+    }
+}
+
+/* Filter Bar Scroll */
+.filter-group {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+
+.filter-chip {
+    flex-shrink: 0;
+}
+}
+
+/* 6. Main List Refinements (v2.1) */
+.event-list-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px;
+}
+
+.event-row {
+    display: flex;
+    flex-direction: column;
+    /* Mobile Default: Stack */
+    padding: 16px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    gap: 8px;
+}
+
+.event-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.event-city {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    align-self: flex-start;
+    /* Fit content */
+    margin-bottom: 4px;
+}
+
+.event-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.event-date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', Consolas, monospace;
+}
+
+.event-arrow {
+    display: none;
+    /* Hidden on mobile usually, or shown absolute */
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ddd;
+    font-size: 1.5rem;
+}
+
+/* Desktop Main List */
+@media (min-width: 1024px) {
+    .event-list-main {
+        padding: 0 30px;
+    }
+
+    .event-row {
+        flex-direction: row;
+        align-items: center;
+        padding: 18px 24px;
+        gap: 20px;
+    }
+
+    .event-city {
+        width: 60px;
+        /* Fixed width for alignment */
+        margin-bottom: 0;
+        text-align: center;
+        font-size: 0.9rem;
         flex-shrink: 0;
     }
+
+    .event-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        /* Keep title above date? Or Row? */
+        /* User Requirement: Left City, Right Flow Title & Date */
+        /* Actually User said: "Right flow display Play Name (Bold) AND Date Range (Gray) - TWO ROWS vertical alignment" */
+        gap: 4px;
+    }
+
+    .event-title {
+        font-size: 1.1rem;
+    }
+
+    .event-arrow {
+        display: block;
+        position: static;
+        transform: none;
+    }
+}
+
+/* 7. Card & Snippet Tweaks v2.1 */
+.snippet-stock {
+    /* Make it a tag */
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    background: #f0f0f0;
+    color: #666;
+    margin-left: 4px;
+}
+
+.snippet-stock.urgent {
+    background: #fff3e0;
+    /* Light Orange */
+    color: #e65100;
+}
+
+.snippet-stock.sold-out {
+    background: #eee;
+    color: #999;
+}
+
+/* Force single line title in Updates */
+.summary-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* max-width controlled by flexibility */
 }
 
 /* Detail Panel (Expandable) */
@@ -2376,7 +2873,9 @@ main {
 
     .summary-title {
         font-size: 0.8rem;
-        max-width: 80px;
+        /* max-width removed to allow flex grow */
+        width: auto;
+        flex: 1;
     }
 
     .summary-date-range {
@@ -2568,6 +3067,61 @@ main {
 .site-footer {
     margin-top: 0;
     margin-bottom: 20px;
+}
+
+/* Modal System */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: white;
+    transform: translateY(20px);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+}
+
+/* Subscription UI Specific */
+.type-option {
+    transition: all 0.2s ease;
+}
+
+.type-option:active {
+    transform: scale(0.95);
+}
+
+.suggestion-item:hover {
+    background: #f5f5f5 !important;
+}
+
+.sub-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sub-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
 }
 
 .footer-content {

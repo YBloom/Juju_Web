@@ -1,6 +1,36 @@
 // API Interaction Module
 
 export const api = {
+    // Auth
+    async checkLogin() {
+        // Use new router endpoint
+        const res = await fetch('/auth/me');
+        return await res.json();
+    },
+
+    async logout() {
+        const res = await fetch('/auth/logout', { method: 'POST' });
+        return await res.json();
+    },
+
+    // User Settings
+    async fetchUserSettings() {
+        const res = await fetch('/api/user/settings');
+        if (res.status === 401) return null;
+        if (!res.ok) throw new Error("获取设置失败");
+        return await res.json();
+    },
+
+    async updateUserSettings(data) {
+        const res = await fetch('/api/user/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("更新设置失败");
+        return await res.json();
+    },
+
     // Meta/Status
     async fetchUpdateStatus() {
         try {
@@ -60,6 +90,44 @@ export const api = {
     async fetchRecentUpdates(limit = 20, types = "new,restock,back") {
         const res = await fetch(`/api/tickets/recent-updates?limit=${limit}&types=${types}`);
         if (!res.ok) throw new Error("获取票务更新失败");
+        return await res.json();
+    },
+
+    // Alias for v2.1 compat
+    async fetchTicketUpdates() {
+        return this.fetchRecentUpdates(50, "new,restock,back,pending");
+    },
+
+    // Subscriptions
+    async fetchSubscriptions() {
+        const res = await fetch('/api/subscriptions');
+        if (!res.ok) throw new Error("获取订阅列表失败");
+        return await res.json();
+    },
+
+    async createSubscription(data) {
+        const res = await fetch('/api/subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("创建订阅失败");
+        return await res.json();
+    },
+
+    async deleteSubscription(id) {
+        const res = await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error("删除订阅失败");
+        return await res.json();
+    },
+
+    async updateSubscriptionOptions(id, data) {
+        const res = await fetch(`/api/subscriptions/${id}/options`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("更新订阅选项失败");
         return await res.json();
     }
 };

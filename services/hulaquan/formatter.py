@@ -85,3 +85,37 @@ class HulaquanFormatter:
             lines.append(HulaquanFormatter.format_ticket_detail(t))
             
         return "\n".join(lines)
+
+    @staticmethod
+    def format_co_casts(results: List[Dict], limit: int = 5, show_link: str = None) -> str:
+        """Format co-cast search results."""
+        if not results:
+            return "👥 未找到同场演出信息。"
+            
+        lines = [f"👥 找到 {len(results)} 场同台演出:"]
+        
+        # Filter future only for concise list? Or just list all?
+        # User request: "Default generate from now to future"
+        # The logic for filtering should be in Service or Handler, here we format what we get.
+        
+        count = 0
+        for item in results:
+            if count >= limit:
+                break
+                
+            date_str = item.get("date", "未知日期")
+            title = item.get("title", "未知剧目")
+            city = item.get("city", "")
+            city_str = f"[{city}]" if city else ""
+            
+            # Format: 1. 02月14日 星期五 19:30 《粉丝来信》 [上海]
+            lines.append(f"{count+1}. {date_str} 《{title}》{city_str}")
+            count += 1
+            
+        if len(results) > limit:
+            lines.append(f"...等 {len(results)} 场 (仅显示前 {limit} 场)")
+            
+        if show_link:
+            lines.append(f"\n🔗 网页快速筛选: {show_link}")
+            
+        return "\n".join(lines)

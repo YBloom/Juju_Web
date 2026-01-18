@@ -2,15 +2,22 @@
 import logging
 import asyncio
 import os
+import re
 from typing import Optional, List, Dict
+from datetime import datetime, timedelta
+
 from services.hulaquan.service import HulaquanService
+from services.saoju.service import SaojuService
+from services.hulaquan.formatter import HulaquanFormatter
 from services.hulaquan.models import TicketInfo
+from services.db.connection import session_scope
+from services.db.models import User
+from sqlmodel import select
 
 log = logging.getLogger(__name__)
 
-# --- Magic Link Configuration (与 web_app.py 共享) ---
+# --- Magic Link Configuration ---
 import jwt
-from datetime import datetime, timedelta
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
@@ -21,9 +28,8 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 5
 WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
 
-
 def create_magic_link_token(qq_id: str, nickname: str = "") -> str:
-    """为 Bot 用户生成 Magic Link Token"""
+    """Generate Magic Link Token for Bot User"""
     payload = {
         "qq_id": qq_id,
         "nickname": nickname,
@@ -32,113 +38,177 @@ def create_magic_link_token(qq_id: str, nickname: str = "") -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-
 class BotHandler:
     def __init__(self, service: HulaquanService):
         self.service = service
+        self.saoju_service = SaojuService()
+
+    async def get_user_mode(self, user_id: str) -> str:
+        """Get user's preferred interaction mode from DB (default: hybrid)."""
+        # Optimized: Reading from simple cache or DB
+        # For now, strict DB read (low concurrency expected for config)
+        try:
+            with session_scope() as session:
+                user = session.get(User, user_id)
+                if user and user.bot_interaction_mode:
+                    return user.bot_interaction_mode
+        except Exception as e:
+            log.warning(f"Failed to fetch user mode for {user_id}: {e}")
+        return "hybrid"
 
     async def handle_message(self, message: str, user_id: str, nickname: str = "") -> Optional[str]:
-        """
-        统一消息处理入口，供私聊和群聊共用。
-        """
         return await self.handle_group_message(0, int(user_id), message, nickname=nickname)
 
     async def handle_group_message(self, group_id: int, user_id: int, message: str, sender_role: str = "member", nickname: str = "") -> Optional[str]:
-        """
-        Handle group messages and return a response string or None.
-        """
         msg = message.strip()
+        uid_str = str(user_id)
         
-        # --- /web 命令: 生成 Magic Link 登录链接 ---
+        # --- Auth / Login ---
         if msg == "/web" or msg == "/登录":
-            token = create_magic_link_token(str(user_id), nickname)
-            link = f"{WEB_BASE_URL}/auth?token={token}"
+            token = create_magic_link_token(uid_str, nickname)
+            link = f"{WEB_BASE_URL}/auth/magic-login?token={token}"
             return f"🔐 点击下方链接登录 Web 控制台（5分钟内有效）：\n\n👉 {link}\n\n✨ 登录后可查看完整演出信息、管理订阅等"
+
+        # --- User Mode Check ---
+        mode = await self.get_user_mode(uid_str)
+        # Default modes configuration
+        # You can override per command if needed, but generic "mode" applies generally.
         
-        # --- /hlq 命令: 快速查票 (兼容旧指令) ---
-        if msg.startswith("/hlq ") or msg.startswith("/hlq"):
-            parts = msg.split(" ", 1)
-            if len(parts) < 2 or not parts[1].strip():
-                return "请指定剧目名称，例如: /hlq 剧院魅影"
-            query = parts[1].strip()
-            return await self._handle_search(query)
-        
-        # --- 查票 命令 (简化版) ---
-        if msg.startswith("查票") or msg.startswith("查 "):
-            parts = msg.split(" ", 1)
-            if len(parts) < 2:
-                return "请指定剧目名称，例如: 查票 剧院魅影"
-            
-            query = parts[1].strip()
-            if not query:
-                return "查询词不能为空"
+        # --- /date Command ---
+        if msg.startswith("/date"):
+            # Format: /date 2026-01-01 [city]
+            parts = msg.split()
+            date_str = None
+            city = None
+            if len(parts) > 1:
+                date_str = parts[1]
+            else:
+                date_str = datetime.now().strftime("%Y-%m-%d") # Default today
                 
-            return await self._handle_search(query)
+            if len(parts) > 2:
+                city = parts[2]
+            
+            return await self._handle_date(date_str, city, mode)
 
-        # --- /同场演员 命令: 重定向到 Web ---
-        if msg.startswith("/同场演员 ") or msg.startswith("/同场演员"):
-            parts = msg.split(" ", 1)
-            if len(parts) < 2 or not parts[1].strip():
-                return "请指定演员名，例如: /同场演员 张三 李四"
-            actors = parts[1].strip().replace(" ", ",")
-            web_link = f"{WEB_BASE_URL}/?tab=cocast&actors={actors}"
-            return f"🔍 同场演员查询已升级至 Web 版！\n\n👉 点击查看: {web_link}"
+        # --- /hlq Command (Search) ---
+        if msg.startswith("/hlq "):
+            query = msg[5:].strip()
+            if not query: return "请指定剧目名称"
+            return await self._handle_hlq(query, mode)
+            
+        if msg.startswith("查票 "): # Alias
+            query = msg[3:].strip()
+            if not query: return "请指定剧目名称"
+            return await self._handle_hlq(query, mode)
 
-        if msg == "订阅列表":
-            return f"请前往 Web 控制台查看订阅:\n👉 {WEB_BASE_URL}"
+        # --- /同场演员 (Co-Casts) ---
+        if msg.startswith("/同场演员 ") or msg.startswith("/cast "):
+            query = msg.split(" ", 1)[1].strip()
+            if not query: return "请指定演员，用空格分隔"
+            actors = [a.strip() for a in query.split() if a.strip()]
+            return await self._handle_cocast(actors, mode)
 
         return None
 
-    async def _handle_search(self, query: str) -> str:
+    # --- Command Implementations ---
+
+    async def _handle_date(self, date_str: str, city: Optional[str], mode: str) -> str:
         try:
-            # 1. Search DB
-            results = await self.service.search_events(query)
+            target_date = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return "❌ 日期格式错误，请使用 YYYY-MM-DD，例如: /date 2026-01-20"
             
+        # 1. Fetch Data
+        results = await self.service.get_events_by_date(target_date, city)
+        
+        web_link = f"{WEB_BASE_URL}/?tab=calendar&date={date_str}"
+        if city: web_link += f"&city={city}"
+
+        # 2. Format based on Mode
+        if mode == "lite":
+            return f"📅 {date_str} 共找到 {len(results)} 场演出。\n🔗 点击查看: {web_link}"
+            
+        elif mode == "hybrid":
+            # Show top 5
             if not results:
-                return f"未找到包含 '{query}' 的剧目。"
+                return f"📅 {date_str} 暂无收录的演出信息。"
+                
+            summary = HulaquanFormatter.format_date_events(target_date, results[:5])
+            if len(results) > 5:
+                summary += f"\n...还有 {len(results)-5} 场"
             
-            # 2. Format Result (限制前 3 个)
-            top_results = results[:3]
-            response_lines = [f"🔍 找到 {len(results)} 个结果 (显示前 {len(top_results)} 个):"]
+            summary += f"\n🔗 完整排期: {web_link}"
+            return summary
             
-            for event in top_results:
-                line = f"\n🎭 {event.title}"
-                if event.city:
-                    line += f" [{event.city}]"
-                
-                # Available Tickets Summary
-                tickets_available = [t for t in event.tickets if t.stock > 0 and t.status != "expired"]
-                if not tickets_available:
-                    line += "\n   (暂无余票)"
-                else:
-                    line += f"\n   🎫 余票: {sum(t.stock for t in tickets_available)} 张"
-                    # Group by price
-                    price_groups = {}
-                    for t in tickets_available:
-                        p = int(t.price) if t.price.is_integer() else t.price
-                        price_groups[p] = price_groups.get(p, 0) + t.stock
-                    
-                    price_str = ", ".join([f"¥{p}x{c}" for p, c in sorted(price_groups.items())])
-                    line += f"\n   💰 价位: {price_str}"
-                    
-                    # Show upcoming sessions
-                    sessions = sorted(list(set(t.session_time for t in tickets_available if t.session_time)))
-                    if sessions:
-                        s_str = ", ".join([s.strftime("%m-%d") for s in sessions[:3]])
-                        if len(sessions) > 3:
-                            s_str += "..."
-                        line += f"\n   📅 场次: {s_str}"
-                
-                response_lines.append(line)
-                
+        else: # Legacy / Full
+            if not results: return f"📅 {date_str} 暂无收录的演出信息。"
+            # Legacy formatted everything
+            # But let's limit safely to avoid excessive spam (e.g. 20 items max)
+            limit = 20
+            summary = HulaquanFormatter.format_date_events(target_date, results[:limit])
+            if len(results) > limit:
+                summary += f"\n...还有 {len(results)-limit} 场 (请使用 Web 查看全部)"
+            return summary
+
+    async def _handle_hlq(self, query: str, mode: str) -> str:
+        results = await self.service.search_events(query)
+        web_link = f"{WEB_BASE_URL}/?q={query}" # Assuming web has search param
+        
+        if not results:
+            return f"❌ 未找到包含 '{query}' 的剧目。"
+
+        if mode == "lite":
+             return f"🔍 找到 {len(results)} 个结果。\n🔗 点击查看: {web_link}"
+             
+        elif mode == "hybrid":
+            # Show top 3
+            top = results[:3]
+            txt = ""
+            for e in top:
+                txt += HulaquanFormatter.format_event_search_result(e) + "\n"
+            
             if len(results) > 3:
-                response_lines.append(f"\n...以及其他 {len(results)-3} 个结果")
+                txt += f"\n...等 {len(results)} 个结果"
+            txt += f"\n🔗 查看详情: {web_link}"
+            return txt.strip()
             
-            # 添加 Web 引流
-            response_lines.append(f"\n\n🌐 查看详情: {WEB_BASE_URL}")
-                
-            return "".join(response_lines)
+        else: # Legacy (Full)
+            # Legacy behavior often printed distinct messages or one long one
+            # We stick to one long message but full detail for top N
+            limit = 10
+            top = results[:limit]
+            txt = ""
+            for e in top:
+                txt += HulaquanFormatter.format_event_search_result(e) + "\n"
+            if len(results) > limit:
+                txt += f"\n...等 {len(results)} 个结果"
+            return txt.strip()
+
+    async def _handle_cocast(self, actors: List[str], mode: str) -> str:
+        # Filter logic: Future only (User requirement)
+        start_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Call Saoju Service
+        results = await self.saoju_service.match_co_casts(
+            actors, show_others=True, start_date=start_date
+        )
+        
+        actors_str = ",".join(actors)
+        web_link = f"{WEB_BASE_URL}/?tab=cocast&actors={actors_str}"
+
+        if not results:
+             return f"👥 未找到 {actors_str} 在 {start_date} 之后的同台演出。"
+
+        if mode == "lite":
+            return f"👥 找到 {len(results)} 场同台。\n🔗 查看详情: {web_link}"
             
-        except Exception as e:
-            log.error(f"Error searching events: {e}", exc_info=True)
-            return "搜索时发生系统错误，请联系管理员。"
+        elif mode == "hybrid":
+            # Top 10
+            return HulaquanFormatter.format_co_casts(results, limit=10, show_link=web_link)
+            
+        else: # Legacy
+            # Legacy wants FULL list
+            # But we must be careful of max length. 
+            # "Legacy Text (Future Only) + Link" was the plan.
+            # Let's show up to 30.
+            return HulaquanFormatter.format_co_casts(results, limit=30, show_link=web_link)
