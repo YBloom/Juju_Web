@@ -21,6 +21,7 @@ from .marketplace import MarketplaceListing, ListingItem, ItemType
 from .observability import ErrorLog, Metric, SendQueue
 from .play import Play, PlayAlias, PlaySnapshot, PlaySourceLink
 from .subscription import Subscription, SubscriptionOption, SubscriptionTarget
+from .session import UserSession, EmailVerification
 from .user import User
 
 # Import SaojuCache for database initialization
@@ -59,5 +60,7 @@ __all__ = [
     "TradeType",
     "User",
     "UserInventory",
+    "UserSession",
+    "EmailVerification",
     "utcnow",
 ]

@@ -2766,6 +2766,9 @@ main {
     background: #fafafa;
     border-left: 3px solid #e0e0e0;
     padding: 4px 0;
+    /* 支持手机端左右滑动查看完整内容 */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .detail-row {
@@ -2777,6 +2780,9 @@ main {
     color: #4b5563;
     cursor: pointer;
     transition: background 0.1s;
+    /* 防止内容收缩，支持水平滚动 */
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .detail-row:hover {
@@ -2808,11 +2814,9 @@ main {
 .detail-cast {
     font-size: 0.7rem;
     color: #9ca3af;
-    flex: 1;
-    text-align: right;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
+    /* 移除宽度限制，允许完整显示卡司 */
+    padding-right: 16px;
 }
 
 /* Expired Session Styles */
@@ -2922,7 +2926,15 @@ main {
     }
 
     .detail-cast {
+        /* 默认隐藏，通过 show-cast-mode 类控制显示 */
         display: none;
+    }
+
+    /* 当启用卡司模式时，显示卡司并支持水平滚动查看 */
+    .updates-list.show-cast-mode .detail-cast,
+    .updates-scroll.show-cast-mode .detail-cast {
+        display: inline;
+        flex-shrink: 0;
     }
 }
 
