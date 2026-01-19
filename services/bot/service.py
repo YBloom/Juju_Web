@@ -4,7 +4,7 @@ import logging
 from ncatbot.core import BotClient, GroupMessage, PrivateMessage
 from services.hulaquan.service import HulaquanService
 from services.bot.handlers import BotHandler
-from services.bot.notifier import BotNotifier
+from services.notification.engine import NotificationEngine
 
 log = logging.getLogger(__name__)
 
@@ -14,6 +14,11 @@ class BotService:
         self.hlq_service = HulaquanService()
         self.handler = BotHandler(self.hlq_service)
         self.notifier = BotNotifier(self.client)
+        
+        # Notification Consumer (Decoupled from Web)
+        # Bot service is responsible for sending queued messages
+        self.notification_engine = NotificationEngine(bot_api=self.client.api)
+        self.consumer_task = None
         
         self._setup_events()
 
@@ -38,32 +43,39 @@ class BotService:
              # Handle private commands if needed
              pass
 
+    async def _run_consumer_loop(self):
+        """Periodically consume SendQueue items and send notifications."""
+        log.info("📧 [Bot服务] 通知消费任务已启动 (Interval: 120s)")
+        while True:
+            try:
+                count = await self.notification_engine.consume_queue(limit=50)
+                if count > 0:
+                    log.info(f"📧 [Bot服务] 发送了 {count} 条通知")
+            except Exception as e:
+                log.error(f"⚠️ [Bot服务] 通知消费错误: {e}")
+            
+            await asyncio.sleep(120) # 2 minutes interval
+
     async def start(self, **kwargs):
         """Start the bot client."""
         log.info("🤖 [Bot服务] 正在启动 Bot 服务...")
         
-        # Start Notifier
+        # Start Notifier (Old logic, maybe redundant if using queue? Keep for now)
         asyncio.create_task(self.notifier.start())
         
+        # Start Queue Consumer
+        self.consumer_task = asyncio.create_task(self._run_consumer_loop())
+        
         # Start Bot Client
-        # run() is usually blocking in older versions, but in v4 with asyncio, it might be async 
-        # or we use start() if available.
-        # Based on typical OneBot libs, run() is the entry point.
-        # If run() blocks, we need to be careful about task scheduling.
-        # But this is "main_bot.py", so blocking is fine.
-        
-        # NOTE: ncatbot v4 run() might handle loop.
-        # We need to configure it via config.yaml or arguments.
-        # We will assume env vars or file config is handled by ncatbot internal logic.
-        
-        # Re-using the logic from old main.py to set config path if needed?
-        # Old main.py patched config. Here we rely on standard ncatbot config. 
-        # User should ensure config/onebot11_<qq>.json exists.
-        
-        # Use a dummy User ID for run? Or read from config?
-        # The user provided "3044829389" in main.py.
         await self.client.run() 
 
     async def stop(self):
+        if self.consumer_task:
+            self.consumer_task.cancel()
+            try:
+                await self.consumer_task
+            except asyncio.CancelledError:
+                pass
+                
         await self.notifier.stop()
         await self.hlq_service.close()

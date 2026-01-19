@@ -26,6 +26,7 @@ class User(TimeStamped, SoftDelete, SQLModel, table=True):
 
     # Bot Settings
     bot_interaction_mode: str = Field(default="hybrid", max_length=20, description="hybrid, lite, legacy")
+    global_notification_level: int = Field(default=0, nullable=False, description="0=off, 1=new, 2=new+restock, 3=+back, 4=+decrease, 5=all")
 
     extra_json: Optional[dict] = Field(
         default=None,

@@ -10,14 +10,6 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
-# AWS SES SMTP 配置（从环境变量读取）
-# SMTP 终端节点根据区域不同而不同
-AWS_SES_SMTP_HOST = os.getenv("AWS_SES_SMTP_HOST", "email-smtp.ap-southeast-1.amazonaws.com")
-AWS_SES_SMTP_PORT = int(os.getenv("AWS_SES_SMTP_PORT", "587"))
-AWS_SES_SMTP_USER = os.getenv("AWS_SES_SMTP_USER")  # SMTP 用户名
-AWS_SES_SMTP_PASSWORD = os.getenv("AWS_SES_SMTP_PASSWORD")  # SMTP 密码
-AWS_SES_SENDER = os.getenv("AWS_SES_SENDER", "noreply@yaobii.com")
-
 # 邮件模板
 EMAIL_TEMPLATES = {
     "verification": {
@@ -83,6 +75,13 @@ async def send_email(
     Returns:
         bool: 是否发送成功
     """
+    # Lazy load config
+    AWS_SES_SMTP_HOST = os.getenv("AWS_SES_SMTP_HOST", "email-smtp.ap-southeast-1.amazonaws.com")
+    AWS_SES_SMTP_PORT = int(os.getenv("AWS_SES_SMTP_PORT", "587"))
+    AWS_SES_SMTP_USER = os.getenv("AWS_SES_SMTP_USER")
+    AWS_SES_SMTP_PASSWORD = os.getenv("AWS_SES_SMTP_PASSWORD")
+    AWS_SES_SENDER = os.getenv("AWS_SES_SENDER", "noreply@yaobii.com")
+
     if not AWS_SES_SMTP_USER or not AWS_SES_SMTP_PASSWORD:
         log.error("❌ AWS SES 未配置：缺少 AWS_SES_SMTP_USER 或 AWS_SES_SMTP_PASSWORD")
         return False

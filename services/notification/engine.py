@@ -1,8 +1,7 @@
-"""Notification engine for subscription-based push notifications."""
-
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import List, Optional, Set
 
@@ -232,12 +231,24 @@ class NotificationEngine:
             log.warning("Bot API not configured, skipping queue consumption")
             return 0
         
+        # --- Safety: Test Whitelist ---
+        # If TEST_USER_WHITELIST is set (comma-separated IDs), only send to these users.
+        whitelist_str = os.getenv("TEST_USER_WHITELIST", "")
+        whitelist = set(whitelist_str.split(",")) if whitelist_str else set()
+        
         loop = asyncio.get_running_loop()
         pending_items = await loop.run_in_executor(None, self._get_pending_items, limit)
         
         sent_count = 0
         for item in pending_items:
             try:
+                # Check whitelist
+                if whitelist and str(item.user_id) not in whitelist:
+                    log.info(f"SAFE MODE: Skipping notification for non-whitelisted user {item.user_id}")
+                    # Mark as sent to remove from queue without actually sending
+                    await loop.run_in_executor(None, self._mark_sent, item.id)
+                    continue
+
                 # 格式化消息
                 payload = item.payload or {}
                 updates_data = payload.get("updates", [])
