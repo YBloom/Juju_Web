@@ -41,9 +41,10 @@ class ListingUpdateStatusRequest(BaseModel):
     status: TradeStatus
 
 
+from web.dependencies import get_current_user
+
 def get_current_user_from_request(request: Request):
     """从请求中获取当前用户（依赖注入）."""
-    from web_app import get_current_user
     user = get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="未登录")

@@ -16,10 +16,7 @@ import re
 import hashlib
 import secrets
 from datetime import datetime
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
+from services.utils.timezone import now as get_now, make_aware
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -29,7 +26,7 @@ logger = logging.getLogger(__name__)
 JWT_SECRET = os.getenv("JWT_SECRET", "musicalbot-dev-secret-change-in-prod")
 JWT_ALGORITHM = "HS256"
 SESSION_COOKIE_NAME = "mb_session"
-WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
+WEB_BASE_URL = os.getenv("WEB_BASE_URL", "http://127.0.0.1:8000")
 
 
 def hash_password(password: str) -> str:
@@ -48,28 +45,27 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 
-def get_session_from_cookie(request: Request) -> Optional[UserSession]:
-    """从 Cookie 获取 Session"""
-    session_id = request.cookies.get(SESSION_COOKIE_NAME)
-    if not session_id:
-        return None
-    
-    with session_scope() as db:
-        session = db.get(UserSession, session_id)
-        if session and not session.is_expired():
-            return session
-    return None
 
 
-def set_session_cookie(response: Response, session: UserSession):
+
+
+def set_session_cookie(response: Response, session_id: str, request: Request = None):
     """设置 Session Cookie"""
+    # Auto-detect secure flag based on request scheme if available
+    is_secure = False
+    if request:
+        is_secure = request.url.scheme == "https"
+    else:
+        # Fallback to config
+        is_secure = WEB_BASE_URL.startswith("https")
+
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
-        value=session.session_id,
+        value=session_id,
         max_age=30 * 24 * 60 * 60,  # 30 天
         httponly=True,
         samesite="lax",
-        secure=True
+        secure=is_secure
     )
 
 
@@ -97,13 +93,40 @@ class PasswordResetRequest(BaseModel):
     new_password: str
 
 
+# === IP Rate Limiting (In-Memory) ===
+from collections import defaultdict
+import time
+
+# IP -> List[timestamp]
+# 简单防刷: 1分钟内限制5次请求
+IP_RATE_LIMITS = defaultdict(list)
+
+def check_ip_limit(ip: str) -> bool:
+    now = time.time()
+    # 清理过期记录
+    IP_RATE_LIMITS[ip] = [t for t in IP_RATE_LIMITS[ip] if now - t < 60]
+    # 允许5次
+    return len(IP_RATE_LIMITS[ip]) < 5
+
+def add_ip_record(ip: str):
+    IP_RATE_LIMITS[ip].append(time.time())
+
+
 # === Endpoints ===
 
 @router.post("/email/send-code")
-async def send_email_code(req: EmailSendCodeRequest):
+async def send_email_code(req: EmailSendCodeRequest, request: Request):
     """发送邮箱验证码"""
     email = req.email.lower().strip()
     purpose = req.purpose
+    
+    # 1. IP 限流检查
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_ip_limit(client_ip):
+         return JSONResponse(
+            status_code=429,
+            content={"error": "请求过于频繁，请稍后重试"}
+        )
     
     # 检查用户是否已存在（根据 purpose）
     with session_scope() as db:
@@ -131,8 +154,10 @@ async def send_email_code(req: EmailSendCodeRequest):
         
         recent = db.exec(stmt).first()
         if recent:
-            now = datetime.now(ZoneInfo("Asia/Shanghai"))
-            if (now - recent.created_at).seconds < 60:
+            now_time = get_now()
+            created_at = make_aware(recent.created_at)
+            
+            if (now_time - created_at).total_seconds() < 60:
                 return JSONResponse(
                     status_code=429,
                     content={"error": "发送过于频繁，请稍后再试", "wait_seconds": 60}
@@ -141,13 +166,111 @@ async def send_email_code(req: EmailSendCodeRequest):
         # 创建验证码
         verification = EmailVerification.create(email, purpose)
         db.add(verification)
+        code = verification.code
     
     # 发送邮件
-    success = await send_verification_code(email, verification.code, purpose)
+    success = await send_verification_code(email, code, purpose)
     
     if success:
+        # 记录 IP 限制
+        add_ip_record(client_ip)
         return {"status": "ok", "message": "验证码已发送到您的邮箱"}
     else:
+        # 发送失败，删除数据库记录，避免占用频次
+        try:
+            with session_scope() as db:
+                stmt = select(EmailVerification).where(
+                    EmailVerification.email == email,
+                    EmailVerification.code == code,
+                    EmailVerification.purpose == purpose
+                )
+                v = db.exec(stmt).first()
+                if v:
+                    db.delete(v)
+        except Exception as e:
+            logger.error(f"Failed to rollback verification: {e}")
+
+        return JSONResponse(
+            status_code=500,
+            content={"error": "邮件发送失败，请稍后重试"}
+        )
+
+@router.post("/email/send-code")
+async def send_email_code(req: EmailSendCodeRequest, request: Request):
+    """发送邮箱验证码"""
+    email = req.email.lower().strip()
+    purpose = req.purpose
+    
+    # 1. IP 限流检查
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_ip_limit(client_ip):
+         return JSONResponse(
+            status_code=429,
+            content={"error": "请求过于频繁，请稍后重试"}
+        )
+    
+    # 检查用户是否已存在（根据 purpose）
+    with session_scope() as db:
+        stmt = select(User).where(User.email == email)
+        existing_user = db.exec(stmt).first()
+        
+        if purpose == "register" and existing_user:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "此邮箱已注册，请直接登录", "hint": "login"}
+            )
+        
+        if purpose in ["login", "reset_password"] and not existing_user:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "此邮箱未注册", "hint": "register"}
+            )
+        
+        # 检查发送频率（1分钟内只能发一次）
+        stmt = select(EmailVerification).where(
+            EmailVerification.email == email,
+            EmailVerification.purpose == purpose,
+            EmailVerification.used == False
+        ).order_by(EmailVerification.created_at.desc())
+        
+        recent = db.exec(stmt).first()
+        if recent:
+            now_time = get_now()
+            created_at = make_aware(recent.created_at)
+            
+            if (now_time - created_at).total_seconds() < 60:
+                return JSONResponse(
+                    status_code=429,
+                    content={"error": "发送过于频繁，请稍后再试", "wait_seconds": 60}
+                )
+        
+        # 创建验证码
+        verification = EmailVerification.create(email, purpose)
+        db.add(verification)
+        code = verification.code
+    
+    # 发送邮件
+    success = await send_verification_code(email, code, purpose)
+    
+    if success:
+        # 记录 IP 限制
+        add_ip_record(client_ip)
+        return {"status": "ok", "message": "验证码已发送到您的邮箱"}
+    else:
+        # 发送失败，删除数据库记录，避免占用频次
+        try:
+            with session_scope() as db:
+                stmt = select(EmailVerification).where(
+                    EmailVerification.email == email,
+                    EmailVerification.code == code,
+                    EmailVerification.purpose == purpose
+                )
+                v = db.exec(stmt).first()
+                if v:
+                    db.delete(v)
+        except Exception as e:
+            logger.error(f"Failed to rollback verification: {e}")
+
         return JSONResponse(
             status_code=500,
             content={"error": "邮件发送失败，请稍后重试"}
@@ -163,6 +286,9 @@ async def email_register(req: EmailVerifyRequest, request: Request, response: Re
     
     if not password or len(password) < 6:
         return JSONResponse(status_code=400, content={"error": "密码至少6位"})
+    
+    session_id = None
+    user_id_val = None
     
     with session_scope() as db:
         # 验证验证码
@@ -208,17 +334,23 @@ async def email_register(req: EmailVerifyRequest, request: Request, response: Re
             user_agent=request.headers.get("user-agent")
         )
         db.add(session)
+        
+        # Extract ID while in session to prevent DetachedInstanceError
+        session_id = session.session_id
+        user_id_val = user.user_id
     
-    # 发送欢迎邮件
-    await send_welcome_email(email)
+    # 发送欢迎邮件 - 已移除 (根据用户需求)
+    # await send_welcome_email(email)
     
     # 设置 Cookie
     resp = JSONResponse(content={
         "status": "ok",
         "message": "注册成功",
-        "user": {"user_id": user_id, "email": email}
+        "user": {"user_id": user_id_val, "email": email}
     })
-    set_session_cookie(resp, session)
+    
+    if session_id:
+        set_session_cookie(resp, session_id)
     
     logger.info(f"✨ [注册] 新用户注册: {email}")
     return resp
@@ -229,6 +361,9 @@ async def email_login(req: EmailLoginRequest, request: Request, response: Respon
     """邮箱密码登录"""
     email = req.email.lower().strip()
     password = req.password
+    
+    session_id = None
+    user_id_val = None
     
     with session_scope() as db:
         stmt = select(User).where(User.email == email)
@@ -250,13 +385,19 @@ async def email_login(req: EmailLoginRequest, request: Request, response: Respon
             user_agent=request.headers.get("user-agent")
         )
         db.add(session)
+
+        # Extract ID while in session to prevent DetachedInstanceError
+        session_id = session.session_id
+        user_id_val = user.user_id
     
     resp = JSONResponse(content={
         "status": "ok",
         "message": "登录成功",
-        "user": {"user_id": user.user_id, "email": email}
+        "user": {"user_id": user_id_val, "email": email}
     })
-    set_session_cookie(resp, session)
+    
+    if session_id:
+        set_session_cookie(resp, session_id)
     
     logger.info(f"🔐 [登录] 用户登录: {email}")
     return resp
@@ -307,7 +448,7 @@ async def reset_password(req: PasswordResetRequest):
 # === QQ Magic Link ===
 
 @router.get("/magic-link")
-async def login_with_magic_link(token: str, request: Request, response: Response):
+async def login_with_magic_link(token: str, request: Request, response: Response, redirect: Optional[str] = None):
     """QQ Magic Link 登录"""
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
@@ -346,9 +487,20 @@ async def login_with_magic_link(token: str, request: Request, response: Response
                 user_agent=request.headers.get("user-agent")
             )
             db.add(session)
+            
+            # Extract ID while in session
+            session_id = session.session_id
         
-        resp = RedirectResponse(url=f"{WEB_BASE_URL}/")
-        set_session_cookie(resp, session)
+        # Determine redirect URL
+        target_url = f"{WEB_BASE_URL}/"
+        if redirect and redirect.startswith("/"):
+             target_url = f"{WEB_BASE_URL}{redirect}"
+        
+        resp = RedirectResponse(url=target_url)
+        
+        if session_id:
+            set_session_cookie(resp, session_id)
+        
         return resp
         
     except jwt.ExpiredSignatureError:
@@ -363,12 +515,14 @@ async def login_with_magic_link(token: str, request: Request, response: Response
 @router.get("/me")
 async def get_current_user_info(request: Request):
     """获取当前登录用户信息"""
-    session = get_session_from_cookie(request)
-    if not session:
+    from web.dependencies import get_current_user
+    session_data = get_current_user(request)
+    
+    if not session_data:
         return {"authenticated": False, "user": None}
     
     with session_scope() as db:
-        user = db.get(User, session.user_id)
+        user = db.get(User, session_data["user_id"])
         if not user:
             return {"authenticated": False, "user": None}
         
@@ -388,10 +542,10 @@ async def get_current_user_info(request: Request):
 @router.post("/logout")
 async def logout(request: Request, response: Response):
     """登出"""
-    session = get_session_from_cookie(request)
-    if session:
-        with session_scope() as db:
-            db.delete(session)
+    from web.session import delete_session
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    if session_id:
+        delete_session(session_id)
     
     resp = JSONResponse(content={"status": "logged_out"})
     resp.delete_cookie(SESSION_COOKIE_NAME)

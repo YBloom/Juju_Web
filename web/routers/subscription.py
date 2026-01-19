@@ -12,7 +12,7 @@ from datetime import datetime
 from services.db.connection import get_engine
 from services.db.models import Subscription, SubscriptionTarget, SubscriptionOption
 from services.db.models.base import SubscriptionTargetKind, SubscriptionFrequency
-from web.session import sessions
+from web.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
@@ -24,6 +24,7 @@ def get_session():
     engine = get_engine()
     with Session(engine) as session:
         yield session
+
 
 
 # --- Pydantic Models for Request/Response ---
@@ -42,6 +43,7 @@ class SubscriptionOptionCreate(BaseModel):
     mute: bool = False
     freq: SubscriptionFrequency = SubscriptionFrequency.REALTIME
     allow_broadcast: bool = True
+    notification_level: int = 2
 
 
 class SubscriptionCreate(BaseModel):
@@ -57,6 +59,8 @@ class SubscriptionTargetResponse(BaseModel):
     target_id: Optional[str]
     name: Optional[str]
     city_filter: Optional[str]
+    include_plays: Optional[List[str]]
+    exclude_plays: Optional[List[str]]
     flags: Optional[dict]
     created_at: datetime
     updated_at: datetime
@@ -71,6 +75,7 @@ class SubscriptionOptionResponse(BaseModel):
     mute: bool
     freq: str
     allow_broadcast: bool
+    notification_level: int
     last_notified_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
@@ -94,11 +99,7 @@ class SubscriptionResponse(BaseModel):
 
 # --- Auth Dependency ---
 
-def get_current_user(request: Request) -> Optional[dict]:
-    """从 session 获取当前登录用户"""
-    # 复用 web_app 中的实现
-    from web_app import get_current_user as get_user_from_app
-    return get_user_from_app(request)
+
 
 
 def require_auth(request: Request) -> dict:
@@ -317,3 +318,40 @@ async def update_subscription_options(
     session.refresh(options)
     
     return SubscriptionOptionResponse.model_validate(options)
+@router.patch("/options/{subscription_id}")
+async def update_subscription_options(
+    subscription_id: int,
+    options: SubscriptionOptionCreate,
+    db: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """更新订阅选项"""
+    stmt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == subscription_id)
+    db_options = db.exec(stmt).first()
+    if not db_options:
+        raise HTTPException(status_code=404, detail="Options not found")
+        
+    for key, value in options.dict().items():
+        setattr(db_options, key, value)
+    
+    db.add(db_options)
+    db.commit()
+    return db_options
+
+@router.patch("/global-level")
+async def update_global_level(
+    level: int,
+    db: Session = Depends(get_session),
+    user: dict = Depends(get_current_user)
+):
+    """更新全局推送级别"""
+    from services.db.models import User
+    user_id = user.get("user_id") or user.get("qq_id")
+    db_user = db.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db_user.global_notification_level = level
+    db.add(db_user)
+    db.commit()
+    return {"status": "ok", "level": level}
