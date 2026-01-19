@@ -22,6 +22,7 @@ sudo git pull origin v1 || { echo -e "${RED}Git pull 失败${NC}"; exit 1; }
 
 # 3. 检查依赖是否有变化
 echo -e "${YELLOW}[2/4] 检查依赖...${NC}"
+# 对比 HEAD 和上一次提交 (HEAD@{1}) 的 requirements.txt 差异
 if sudo git diff HEAD@{1} HEAD -- requirements.txt | grep -q '^[+-]'; then
     echo -e "${YELLOW}检测到依赖变化，更新 Python 包...${NC}"
     .venv/bin/pip install -r requirements.txt
