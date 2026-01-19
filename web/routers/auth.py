@@ -4,7 +4,7 @@
 from fastapi import APIRouter, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr
-from services.db.models import User, UserSession, EmailVerification
+from services.db.models import User, UserSession, EmailVerification, UserAuthMethod
 from services.db.connection import session_scope
 from services.email import send_verification_code, send_welcome_email
 from typing import Optional
@@ -279,7 +279,7 @@ async def send_email_code(req: EmailSendCodeRequest, request: Request):
 
 @router.post("/email/register")
 async def email_register(req: EmailVerifyRequest, request: Request, response: Response):
-    """邮箱注册"""
+    """邮箱注册 - 生成6位数字ID"""
     email = req.email.lower().strip()
     code = req.code
     password = req.password
@@ -303,24 +303,33 @@ async def email_register(req: EmailVerifyRequest, request: Request, response: Re
             return JSONResponse(status_code=400, content={"error": "验证码无效或已过期"})
         
         # 检查邮箱是否已注册
-        stmt = select(User).where(User.email == email)
+        stmt = select(UserAuthMethod).where(
+            UserAuthMethod.provider == "email",
+            UserAuthMethod.provider_user_id == email
+        )
         if db.exec(stmt).first():
             return JSONResponse(status_code=400, content={"error": "此邮箱已注册"})
         
+        # 生成数字ID
+        user_id = User.generate_next_id()
+        
         # 创建用户
-        user_id = f"email_{secrets.token_hex(8)}"
         user = User(
             user_id=user_id,
             email=email,
-            auth_provider="email",
-            auth_id=email,
             nickname=email.split("@")[0]
         )
-        
-        # 存储密码哈希到 extra_json
-        user.extra_json = {"password_hash": hash_password(password)}
-        
         db.add(user)
+        
+        # 创建认证方式 (密码存储在extra_data中)
+        auth_method = UserAuthMethod(
+            user_id=user_id,
+            provider="email",
+            provider_user_id=email,
+            is_primary=True,
+            extra_data={"password_hash": hash_password(password)}
+        )
+        db.add(auth_method)
         
         # 标记验证码已使用
         verification.used = True
@@ -339,9 +348,6 @@ async def email_register(req: EmailVerifyRequest, request: Request, response: Re
         session_id = session.session_id
         user_id_val = user.user_id
     
-    # 发送欢迎邮件 - 已移除 (根据用户需求)
-    # await send_welcome_email(email)
-    
     # 设置 Cookie
     resp = JSONResponse(content={
         "status": "ok",
@@ -352,13 +358,13 @@ async def email_register(req: EmailVerifyRequest, request: Request, response: Re
     if session_id:
         set_session_cookie(resp, session_id)
     
-    logger.info(f"✨ [注册] 新用户注册: {email}")
+    logger.info(f"✨ [注册] 新用户注册: {email} -> user_id={user_id_val}")
     return resp
 
 
 @router.post("/email/login")
 async def email_login(req: EmailLoginRequest, request: Request, response: Response):
-    """邮箱密码登录"""
+    """邮箱密码登录 - 通过UserAuthMethod验证"""
     email = req.email.lower().strip()
     password = req.password
     
@@ -366,20 +372,24 @@ async def email_login(req: EmailLoginRequest, request: Request, response: Respon
     user_id_val = None
     
     with session_scope() as db:
-        stmt = select(User).where(User.email == email)
-        user = db.exec(stmt).first()
+        # 查询认证方式
+        stmt = select(UserAuthMethod).where(
+            UserAuthMethod.provider == "email",
+            UserAuthMethod.provider_user_id == email
+        )
+        auth_method = db.exec(stmt).first()
         
-        if not user:
+        if not auth_method:
             return JSONResponse(status_code=400, content={"error": "邮箱未注册"})
         
         # 验证密码
-        password_hash = user.extra_json.get("password_hash") if user.extra_json else None
+        password_hash = auth_method.extra_data.get("password_hash") if auth_method.extra_data else None
         if not password_hash or not verify_password(password, password_hash):
             return JSONResponse(status_code=400, content={"error": "密码错误"})
         
         # 创建 Session
         session = UserSession.create(
-            user_id=user.user_id,
+            user_id=auth_method.user_id,
             provider="email",
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent")
@@ -388,7 +398,7 @@ async def email_login(req: EmailLoginRequest, request: Request, response: Respon
 
         # Extract ID while in session to prevent DetachedInstanceError
         session_id = session.session_id
-        user_id_val = user.user_id
+        user_id_val = auth_method.user_id
     
     resp = JSONResponse(content={
         "status": "ok",
@@ -405,7 +415,7 @@ async def email_login(req: EmailLoginRequest, request: Request, response: Respon
 
 @router.post("/email/reset-password")
 async def reset_password(req: PasswordResetRequest):
-    """重置密码"""
+    """重置密码 - 更新UserAuthMethod的extra_data"""
     email = req.email.lower().strip()
     code = req.code
     new_password = req.new_password
@@ -425,17 +435,20 @@ async def reset_password(req: PasswordResetRequest):
         if not verification or not verification.is_valid(code):
             return JSONResponse(status_code=400, content={"error": "验证码无效或已过期"})
         
-        # 查找用户
-        stmt = select(User).where(User.email == email)
-        user = db.exec(stmt).first()
-        if not user:
+        # 查找认证方式
+        stmt = select(UserAuthMethod).where(
+            UserAuthMethod.provider == "email",
+            UserAuthMethod.provider_user_id == email
+        )
+        auth_method = db.exec(stmt).first()
+        if not auth_method:
             return JSONResponse(status_code=400, content={"error": "用户不存在"})
         
         # 更新密码
-        if not user.extra_json:
-            user.extra_json = {}
-        user.extra_json["password_hash"] = hash_password(new_password)
-        db.add(user)
+        if not auth_method.extra_data:
+            auth_method.extra_data = {}
+        auth_method.extra_data["password_hash"] = hash_password(new_password)
+        db.add(auth_method)
         
         # 标记验证码已使用
         verification.used = True
@@ -449,7 +462,7 @@ async def reset_password(req: PasswordResetRequest):
 
 @router.get("/magic-link")
 async def login_with_magic_link(token: str, request: Request, response: Response, redirect: Optional[str] = None):
-    """QQ Magic Link 登录"""
+    """QQ Magic Link 登录 - 通过UserAuthMethod查询或创建用户"""
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         qq_id = payload.get("qq_id")
@@ -461,27 +474,40 @@ async def login_with_magic_link(token: str, request: Request, response: Response
         logger.info(f"🔐 [Auth] Magic Link Login: QQ {qq_id}")
         
         with session_scope() as db:
-            user = db.get(User, qq_id)
-            if not user:
-                logger.info(f"✨ [Auth] Creating new user for QQ {qq_id}")
+            # 查询是否已有此QQ的认证方式
+            stmt = select(UserAuthMethod).where(
+                UserAuthMethod.provider == "qq",
+                UserAuthMethod.provider_user_id == qq_id
+            )
+            auth_method = db.exec(stmt).first()
+            
+            if auth_method:
+                # 已存在认证方式,直接登录
+                logger.info(f"✅ [Auth] Existing user login: {auth_method.user_id}")
+                user_id = auth_method.user_id
+            else:
+                # 首次QQ登录,创建新用户
+                user_id = User.generate_next_id()
+                logger.info(f"✨ [Auth] Creating new user for QQ {qq_id} -> user_id={user_id}")
+                
                 user = User(
-                    user_id=qq_id,
-                    nickname=nickname,
-                    auth_provider="qq",
-                    auth_id=qq_id
+                    user_id=user_id,
+                    nickname=nickname
                 )
                 db.add(user)
-            else:
-                if nickname and nickname != "User" and not user.nickname:
-                    user.nickname = nickname
-                if not user.auth_provider:
-                    user.auth_provider = 'qq'
-                    user.auth_id = qq_id
-                db.add(user)
+                
+                # 创建认证方式
+                auth_method = UserAuthMethod(
+                    user_id=user_id,
+                    provider="qq",
+                    provider_user_id=qq_id,
+                    is_primary=True
+                )
+                db.add(auth_method)
             
             # 创建持久化 Session
             session = UserSession.create(
-                user_id=qq_id,
+                user_id=user_id,
                 provider="qq",
                 ip_address=request.client.host if request.client else None,
                 user_agent=request.headers.get("user-agent")
@@ -504,12 +530,12 @@ async def login_with_magic_link(token: str, request: Request, response: Response
         return resp
         
     except jwt.ExpiredSignatureError:
-        return JSONResponse(status_code=400, content={"error": "链接已过期，请重新获取"})
+        return JSONResponse(status_code=400, content={"error": "链接已过期,请重新获取"})
     except jwt.InvalidTokenError:
         return JSONResponse(status_code=400, content={"error": "无效的登录链接"})
     except Exception as e:
         logger.error(f"Login error: {e}", exc_info=True)
-        return JSONResponse(status_code=500, content={"error": "登录失败，请稍后重试"})
+        return JSONResponse(status_code=500, content={"error": "登录失败,请稍后重试"})
 
 
 @router.get("/me")

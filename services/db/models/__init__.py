@@ -23,6 +23,7 @@ from .play import Play, PlayAlias, PlaySnapshot, PlaySourceLink
 from .subscription import Subscription, SubscriptionOption, SubscriptionTarget
 from .session import UserSession, EmailVerification
 from .user import User
+from .user_auth_method import UserAuthMethod, AccountMergeLog
 
 # Import SaojuCache for database initialization
 from services.hulaquan.tables import SaojuCache
@@ -59,6 +60,8 @@ __all__ = [
     "TradeStatus",
     "TradeType",
     "User",
+    "UserAuthMethod",
+    "AccountMergeLog",
     "UserInventory",
     "UserSession",
     "EmailVerification",

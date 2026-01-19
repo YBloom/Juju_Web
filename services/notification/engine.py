@@ -9,9 +9,14 @@ from sqlmodel import Session, select, col
 
 from services.db.connection import get_engine, session_scope
 from services.db.models import (
-    User, Subscription, SubscriptionTarget, SubscriptionOption,
-    SendQueue, SendQueueStatus, SubscriptionTargetKind
+    SendQueue,
+    SendQueueStatus,
+    Subscription,
+    SubscriptionOption,
+    SubscriptionTarget,
+    UserAuthMethod,
 )
+from services.db.models.base import SubscriptionTargetKind
 from services.hulaquan.tables import TicketUpdateLog, HulaquanCast, TicketCastAssociation
 from services.hulaquan.formatter import HulaquanFormatter
 from services.hulaquan.models import TicketUpdate
@@ -222,7 +227,7 @@ class NotificationEngine:
     
     async def consume_queue(self, limit: int = 50) -> int:
         """
-        消费发送队列，发送待发送的通知。
+        消费发送队列,发送待发送的通知。
         
         Returns:
             Number of messages sent
@@ -242,9 +247,17 @@ class NotificationEngine:
         sent_count = 0
         for item in pending_items:
             try:
+                # 通过UserAuthMethod查询QQ号
+                qq_id = await loop.run_in_executor(None, self._get_qq_number, item.user_id)
+                
+                if not qq_id:
+                    log.warning(f"User {item.user_id} has no QQ binding, skipping notification")
+                    await loop.run_in_executor(None, self._mark_sent, item.id)
+                    continue
+                
                 # Check whitelist
-                if whitelist and str(item.user_id) not in whitelist:
-                    log.info(f"SAFE MODE: Skipping notification for non-whitelisted user {item.user_id}")
+                if whitelist and str(qq_id) not in whitelist:
+                    log.info(f"SAFE MODE: Skipping notification for non-whitelisted QQ {qq_id}")
                     # Mark as sent to remove from queue without actually sending
                     await loop.run_in_executor(None, self._mark_sent, item.id)
                     continue
@@ -266,34 +279,48 @@ class NotificationEngine:
                 
                 text = "\n".join(lines)
                 
-                # 发送
-                await self.bot_api.post_private_msg(int(item.user_id), text=text)
+                # 发送 (使用真实QQ号)
+                await self.bot_api.post_private_msg(int(qq_id), text=text)
                 await loop.run_in_executor(None, self._mark_sent, item.id)
                 sent_count += 1
                 
             except Exception as e:
-                log.error(f"Failed to send notification to {item.user_id}: {e}")
+                log.error(f"Failed to send notification to user {item.user_id}: {e}")
                 await loop.run_in_executor(None, self._mark_failed, item.id, str(e))
         
         return sent_count
     
     def _get_pending_items(self, limit: int) -> List[SendQueue]:
         """获取待发送的队列项。"""
-        from sqlmodel import or_
-        with session_scope() as session:
-            now = datetime.now()
-            stmt = select(SendQueue).where(
-                SendQueue.status.in_([SendQueueStatus.PENDING, SendQueueStatus.RETRYING]),
-                or_(
-                    SendQueue.next_retry_at == None,
-                    col(SendQueue.next_retry_at) <= now
-                ),
-                SendQueue.retry_count < MAX_RETRY_COUNT,
-            ).order_by(SendQueue.created_at).limit(limit)
+        from services.db.utils import get_now
+        with session_scope() as db:
+            stmt = (
+                select(SendQueue)
+                .where(
+                    SendQueue.status == SendQueueStatus.PENDING,
+                    (SendQueue.next_retry_at.is_(None)) | (SendQueue.next_retry_at <= get_now()),
+                )
+                .order_by(SendQueue.created_at)
+                .limit(limit)
+            )
+            return list(db.exec(stmt).all())
+    
+    def _get_qq_number(self, user_id: str) -> Optional[str]:
+        """通过UserAuthMethod查询用户的QQ号。
+        
+        Args:
+            user_id: 用户的数字ID (如 "000001")
             
-            items = session.exec(stmt).all()
-            # Detach from session
-            return [SendQueue.model_validate(item) for item in items]
+        Returns:
+            QQ号字符串,如果未绑定QQ则返回None
+        """
+        with session_scope() as db:
+            stmt = select(UserAuthMethod).where(
+                UserAuthMethod.user_id == user_id,
+                UserAuthMethod.provider == "qq"
+            )
+            auth_method = db.exec(stmt).first()
+            return auth_method.provider_user_id if auth_method else None
     
     def _mark_sent(self, item_id: int):
         """标记为已发送。"""
