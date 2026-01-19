@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from services.db.connection import get_engine
-from services.db.models import User
+from services.db.models import User, UserAuthMethod
 from web.dependencies import get_current_user
 import os
 
@@ -45,6 +45,13 @@ class UserSettingsResponse(BaseModel):
     email: Optional[str] = None
     avatar_url: Optional[str]
     bot_interaction_mode: str
+
+class AuthMethodResponse(BaseModel):
+    """认证方式响应模型"""
+    provider: str
+    provider_user_id: str
+    is_primary: bool
+    created_at: str
 
 @router.get("/settings", response_model=UserSettingsResponse)
 async def get_user_settings(
@@ -135,3 +142,29 @@ async def update_user_settings(
         avatar_url=db_user.avatar_url,
         bot_interaction_mode=db_user.bot_interaction_mode or "hybrid"
     )
+
+
+@router.get("/auth-methods")
+async def get_auth_methods(
+    user_session: dict = Depends(require_auth),
+    session: Session = Depends(get_session)
+):
+    """获取当前用户绑定的所有认证方式"""
+    uid = user_session.get("user_id") or user_session.get("qq_id")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Invalid session state")
+    
+    # 查询该用户的所有认证方式
+    stmt = select(UserAuthMethod).where(UserAuthMethod.user_id == uid)
+    auth_methods = session.exec(stmt).all()
+    
+    result = []
+    for auth in auth_methods:
+        result.append({
+            "provider": auth.provider,
+            "provider_user_id": auth.provider_user_id if auth.provider == "email" else "***" + auth.provider_user_id[-4:],  # QQ号脱敏
+            "is_primary": auth.is_primary,
+            "created_at": auth.created_at.isoformat() if hasattr(auth, 'created_at') else None
+        })
+    
+    return {"auth_methods": result}

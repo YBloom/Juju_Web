@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 # 邮件模板
 EMAIL_TEMPLATES = {
     "verification": {
-        "subject": "【MusicalBot】邮箱验证码",
+        "subject": "【剧剧】邮箱验证码",
         "body": """
 您好！
 
@@ -24,11 +24,12 @@ EMAIL_TEMPLATES = {
 如果这不是您的操作，请忽略此邮件。
 
 ---
-MusicalBot 呼啦圈学生票助手
+剧剧工具站
+yyj.yaobii.com
 """.strip()
     },
     "reset_password": {
-        "subject": "【MusicalBot】密码重置",
+        "subject": "【剧剧】密码重置",
         "body": """
 您好！
 
@@ -39,15 +40,16 @@ MusicalBot 呼啦圈学生票助手
 如果这不是您的操作，请立即检查账号安全。
 
 ---
-MusicalBot 呼啦圈学生票助手
+剧剧工具站
+yyj.yaobii.com
 """.strip()
     },
     "welcome": {
-        "subject": "【MusicalBot】欢迎注册",
+        "subject": "【剧剧】欢迎注册",
         "body": """
 您好！
 
-恭喜您成功注册 MusicalBot 账号！
+恭喜您成功注册 剧剧 账号！
 
 现在您可以：
 ✅ 管理演出订阅
@@ -57,7 +59,8 @@ MusicalBot 呼啦圈学生票助手
 访问：https://yyj.yaobii.com
 
 ---
-MusicalBot 呼啦圈学生票助手
+剧剧工具站
+yyj.yaobii.com
 """.strip()
     }
 }
@@ -163,7 +166,7 @@ async def notify_feedback_received(
     }
     type_label = type_labels.get(feedback_type, "📝 用户反馈")
     
-    subject = f"[MusicalBot] 新{type_label}"
+    subject = f"[剧剧] 新{type_label}"
     
     body = f"""
 [{type_label}]
@@ -173,7 +176,7 @@ async def notify_feedback_received(
 {f'联系方式: {contact}' if contact else ''}
 
 ---
-MusicalBot 自动通知
+剧剧 自动通知
 管理后台: https://yyj.yaobii.com/admin
     """.strip()
     

@@ -559,8 +559,7 @@ async def get_current_user_info(request: Request):
                 "nickname": user.nickname,
                 "email": user.email,
                 "avatar_url": user.avatar_url,
-                "trust_score": user.trust_score,
-                "auth_provider": user.auth_provider
+                "trust_score": user.trust_score
             }
         }
 
