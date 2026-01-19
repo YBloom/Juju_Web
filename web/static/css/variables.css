@@ -1,0 +1,147 @@
+/* ==============================================
+   Design System - CSS Variables (Token System)
+   ============================================== */
+
+/* ----------------------------------------------
+   1. PRIMITIVE TOKENS (原子层)
+   不应直接使用，仅用于构建语义 Token
+   ---------------------------------------------- */
+
+:root {
+    /* Spacing Scale (间距) */
+    --space-4: 4px;
+    --space-8: 8px;
+    --space-12: 12px;
+    --space-16: 16px;
+    --space-20: 20px;
+    --space-24: 24px;
+    --space-32: 32px;
+    --space-40: 40px;
+    --space-48: 48px;
+
+    /* Color Palette (颜色调色板) */
+    --green-500: #637E60;
+    --green-600: #4F664C;
+    --orange-500: #D9885E;
+    --warmwhite-50: #FDFDFB;
+    --white: #FFFFFF;
+    --gray-50: #FAFAF8;
+    --gray-100: #F4F6F4;
+    --gray-200: #E8E6DE;
+    --gray-400: #9CA3AF;
+    --gray-600: #6B7068;
+    --gray-700: #6B7280;
+    --gray-900: #3C403B;
+
+    /* Status Colors */
+    --red-50: #FEF2F2;
+    --red-500: #DC2626;
+    --red-200: #FECaca;
+    --orange-50: #FFF7ED;
+    --orange-600: #C2410C;
+    --orange-200: #FED7AA;
+    --blue-50: #EFF6FF;
+    --blue-500: #2563EB;
+    --blue-200: #BFDBFE;
+    --green-50: #F0FDF4;
+    --green-700: #15803D;
+
+    /* Radius (圆角) */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --radius-pill: 50px;
+
+    /* Shadows (阴影) */
+    --shadow-xs: 0 2px 8px rgba(0, 0, 0, 0.03);
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 4px 20px -2px rgba(99, 126, 96, 0.1);
+    --shadow-lg: 0 10px 30px rgba(99, 126, 96, 0.08);
+    --shadow-btn: 0 4px 12px rgba(99, 126, 96, 0.2);
+    --shadow-btn-hover: 0 6px 20px rgba(99, 126, 96, 0.3);
+
+    /* Typography Scale (排版比例) */
+    --text-xs: 0.75rem;
+    --text-sm: 0.85rem;
+    --text-base: 1rem;
+    --text-lg: 1.1rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.6rem;
+
+    /* Font Weights */
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+
+    /* Font Families */
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --font-number: 'Outfit', 'Inter', sans-serif;
+
+    /* Breakpoints (断点) */
+    --breakpoint-md: 768px;
+}
+
+/* ----------------------------------------------
+   2. SEMANTIC TOKENS (语义层)
+   组件开发中使用，映射到原子 Token
+   ---------------------------------------------- */
+
+:root {
+    /* Theme Colors (主题颜色) */
+    --primary-color: var(--green-500);
+    --primary-hover: var(--green-600);
+    --accent-color: var(--orange-500);
+    --bg-color: var(--warmwhite-50);
+    --card-bg: var(--white);
+    --border-color: var(--gray-200);
+
+    /* Text Colors (文本颜色) */
+    --text-primary: var(--gray-900);
+    --text-secondary: var(--gray-600);
+    --text-safe: var(--gray-700);
+    --text-warning: var(--orange-600);
+    --text-urgency: var(--red-500);
+
+    /* Status Colors (状态颜色) */
+    --status-red-bg: var(--red-50);
+    --status-red-text: var(--red-500);
+    --status-red-border: var(--red-200);
+    --status-orange-bg: var(--orange-50);
+    --status-orange-text: var(--orange-600);
+    --status-orange-border: var(--orange-200);
+    --status-blue-bg: var(--blue-50);
+    --status-blue-text: var(--blue-500);
+    --status-blue-border: var(--blue-200);
+    --status-green-bg: var(--green-50);
+    --status-green-text: var(--green-700);
+
+    /* Layout Spacing (布局间距) */
+    --container-padding: var(--space-20);
+    --section-gap: var(--space-24);
+    --section-margin: var(--space-40);
+
+    /* Component Spacing (组件间距) */
+    --card-padding: var(--space-24);
+    --card-padding-sm: var(--space-16);
+    --btn-padding-x: var(--space-24);
+    --btn-padding-y: var(--space-12);
+    --input-padding-x: var(--space-20);
+    --input-padding-y: var(--space-12);
+    --header-padding: var(--space-20);
+
+    /* Component Radius (组件圆角) */
+    --btn-radius: var(--radius-md);
+    --card-radius: var(--radius-lg);
+    --input-radius: var(--radius-md);
+    --modal-radius: var(--radius-xl);
+
+    /* Component Shadows (组件阴影) */
+    --shadow-soft: var(--shadow-md);
+    --shadow-card: var(--shadow-lg);
+}

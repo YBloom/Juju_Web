@@ -13,15 +13,15 @@ const ERROR_TYPES = {
 // UI Config for different error types
 const ERROR_UI_CONFIG = {
     [ERROR_TYPES.NETWORK_OFFLINE]: {
-        title: '网络连接似乎断开了',
-        message: '请检查您的网络连接是否正常。',
+        title: '哦不！网络连接似乎断开了',
+        message: '请检查您的网络连接是否正常～',
         icon: 'wifi_off',
         theme: 'theme-network', // Neutral/Blue
         canRetry: true
     },
     [ERROR_TYPES.SERVER_FAULT]: {
         title: '服务器遇到了一点问题',
-        message: '我们的工程师正在紧急修复，请稍后再试。',
+        message: '我们正在紧急修复TT，请稍后再试。',
         icon: 'dns',
         theme: 'theme-server', // Warning/Orange
         canRetry: true

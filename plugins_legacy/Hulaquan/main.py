@@ -556,19 +556,10 @@ class Hulaquan(BasePlugin):
         m = f"当前版本：{self.version}\n\n版本更新日志：\n{get_update_log()}"
         await msg.reply(m)
     
-    # 呼啦圈刷新    
     @user_command_wrapper("hulaquan_announcer")
     async def on_hulaquan_announcer(self, test=False, manual=False, announce_admin_only=False):
-        """
-        New Service-based Announcer.
-        新的基于服务的通知器。
-        1. Sync data from API.
-        1. 从 API 同步数据。
-        2. Filter updates based on subscriptions.
-        2. 根据订阅过滤更新。
-        3. Format and send.
-        3. 格式化并发送。
-        """
+        """Hulaquan Updates Announcer (Unified System)"""
+        # ... (sync logic kept as is) ...
         MODE_MAP = {
             "new": 1,
             "restock": 1,
@@ -1472,6 +1463,84 @@ class Hulaquan(BasePlugin):
             
             await self.output_messages_by_pages(lines, msg, page_size=40)
             
+    @user_command_wrapper("set_hulaquan_notify")
+    async def on_set_hulaquan_notify(self, level: int = None):
+        """/呼啦圈通知 [0-5]"""
+        user_id = self.ctx.user_id
+        if level is None:
+            await self.api.post_private_msg(user_id, 
+                "🔔 呼啦圈通知设置\n"
+                "用法: /呼啦圈通知 [0-5]\n"
+                "0: 关闭\n1: 上新\n2: +补票\n3: +回流\n4: +余票减\n5: 全量")
+            return
+
+        if not (0 <= level <= 5):
+            await self.api.post_private_msg(user_id, "❌ 级别必须在 0-5 之间")
+            return
+
+        from services.db.models import User
+        from services.db.models.subscription import NotificationLevel
+        with session_scope() as session:
+            user = session.get(User, user_id)
+            if not user:
+                user = User(user_id=user_id, auth_provider="qq", auth_id=user_id)
+                session.add(user)
+            user.global_notification_level = level
+            
+        level_name = NotificationLevel(level).name # Simplified for now
+        await self.api.post_private_msg(user_id, f"✅ 全局推送级别已设置为: {level} ({level_name})")
+
+    @user_command_wrapper("follow_ticket_v2")
+    async def on_follow_ticket(self, name: str = "", mode: int = 2, city: str = None, include: str = None, exclude: str = None):
+        """/关注学生票 [剧名/演员] [级别2-5] [-C 城市] [-I 包含] [-X 排除]"""
+        user_id = self.ctx.user_id
+        if not name:
+            await self.api.post_private_msg(user_id, "💡 用法: /关注学生票 [剧名/演员] [级别2-5] [-C 城市] ...")
+            return
+
+        # Simple logic for Bot Command (real implementation would need better arg parsing)
+        from services.db.models import User, Subscription, SubscriptionTarget, SubscriptionOption
+        from services.db.models.base import SubscriptionTargetKind
+        
+        with session_scope() as session:
+            user = session.get(User, user_id)
+            if not user or user.global_notification_level > mode:
+                await self.api.post_private_msg(user_id, f"❌ 订阅级别({mode})不得低于全局设置")
+                return
+            
+            # Find or create sub
+            stmt = select(Subscription).where(Subscription.user_id == user_id)
+            sub = session.exec(stmt).first()
+            if not sub:
+                sub = Subscription(user_id=user_id)
+                session.add(sub)
+                session.flush()
+
+            # Determine kind (simplified heuristic: if searchable in plays, it's a play)
+            kind = SubscriptionTargetKind.PLAY # Default
+            # In a real system, we'd search DB for play names here.
+            
+            target = SubscriptionTarget(
+                subscription_id=sub.id,
+                kind=kind,
+                target_id=name, # Should be ID in production
+                name=name,
+                city_filter=city,
+                include_plays=include.split(",") if include else None,
+                exclude_plays=exclude.split(",") if exclude else None
+            )
+            session.add(target)
+            
+            # Update Option
+            stmt_o = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
+            opt = session.exec(stmt_o).first()
+            if not opt:
+                opt = SubscriptionOption(subscription_id=sub.id, notification_level=mode)
+                session.add(opt)
+            else:
+                opt.notification_level = max(opt.notification_level, mode)
+                
+        await self.api.post_private_msg(user_id, f"✅ 已成功订阅: {name} (级别 {mode})")
     @user_command_wrapper("follow_ticket")        
     async def on_follow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)

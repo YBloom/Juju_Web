@@ -4,24 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MusicalBot Web</title>
+    <title>剧剧 | 演出&票务小站</title>
     <link rel="icon" type="image/png" href="/static/img/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Material+Icons&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Material+Icons&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css?v=20260112_7">
     <link rel="stylesheet" href="/static/css/feedback.css?v=20260112_7">
     <link rel="stylesheet" href="/static/css/error.css">
 
+    <!-- Cropper.js for Avatar Upload -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <!-- Import Map for ES Module dependencies -->
+    <script type="importmap">
+    {
+        "imports": {
+            "animal-avatar-generator": "https://cdn.skypack.dev/animal-avatar-generator@1.2.0"
+        }
+    }
+    </script>
+
     <!-- Pinyin Library for Autocomplete -->
     <script src="https://unpkg.com/pinyin-pro@3.18.2/dist/index.js"></script>
-    ...
+
     <!-- Main Module Entry -->
-    <!-- Main Module Entry -->
-    <!-- script type="module" src="/static/js/index.js" REMOVED (Duplicate/Invalid) -->
-    <script src="https://unpkg.com/pinyin-pro@3.18.2/dist/index.js"></script>
 
     <!-- Umami Analytics -->
     <!-- 登录 https://analytics.yaobii.com 创建网站后,替换 YOUR_WEBSITE_ID -->
@@ -33,44 +43,62 @@
     <div id="app"></div>
 
 
+    <!-- Mobile Header -->
+    <header class="mobile-header tool-minimal">
+        <div class="header-brand-row">
+            <div class="brand-section">
+                <div class="brand-name">剧剧</div>
+                <div class="brand-tagline">演出&票务小站</div>
+            </div>
+        </div>
+        <div class="header-search-container">
+            <i class="material-icons search-icon">search</i>
+            <input type="text" id="global-search" placeholder="搜索剧目、城市或场馆..." class="header-search-input">
+        </div>
+        <div class="domain-badge">yyj.yaobii.com</div>
+    </header>
+
     <div class="nav-ribbon">
-        <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')"><i class="material-icons">list</i>
-            呼啦圈剧目</button>
-        <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')"><i
-                class="material-icons">event</i>
-            学生票日历</button>
-        <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')"><i
-                class="material-icons">people</i> 同场演员</button>
-        <button class="nav-btn" data-tab="tab-lab" onclick="router.navigate('/lab')"><i
-                class="material-icons">palette</i>
-            数据艺廊</button>
-        <button class="nav-btn" data-tab="tab-user" onclick="router.navigate('/user')"><i
-                class="material-icons">account_circle</i>
-            我的</button>
+        <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')">
+            <i class="material-icons">list</i>
+            <span class="desktop-text">呼啦圈剧目</span>
+            <span class="mobile-text">呼啦圈<br>剧目</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')">
+            <i class="material-icons">event</i>
+            <span class="desktop-text">学生票日历</span>
+            <span class="mobile-text">学生票<br>日历</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')">
+            <i class="material-icons">people</i>
+            <span class="desktop-text">同场演员</span>
+            <span class="mobile-text">同场<br>演员</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-lab" onclick="router.navigate('/lab')">
+            <i class="material-icons">palette</i>
+            <span class="desktop-text">数据艺廊</span>
+            <span class="mobile-text">数据<br>艺廊</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-user" onclick="router.navigate('/user')">
+            <i class="material-icons">account_circle</i>
+            <span class="desktop-text">我的</span>
+            <span class="mobile-text">我的</span>
+        </button>
     </div>
 
     <main>
         <!-- Hulaquan List Tab -->
         <!-- 呼啦圈列表标签页 -->
         <div id="tab-hlq" class="tab-content active">
-            <div class="header-section" style="text-align: center; padding: 40px 20px 20px;">
-                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">全部剧目</h3>
-                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">浏览呼啦圈所有在售演出信息</p>
-            </div>
-            <!-- Top Filters (Pills) -->
-            <div id="top-filter-container" class="filter-pills-scroll-wrapper"
-                style="margin-bottom: 20px; padding: 0 20px;">
-                <!-- JS Injected Pills -->
+            <!-- Header Title Area -->
+            <div class="header-section text-center px-md pt-sm pb-md">
+                <h3 class="font-bold text-xl" style="margin: 0; color: var(--primary-color);">全部剧目</h3>
+                <p class="text-secondary text-sm" style="margin: 4px 0 0;">浏览呼啦圈所有在售演出信息</p>
             </div>
 
-            <!-- Global Search -->
-            <div style="margin-bottom: 20px; padding: 0 20px;">
-                <div
-                    style="background:#fff; border-radius:50px; padding:10px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); display:flex; align-items:center;">
-                    <i class="material-icons" style="color:#bbb; margin-right:10px;">search</i>
-                    <input type="text" id="global-search" placeholder="搜索剧目、城市或场馆..."
-                        style="border:none; outline:none; font-size:1rem; width:100%; color:#333;">
-                </div>
+            <!-- Filter Pills -->
+            <div id="top-filter-container" class="filter-pills-scroll-wrapper sticky-filters" style="padding: 0 20px;">
+                <!-- JS Injected Pills -->
             </div>
 
             <!-- 票务动态卡片 (Ticket Updates Dashboard) -->
@@ -91,7 +119,7 @@
                 </div>
                 <div class="updates-body" id="updates-body">
                     <!-- New Filter Pills (Horizontal Scroll) -->
-                    <div class="filter-pills-scroll-wrapper">
+                    <div class="filter-pills-scroll-wrapper sticky-filters-secondary">
                         <div class="filter-pills-container" id="filter-pills-container">
                             <div class="filter-pill active" data-value="new">
                                 <i class="material-icons">add_circle_outline</i> 上新
@@ -303,11 +331,11 @@
         </div>
         <!-- User Tab -->
         <div id="tab-user" class="tab-content">
-            <div class="header-section" style="text-align: center; padding: 40px 20px 20px;">
+            <div class="header-section" style="text-align: center; padding: 40px 20px 10px;">
                 <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">我的账户</h3>
             </div>
 
-            <div id="user-profile-container" style="padding: 20px;">
+            <div id="user-profile-container" style="padding: 0 20px 20px;">
                 <!-- Loading state -->
                 <div class="loading-spinner"></div>
             </div>
@@ -316,7 +344,7 @@
         <!-- Subscription Management Tab -->
         <div id="tab-user-subscriptions" class="tab-content">
             <div class="page-header"
-                style="padding: 20px; display: flex; align-items: center; justify-content: space-between;">
+                style="padding: 20px 20px 10px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <button class="icon-btn" onclick="router.navigate('/user')"
                         style="background: none; border: none; cursor: pointer; padding: 5px;">
@@ -329,6 +357,22 @@
                     <i class="material-icons" style="font-size: 1.2rem;">add</i>
                     添加订阅
                 </button>
+                <button id="batch-delete-btn" class="secondary-btn" onclick="subscription.handleBatchAction()"
+                    style="padding: 8px 16px; border-radius: 20px; font-size: 0.9rem;">
+                    多选删除
+                </button>
+            </div>
+
+            <div class="sub-tabs-wrapper" style="padding: 0 20px 15px;">
+                <div class="sub-tabs-list"
+                    style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                    <div class="sub-tab active" data-type="play" onclick="switchSubTab('play')"
+                        style="padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-weight: 500; color: var(--text-secondary);">
+                        剧目</div>
+                    <div class="sub-tab" data-type="actor" onclick="switchSubTab('actor')"
+                        style="padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-weight: 500; color: var(--text-secondary);">
+                        演员</div>
+                </div>
             </div>
 
             <div id="subscriptions-container" style="padding: 0 15px 100px;">
@@ -368,37 +412,40 @@
                     </div>
 
                     <div id="sub-form-fields" style="margin-top: 20px;">
+                        <div id="sub-inputs-container" style="margin-top: 15px;">
+                            <label id="target-label"
+                                style="font-weight: 600; color: #666; display: block; margin-bottom: 8px;">剧目名称</label>
+                            <!-- Rows will be injected by JS -->
+                        </div>
                         <input type="hidden" id="selected-sub-type" value="play">
-                        <div class="form-group">
-                            <label id="target-label" style="font-weight: 600; color: #666;">剧目名称</label>
-                            <div class="input-wrapper" style="margin-top: 8px; position:relative;">
-                                <i class="material-icons prefix"
-                                    style="position: absolute; left: 12px; top: 12px; color: #999;">search</i>
-                                <input type="text" id="sub-target-input" placeholder="输入名称并选择..."
-                                    style="width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #eee; border-radius: 12px; box-sizing: border-box;">
-                                <div id="sub-autocomplete-results" class="autocomplete-suggestions"
-                                    style="position: absolute; width: 100%; z-index: 1000; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none; max-height: 200px; overflow-y: auto;">
-                                </div>
-                            </div>
-                            <input type="hidden" id="sub-target-id">
-                            <input type="hidden" id="sub-target-name">
-                        </div>
 
                         <div class="form-group" style="margin-top: 15px;">
-                            <label style="font-weight: 600; color: #666;">城市过滤 (可选)</label>
-                            <input type="text" id="sub-city-input" placeholder="不填则订阅所有城市"
-                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; box-sizing: border-box;">
-                        </div>
-
-                        <div class="form-group" style="margin-top: 15px;">
-                            <label style="font-weight: 600; color: #666;">通知频率</label>
-                            <select id="sub-freq-select"
-                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; background: white; -webkit-appearance: none;">
-                                <option value="realtime">实时通知 (推荐)</option>
-                                <option value="hourly">每小时汇总结算</option>
-                                <option value="daily">每日汇总</option>
+                            <label style="font-weight: 600; color: #666;">推送级别</label>
+                            <select id="sub-level-select"
+                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; background: white; box-sizing: border-box;">
+                                <option value="1">仅上新</option>
+                                <option value="2" selected>上新/补票</option>
+                                <option value="3">上新/补票/回流</option>
+                                <option value="4">上新/补票/回流/票减</option>
+                                <option value="5">全部动态</option>
                             </select>
                         </div>
+
+
+                        <div id="actor-filters-group" style="display: none; margin-top: 15px;">
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #666;">只看剧目 (白名单)</label>
+                                <input type="text" id="sub-include-input" placeholder="输入剧目名称，用逗号分隔"
+                                    style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; box-sizing: border-box;">
+                            </div>
+                            <div class="form-group" style="margin-top: 10px;">
+                                <label style="font-weight: 600; color: #666;">排除剧目 (黑名单)</label>
+                                <input type="text" id="sub-exclude-input" placeholder="输入不感兴趣的剧目"
+                                    style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+
                     </div>
                 </div>
                 <div class="modal-footer"
@@ -535,14 +582,14 @@
                     <h4><i class="material-icons">add_circle</i> 新增功能</h4>
                     <ul>
                         <li><strong>全局错误处理系统</strong>：智能识别网络异常与服务故障，提供友好的错误提示与重试机制。</li>
-                        <li><strong>状态自动恢复</strong>：优化了断网重连后的页面恢复体验。</li>
+                        <li><strong>新增“我的”页面</strong>：即将支持可视化地管理QQ机器人订阅，以及未来更多的数据推送功能。</li>
                     </ul>
                 </div>
                 <div class="changelog-section">
                     <h4><i class="material-icons">build</i> build 优化</h4>
                     <ul>
-                        <li>修复部分 UI 渲染时的代码截断问题。</li>
-                        <li>增强前端代码的健壮性。</li>
+                        <li>修复部分卡司显示截断问题。</li>
+                        <li>修复若干BUG。</li>
                     </ul>
                 </div>
 
@@ -602,7 +649,7 @@
     <!-- Heatmap Logic -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
-    <script type="module" src="/static/js/main.js?v=20260118_2"></script>
+    <script type="module" src="/static/js/main.js?v=20260119_1"></script>
     <script src="/static/js/feedback.js?v=20260118_2"></script>
 
 </body>

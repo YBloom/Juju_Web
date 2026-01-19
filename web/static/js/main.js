@@ -3,7 +3,7 @@ import { router } from './modules/router.js';
 import { state } from './modules/state.js';
 import { initErrorHandler } from './modules/error_handler.js';
 import * as ui from './modules/ui.js';
-import { loadHeatmap, updateLabCardStats } from './modules/heatmap.js?v=20260118_2';
+import { loadHeatmap, updateLabCardStats } from './modules/heatmap.js';
 
 // Init Global Error Handler
 initErrorHandler();
@@ -30,6 +30,79 @@ window.hideAddSubModal = ui.hideAddSubModal;
 window.selectSubType = ui.selectSubType;
 window.doAddSubscription = ui.doAddSubscription;
 window.handleDeleteSubscription = ui.handleDeleteSubscription;
+window.switchSubTab = ui.switchSubTab;
+window.addSubInputRow = ui.addSubInputRow;
+window.selectSubSuggestionRow = ui.selectSubSuggestionRow;
+
+// Attach subscription namespace to avoid name collisions if needed
+window.subscription = {
+    addSubInputRow: ui.addSubInputRow,
+    selectSubSuggestionRow: ui.selectSubSuggestionRow,
+    toggleEditMode: ui.toggleEditMode,
+    toggleSubSelection: ui.toggleSubSelection,
+    toggleSelectAll: ui.toggleSelectAll,
+    batchDeleteSubscriptions: ui.batchDeleteSubscriptions,
+    handleBatchAction: function () {
+        const selectedCount = document.querySelectorAll('.sub-checkbox:checked').length;
+        if (selectedCount > 0) {
+            ui.batchDeleteSubscriptions();
+        } else {
+            ui.toggleEditMode();
+        }
+    }
+};
+
+// Debug: Verify global attachment
+console.log('[Main] Global functions attached:', {
+    switchSubTab: !!window.switchSubTab,
+});
+
+// Router Setup
+router.on('/', () => {
+    ui.showTabContent('tab-hlq');
+    if (state.allEvents.length === 0) {
+        ui.initHlqTab();
+    }
+});
+
+router.on('/detail/:id', (params) => {
+    ui.showDetailView(params.id);
+});
+
+router.on('/date', (params, query) => {
+    ui.showTabContent('tab-date');
+    if (query.d) {
+        const input = document.getElementById('date-input');
+        if (input) {
+            input.value = query.d;
+            ui.doDateSearch();
+        }
+    }
+});
+
+router.on('/cocast', () => {
+    ui.showTabContent('tab-cocast');
+});
+
+router.on('/lab', () => {
+    ui.showTabContent('tab-lab');
+    updateLabCardStats();
+});
+
+router.on('/lab/heatmap', () => {
+    ui.showTabContent('tab-lab-heatmap');
+    loadHeatmap();
+});
+
+router.on('/user', () => {
+    ui.showTabContent('tab-user');
+    ui.initUserTab();
+});
+
+router.on('/user/subscriptions', () => {
+    ui.showTabContent('tab-user-subscriptions');
+    ui.initSubscriptionManagement();
+});
 
 // Expose state for debugging if needed
 window.appState = state;
@@ -38,53 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ui.renderColumnToggles(); // Removed in v2.1 (No Table Header)
     ui.fetchUpdateStatus();
     ui.initActorAutocomplete();
-
-    // Router Setup
-    router.on('/', () => {
-        ui.showTabContent('tab-hlq');
-        if (state.allEvents.length === 0) {
-            ui.initHlqTab();
-        }
-    });
-
-    router.on('/detail/:id', (params) => {
-        ui.showDetailView(params.id);
-    });
-
-    router.on('/date', (params, query) => {
-        ui.showTabContent('tab-date');
-        if (query.d) {
-            const input = document.getElementById('date-input');
-            if (input) {
-                input.value = query.d;
-                ui.doDateSearch();
-            }
-        }
-    });
-
-    router.on('/cocast', () => {
-        ui.showTabContent('tab-cocast');
-    });
-
-    router.on('/lab', () => {
-        ui.showTabContent('tab-lab');
-        updateLabCardStats();
-    });
-
-    router.on('/lab/heatmap', () => {
-        ui.showTabContent('tab-lab-heatmap');
-        loadHeatmap();
-    });
-
-    router.on('/user', () => {
-        ui.showTabContent('tab-user');
-        ui.initUserTab();
-    });
-
-    router.on('/user/subscriptions', () => {
-        ui.showTabContent('tab-user-subscriptions');
-        ui.initSubscriptionManagement();
-    });
 
     // Global search hook
     const globalSearchEl = document.getElementById('global-search');

@@ -55,23 +55,30 @@ export function initTicketUpdates() {
     if (listContainer) {
         listContainer.addEventListener('click', (e) => {
             // Handle Detail Row Click (Navigation)
-            const detailRow = e.target.closest('.detail-row');
-            if (detailRow && detailRow.dataset.eventId) {
+            const detailRow = e.target.closest('.detail-row-compact');
+            if (detailRow) {
                 e.stopPropagation();
-                router.navigate(`/detail/${detailRow.dataset.eventId}`);
+                // Detail rows in ticket updates usually don't have session-specific nav unless intended.
+                // The old code navigated to /detail/:id. 
+                // Assuming eventId is on the row or parent.
+                // In render, .detail-row-compact has data-event-id.
+                if (detailRow.dataset.eventId) {
+                    router.navigate(`/detail/${detailRow.dataset.eventId}`);
+                }
                 return;
             }
 
-            // Handle Summary Row Click (Toggle or Nav)
-            const summaryRow = e.target.closest('.update-summary-row');
+            // Handle Summary Row/Compact Item Click (Toggle Details)
+            const summaryRow = e.target.closest('.compact-list-item');
             if (summaryRow) {
+                const canExpand = summaryRow.dataset.canExpand === 'true';
                 const groupId = summaryRow.dataset.groupId;
                 const eventId = summaryRow.dataset.eventId;
-                const canExpand = summaryRow.dataset.canExpand === 'true';
 
-                if (canExpand) {
+                if (canExpand && groupId) {
                     toggleDetail(groupId);
-                } else if (eventId) {
+                } else if (eventId && !canExpand) {
+                    // Fallback: If no details, maybe navigate?
                     router.navigate(`/detail/${eventId}`);
                 }
             }
@@ -193,16 +200,9 @@ function groupUpdatesByEvent(updates) {
         if (new Date(u.created_at) > g.latest_at) g.latest_at = new Date(u.created_at);
         g.types.add(u.change_type);
 
-        // Check for dupe session in this group (same ticket_id)
-        // If same session, keep the LATEST update info (e.g. stock change)
-        const existingSessIndex = g.sessions.findIndex(s => s.ticket_id === u.ticket_id);
-        if (existingSessIndex >= 0) {
-            // Replace if newer? Or prefer certain types?
-            // Simple logic: overwrite
-            g.sessions[existingSessIndex] = u;
-        } else {
-            g.sessions.push(u);
-        }
+        // Deduplication removed: Allow multiple updates for same ticket (e.g. New -> Restock)
+        // 去重已移除：允许同一张票有多次更新（如：上新 -> 回流）
+        g.sessions.push(u);
     });
 
     // Convert to array and Sort Groups
@@ -240,203 +240,183 @@ function groupUpdatesByEvent(updates) {
 
 // --- Rendering Logic ---
 
+// --- Rendering Logic ---
+
 function renderSummaryList(container, groups) {
     const now = new Date();
     const html = groups.map(group => {
         const timeAgo = formatTimeAgo(group.latest_at);
 
-        // Determine Badge
+        // Extract City and Clean Title
+        const { city, cleanTitle } = getDisplayInfo(group.event_id, group.event_title);
+
         const typeLabels = {
-            'new': { text: '上新', class: 'badge-new' },
-            'pending': { text: '待开票', class: 'badge-pending' },
-            'back': { text: '补票', class: 'badge-back' },
-            'restock': { text: '回流', class: 'badge-restock' }
+            'new': { text: '上新', class: 'badge-new-compact' },
+            'pending': { text: '待开票', class: 'badge-pending-compact' },
+            'back': { text: '补票', class: 'badge-back-compact' },
+            'restock': { text: '回流', class: 'badge-restock-compact' }
         };
 
-        const badgeConfig = typeLabels[group.primaryType] || { text: '动态', class: 'badge-default' };
-        let badgeClass = badgeConfig.class;
-        const label = badgeConfig.text;
+        const badgeConfig = typeLabels[group.primaryType];
+        const badgeHtml = badgeConfig ? `<span class="compact-status-badge ${badgeConfig.class}">${badgeConfig.text}</span>` : '';
 
-        const isHeroType = ['pending', 'new'].includes(group.primaryType);
-        const isPending = group.primaryType === 'pending';
+        // Meta Info Construction
+        let metaInfo = '';
 
-        // 1. Badge Logic
+        // 1. Date Range & Count
+        const validSessions = group.sessions.filter(s => s.session_time); // Simple filter
+        const uniqueDates = [...new Set(validSessions.map(s => {
+            const d = new Date(s.session_time);
+            return `${d.getMonth() + 1}.${d.getDate()}`;
+        }))].sort((a, b) => {
+            const [m1, d1] = a.split('.').map(Number);
+            const [m2, d2] = b.split('.').map(Number);
+            return m1 === m2 ? d1 - d2 : m1 - m2;
+        });
+
+        let dateStr = '';
+        if (uniqueDates.length > 0) {
+            if (uniqueDates.length <= 2) dateStr = uniqueDates.join(', ');
+            else dateStr = `${uniqueDates[0]}-${uniqueDates[uniqueDates.length - 1]}`;
+        }
+
+        const sessionCount = group.sessions.length;
+        const countStr = sessionCount > 0 ? `${sessionCount}场` : '';
+
+        metaInfo = [dateStr, countStr].filter(Boolean).join(' · ');
+
+        // Hero/Pending specific extra info (e.g. Open Time)
         if (group.primaryType === 'pending') {
-            badgeClass = 'type-pending-hero';
-        } else if (group.primaryType === 'new') {
-            badgeClass = 'type-new-hero';
-        }
-
-        // 2. Valid From Grouping Logic (Only for Pending)
-        let openTimeStr = '';
-        if (isPending) {
-            // Rely on backend-normalized valid_from strings (minute precision)
             const validTimes = [...new Set(group.sessions.map(s => s.valid_from).filter(t => t))].sort();
-
-            if (validTimes.length === 1) {
-                // All same valid_from -> Show in header
-                openTimeStr = `<span class="open-time-tag">⏰ ${escapeHtml(validTimes[0])}</span>`;
-            } else if (validTimes.length > 1) {
-                // Multiple different times. Show the earliest? Or just "多场次"
-                // User wants to see time. Let's show the first one and a hint.
-                openTimeStr = `<span class="open-time-tag">⏰ ${escapeHtml(validTimes[0])} 等</span>`;
-            } else {
-                // No valid_from found? Try to find from "message" or other fields if needed?
-                // Currently just empty.
+            if (validTimes.length > 0) {
+                metaInfo += ` · ${validTimes[0]}开抢`;
             }
-        }
-
-        // Snippets (Top 3 Sessions) - Only for Non-Hero types (restock, back)
-        // Sort sessions by time
-        group.sessions.sort((a, b) => new Date(a.session_time) - new Date(b.session_time));
-
-        const activeSessions = group.sessions.filter(s => new Date(s.session_time) > now);
-        const snippetCandidates = activeSessions.length > 0 ? activeSessions : group.sessions;
-
-        // Dedup by Date? (If multiple updates for same day). Already deduped by session_id.
-        // Just take top 3 distinct dates logic if simpler? 
-        // Start simple: Top 3 sessions (or 5 for pending since they are smaller)
-        const sliceCount = isHeroType ? 5 : 3; // Kept variable but effectively unused if hidden
-        const top3 = snippetCandidates.slice(0, sliceCount);
-
-        let countStr = '';
-        if (isHeroType) {
-            // For Hero types (Pending/New), we hide snippets, so show TOTAL quantity.
-            countStr = `共${group.sessions.length}场`;
-        } else {
-            // For others, show removed count
-            const remainingCount = Math.max(0, group.sessions.length - sliceCount);
-            if (remainingCount > 0) countStr = `+${remainingCount}`;
         }
 
         const canExpand = group.sessions.length > 0;
         const groupId = `group-${group.event_id}`;
 
-        const snippetHtml = isHeroType ? '' : top3.map((s, i) => {
-            const dt = new Date(s.session_time);
-            const mon = dt.getMonth() + 1;
-            const day = dt.getDate();
-            const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
-            const week = weekMap[dt.getDay()];
-
-            let stockHtml = '';
-
-            // Only show stock info if NOT pending (and stock exists)
-            // Actually, for restock/back, we DO show stock.
-            if (s.stock !== null && s.stock !== undefined) {
-                let stockClass = 'snippet-stock';
-                let stockLabel = '充足';
-
-                if (s.stock <= 0) { stockLabel = '售罄'; stockClass += ' sold-out'; }
-                else if (s.stock <= 5) { stockLabel = `余${s.stock}`; stockClass += ' urgent'; }
-                else if (s.stock <= 20) { stockLabel = `余${s.stock}`; stockClass += ' warning'; }
-                else { stockLabel = `余${s.stock}`; }
-
-                stockHtml = `<span class="${stockClass}">${escapeHtml(stockLabel)}</span>`;
-            }
-
-            const sep = i < top3.length - 1 ? '<span class="snippet-separator">·</span>' : '';
-            return `<div class="snippet-item" style="display:inline-flex; align-items:center;">
-                <span class="snippet-date">${mon}.${day} 周${week}</span>
-                ${stockHtml}
-            </div>${sep}`;
-        }).join('');
-
-        // --- Detail Rows (Hidden) ---
+        // Detail Rows (Hidden)
         let detailHtml = '';
         if (canExpand) {
             const detailRows = group.sessions.map(s => {
-                let dateStr = '-', weekStr = '', timeStr = '';
-                if (s.session_time) {
-                    try {
-                        const d = new Date(s.session_time);
-                        const m = d.getMonth() + 1;
-                        const day = d.getDate();
-                        const h = String(d.getHours()).padStart(2, '0');
-                        const min = String(d.getMinutes()).padStart(2, '0');
-                        const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
-
-                        dateStr = `${m}月${day}日`;
-                        weekStr = `周${weekMap[d.getDay()]}`;
-                        timeStr = `${h}:${min}`;
-                    } catch (e) { dateStr = s.session_time || '-'; }
-                }
-
+                const d = new Date(s.session_time);
+                const datePart = `${d.getMonth() + 1}月${d.getDate()}日`;
+                const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                 const price = s.price ? `¥${s.price}` : '';
                 const stock = s.stock !== null ? `余${s.stock}` : '';
-                let casts = s.cast_names || [];
-                if (typeof casts === 'string') { try { casts = JSON.parse(casts); } catch (e) { casts = [casts]; } }
-                const cast = Array.isArray(casts) && casts.length ? casts.join(' ') : '';
                 const isLow = s.stock !== null && s.stock <= 5;
-                const isExpired = s.session_time && new Date(s.session_time) < now;
-                const expiredClass = isExpired ? 'expired' : '';
-
-                // Extra info (Open Time or Expired Label)
-                let extraInfo = '';
-                if (isExpired) {
-                    extraInfo = '<span class="expired-label">已结束</span>';
-                } else if (s.valid_from && isPending) {
-                    // Collect unique times for the group to see if we have multiple waves
-                    const uniqueTimes = [...new Set(group.sessions.map(ss => ss.valid_from).filter(t => t))];
-
-                    if (uniqueTimes.length > 1) {
-                        extraInfo = `<span style="color:#f59e0b; font-size:0.85em;">${escapeHtml(s.valid_from)}开抢</span>`;
-                    }
-                }
+                const urgentClass = isLow ? 'stock-urgent' : 'stock-normal';
 
                 return `
-                    <div class="detail-row ${expiredClass}" data-event-id="${s.event_id || group.event_id}">
-                        <span class="detail-date">${escapeHtml(dateStr)}</span>
-                        <span class="detail-week">${escapeHtml(weekStr)}</span>
-                        <span class="detail-hm">${escapeHtml(timeStr)}</span>
-                        <span class="detail-price">${escapeHtml(price)}</span>
-                        <span class="detail-stock ${isLow ? 'low-stock' : ''}">${escapeHtml(stock)}</span>
-                        <span class="detail-cast">${escapeHtml(cast)}</span>
-                        <span class="detail-extra">${extraInfo}</span>
-                    </div>
+                    <tr class="update-session-row" data-event-id="${s.event_id}">
+                        <td class="col-date">${datePart} ${timePart}</td>
+                        <td class="col-price">${price}</td>
+                        <td class="col-stock">
+                             <span class="${urgentClass}">${stock}</span>
+                        </td>
+                    </tr>
                 `;
             }).join('');
-            detailHtml = `<div class="detail-panel" id="${groupId}-detail" style="display:none;">${detailRows}</div>`;
+
+            detailHtml = `
+                <div class="updates-table-container" id="${groupId}-detail" style="display:none;">
+                    <table class="updates-session-table">
+                        <tbody>
+                            ${detailRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
-        const clickAction = canExpand ? `toggleDetail('${groupId}')` : `window.router?.navigate('/detail/${group.event_id || ''}')`;
-
-        // v2.1: Single Line Title + Badge | Right: Snippets (Desktop)
+        // Compact List Item Structure
         return `
-            <div class="update-summary-row" data-type="${group.primaryType}" data-group-id="${groupId}" data-event-id="${group.event_id || ''}" data-can-expand="${canExpand}">
-                <div class="summary-top-line">
-                    <div class="summary-title">
-                        <span class="summary-badge ${badgeClass}">${escapeHtml(label)}</span>
-                        <span class="summary-event-title" style="margin-left:8px;">${escapeHtml(cleanEventTitle(group.event_title))}</span>
-                        ${openTimeStr}
+            <div class="compact-list-item clean-list-item adaptive-row" data-group-id="${groupId}" data-can-expand="${canExpand}" data-event-id="${group.event_id}">
+                <div class="cli-info-group">
+                    <div class="cli-main-row grid-5-cols-updates">
+                        <div class="col-type">${badgeHtml}</div>
+                        <div class="col-title">${escapeHtml(city ? `[${city}] ${cleanTitle}` : cleanTitle)}</div>
+                        <div class="col-dates">${escapeHtml(dateStr)}</div>
+                        <div class="col-count">${escapeHtml(countStr)}</div>
+                        <div class="col-time">${escapeHtml(timeAgo)}</div>
                     </div>
                 </div>
-                
-                <div class="snippet-row">
-                    ${snippetHtml}
-                    ${countStr ? `${snippetHtml ? '<span class="snippet-separator" style="color:#ddd; margin-left:10px;">|</span>' : ''} <span style="font-size:0.8em; color:#999;">${countStr}</span>` : ''}
-                </div>
-                
-                 <div class="summary-meta" style="margin-left:auto; padding-left:10px;">
-                    <span class="summary-time">${escapeHtml(timeAgo)}</span>
-                    <span class="summary-arrow" id="${groupId}-arrow">${canExpand ? '▸' : '›'}</span>
-                </div>
+                ${detailHtml}
             </div>
-            ${detailHtml}
         `;
     }).join('');
 
     container.innerHTML = html || '<div class="no-updates">暂无票务动态</div>';
 }
 
+// --- Helper Functions ---
+
+// Helper to get city from state or clean title
+function getDisplayInfo(eventId, rawTitle) {
+    let city = '';
+    let cleanTitle = rawTitle || '';
+
+    // 1. Try to find city from State (Source of Truth)
+    if (state.allEvents && state.allEvents.length > 0) {
+        const found = state.allEvents.find(e => String(e.id) === String(eventId));
+        if (found && found.city) {
+            city = found.city;
+        }
+    }
+
+    // 2. Clean Title Logic
+    // Step A: Remove ANY leading [xxx] or 【xxx】 tags (removes "Winter Warm", "Shanghai", etc. from string)
+    cleanTitle = cleanTitle.replace(/^[\[【].*?[\]】]/, '').trim();
+
+    // Step B: If there is a second tag remaining (unlikely but possible), remove it too? 
+    // User only complained about the first one. Let's stick to first one for now, or use loop?
+    // Usually only one prefix.
+
+    // Step C: Extract core title from 《》 if present
+    const bookNameMatch = cleanTitle.match(/[《](.*?)[》]/);
+    if (bookNameMatch && bookNameMatch[1]) {
+        cleanTitle = bookNameMatch[1].trim();
+    }
+
+    // Fallback: If city was NOT found in state, try to recover it from the original rawTitle if it looked like a city
+    if (!city) {
+        const fallbackMatch = rawTitle.match(/^[\[【](.+?)[\]】]/);
+        if (fallbackMatch && fallbackMatch[1]) {
+            // Check if it looks like a city (2-3 chars, usually) or just accept it?
+            // User wants to remove "Winter Warm". That is long.
+            // Cities are short: 上海, 北京.
+            // Heuristic: If length < 4, assume city.
+            const tag = fallbackMatch[1];
+            if (tag.length < 4) {
+                city = tag;
+            }
+        }
+    }
+
+    return { city, cleanTitle };
+}
+
+function getCityColorClass(city) {
+    // Map common cities to color tags
+    // User requested: "上海-LightBlue", "南京-LightPurple"
+    if (!city) return '';
+
+    if (city.includes('上海')) return 'tag-city-sh';
+    if (city.includes('南京')) return 'tag-city-nj';
+    if (city.includes('北京')) return 'tag-city-bj';
+    if (city.includes('广州') || city.includes('深圳')) return 'tag-city-gz';
+    if (city.includes('杭州')) return 'tag-city-hz';
+
+    return 'tag-city-default';
+}
+
 // Local toggle helper
 function toggleDetail(groupId) {
     const detail = document.getElementById(`${groupId}-detail`);
-    const arrow = document.getElementById(`${groupId}-arrow`);
     if (detail) {
         const isHidden = detail.style.display === 'none';
         detail.style.display = isHidden ? 'block' : 'none';
-        if (arrow) arrow.textContent = isHidden ? '▾' : '▸';
     }
 }
 
@@ -444,17 +424,15 @@ function toggleDetail(groupId) {
 function formatTimeAgo(date) {
     const diff = (new Date() - date) / 1000;
     if (diff < 60) return '刚刚';
-    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
-    return `${Math.floor(diff / 86400)}天前`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`; // Compact: 30m
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`; // Compact: 8h
+    return `${Math.floor(diff / 86400)}d`; // Compact: 1d
 }
 
-// Helper: Clean Event Title
+// Helper: Clean Event Title (Fallback)
 function cleanEventTitle(title) {
-    if (!title) return '';
-    const match = title.match(/《([^》]+)》/);
-    if (match && match[1]) {
-        return `《${match[1]}》`;
-    }
+    // Used inside extractCity logic now, but kept for safety if needed elsewhere
+    // But confusingly extractCity returns cleanTitle. 
+    // Let's just return title here to avoid double processing if not used.
     return title;
 }

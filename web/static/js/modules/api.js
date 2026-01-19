@@ -31,6 +31,14 @@ export const api = {
         return await res.json();
     },
 
+    async updateGlobalLevel(level) {
+        const res = await fetch(`/api/subscriptions/global-level?level=${level}`, {
+            method: 'PATCH'
+        });
+        if (!res.ok) throw new Error("更新全局级别失败");
+        return await res.json();
+    },
+
     // Meta/Status
     async fetchUpdateStatus() {
         try {
@@ -122,8 +130,8 @@ export const api = {
     },
 
     async updateSubscriptionOptions(id, data) {
-        const res = await fetch(`/api/subscriptions/${id}/options`, {
-            method: 'PUT',
+        const res = await fetch(`/api/subscriptions/options/${id}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });

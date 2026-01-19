@@ -1,45 +1,46 @@
+/* Import Design System Variables */
+@import url('variables.css');
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 :root {
-    /* Moral/Nature Palette */
-    --primary-color: #637E60;
-    /* Sage Green */
-    --primary-hover: #4F664C;
-    --accent-color: #D9885E;
-    /* Terracotta for accents (Autumn Leaf) */
-    --bg-color: #FDFDFB;
-    /* Warm White */
-    --card-bg: #FFFFFF;
+    /* Theme Colors (Mappings) */
+    --primary-color: var(--green-500);
+    --primary-hover: var(--green-600);
+    --accent-color: var(--orange-500);
+    --bg-color: var(--warmwhite-50);
+    --card-bg: var(--white);
+    --border-color: var(--gray-200);
 
-    /* Status Colors (Refined High-Signal) */
-    --status-red-bg: #FEF2F2;
-    --status-red-text: #DC2626;
-    --status-red-border: #FECaca;
+    /* Text Colors */
+    --text-primary: var(--gray-900);
+    --text-secondary: var(--gray-600);
+    --text-safe: var(--gray-700);
+    --text-warning: var(--orange-600);
+    --text-urgency: var(--red-500);
 
-    --status-orange-bg: #FFF7ED;
-    --status-orange-text: #C2410C;
-    --status-orange-border: #FED7AA;
+    /* Status Colors */
+    --status-red-bg: var(--red-50);
+    --status-red-text: var(--red-500);
+    --status-red-border: var(--red-200);
 
-    --status-blue-bg: #EFF6FF;
-    --status-blue-text: #2563EB;
-    --status-blue-border: #BFDBFE;
+    --status-orange-bg: var(--orange-50);
+    --status-orange-text: var(--orange-600);
+    --status-orange-border: var(--orange-200);
 
-    --status-green-bg: #F0FDF4;
-    --status-green-text: #15803D;
+    --status-blue-bg: var(--blue-50);
+    --status-blue-text: var(--blue-500);
+    --status-blue-border: var(--blue-200);
 
-    /* Snippet Text Colors */
-    --text-urgency: #DC2626;
-    /* 余票极少 */
-    --text-warning: #C2410C;
-    /* 余票紧张 */
-    --text-safe: #6B7280;
-    /* 充足 (Muted) */
+    --status-green-bg: var(--green-50);
+    --status-green-text: var(--green-700);
 
-    --text-primary: #3C403B;
-    /* Soft Black */
-    --text-secondary: #6B7068;
-    /* Muted Green-Grey */
-
-    --border-color: #E8E6DE;
-    --shadow-soft: 0 4px 20px -2px rgba(99, 126, 96, 0.1);
+    /* Layout & Shadows */
+    --shadow-soft: var(--shadow-md);
 
     /* Typography */
     --font-heading: 'Outfit', sans-serif;
@@ -47,9 +48,15 @@
     --font-number: 'Outfit', 'Inter', sans-serif;
 }
 
+html,
 body {
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+body {
     font-family: var(--font-body);
     background-color: var(--bg-color);
     color: var(--text-primary);
@@ -111,6 +118,10 @@ header {
     background-color: var(--primary-hover);
 }
 
+.mobile-header {
+    display: none;
+}
+
 /* Nav Ribbon - Integrated Navigation Bar Style */
 .nav-ribbon {
     background: var(--card-bg);
@@ -126,7 +137,7 @@ header {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     overflow: hidden;
     position: sticky;
-    top: 20px;
+    top: 0;
     z-index: 100;
 }
 
@@ -149,6 +160,15 @@ header {
     border-right: 1px solid var(--border-color);
     white-space: nowrap;
     /* Prevent text wrapping */
+}
+
+/* Responsive Text Labels */
+.mobile-text {
+    display: none;
+}
+
+.desktop-text {
+    display: inline;
 }
 
 .nav-btn:last-child {
@@ -227,6 +247,48 @@ main {
     }
 }
 
+/* Button Bounce Animation for Click Feedback */
+@keyframes buttonBounce {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(0.95);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Universal Button Styles with Elastic Feel */
+button:not(.no-bounce) {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:not(.no-bounce):active {
+    transform: scale(0.96);
+}
+
+button:not(.no-bounce):hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+/* Loading State - Icon Rotation */
+button.loading .material-icons,
+button[disabled] .material-icons.spin-icon {
+    animation: spin 1s linear infinite;
+}
+
+/* Loading State - Change cursor and opacity */
+button.loading,
+button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+
 .tab-content.active {
     display: block;
 }
@@ -251,6 +313,152 @@ main {
 .toolbar-title::before {
     content: "🌱";
     /* Nature icon */
+}
+
+/* --- Reusable Clean List Component (Borderless Table Style) --- */
+.clean-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.clean-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    background: transparent;
+    gap: 12px;
+}
+
+/* Event List Grid (3 columns) */
+.grid-3-cols {
+    display: grid !important;
+    grid-template-columns: 80px 1fr 140px;
+    align-items: center;
+}
+
+.grid-3-cols .col-city {
+    white-space: nowrap;
+}
+
+.grid-3-cols .col-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-left: 4px;
+}
+
+.grid-3-cols .col-date {
+    text-align: right;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* Adaptive Row for Ticket Updates Detail Side-by-Side */
+.adaptive-row {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    padding: 0 !important;
+    /* Managed by children */
+}
+
+.cli-info-group {
+    flex: 1 1 300px;
+    padding: 12px 16px;
+}
+
+.updates-table-container {
+    flex: 0 0 240px;
+    background: #f8fafc;
+    border-left: 1px solid var(--border-color);
+    margin: 0;
+    padding: 8px 12px;
+}
+
+/* Ticket Updates Grid (5 columns) */
+.grid-5-cols-updates {
+    display: grid !important;
+    grid-template-columns: 60px 1.5fr 100px 60px 60px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.grid-5-cols-updates .col-type {
+    white-space: nowrap;
+}
+
+.grid-5-cols-updates .col-title {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.grid-5-cols-updates .col-dates {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.grid-5-cols-updates .col-count {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.grid-5-cols-updates .col-time {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    text-align: right;
+}
+
+@media (max-width: 768px) {
+    .grid-5-cols-updates {
+        grid-template-columns: 50px 1fr 60px 50px;
+        /* Hide time on very small screens or rearrange */
+    }
+
+    .grid-5-cols-updates .col-time {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .updates-table-container {
+        flex: 1 1 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+}
+
+.clean-list-item:hover {
+    background-color: #F4F6F4;
+}
+
+.clean-list-item:active {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.clean-list-item:last-child {
+    border-bottom: none;
+}
+
+/* Helper for mobile alignment */
+.clean-list-item.inset-mobile {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+@media (max-width: 768px) {
+    .clean-list.inset-mobile {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
 }
 
 /* Table Styles - Clean & Airy */
@@ -544,6 +752,278 @@ main {
     margin-right: 15px;
 }
 
+/* --- Compact List View (Efficiency Optimized) --- */
+
+/* Now inherits from .clean-list-item via JS/HTML classes */
+
+.cli-main-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* Align top for multi-line titles */
+    gap: 12px;
+}
+
+.cli-info {
+    flex: 1;
+    min-width: 0;
+    /* Enable truncation */
+}
+
+.cli-title-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    /* Allow wrapping if needed */
+}
+
+.cli-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    /* slate-800 */
+    line-height: 1.4;
+}
+
+.cli-meta-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cli-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    /* slate-500 */
+    font-weight: 400;
+}
+
+.cli-side {
+    text-align: right;
+    white-space: nowrap;
+    padding-top: 2px;
+}
+
+.cli-time {
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    /* slate-300 (Very light as requested) */
+}
+
+/* City Tags */
+.city-tag {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.tag-city-sh {
+    background-color: #e0f2fe;
+    color: #0284c7;
+}
+
+/* sky-100 / sky-600 */
+.tag-city-nj {
+    background-color: #f3e8ff;
+    color: #9333ea;
+}
+
+/* purple-100 / purple-600 */
+.tag-city-bj {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+/* red-100 / red-600 */
+.tag-city-gz {
+    background-color: #ecfccb;
+    color: #65a30d;
+}
+
+/* lime-100 / lime-600 */
+.tag-city-hz {
+    background-color: #ffedd5;
+    color: #ea580c;
+}
+
+/* orange-100 / orange-600 */
+.tag-city-default {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+/* Detail Expansion (Compact) */
+.detail-panel-compact {
+    margin-top: 8px;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.detail-row-compact {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #334155;
+    padding: 4px 0;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.detail-row-compact:last-child {
+    border-bottom: none;
+}
+
+.d-stock.sl-urgent {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* Status Badges (Compact) */
+.badge-new-compact,
+.badge-back-compact,
+.badge-restock-compact,
+.badge-pending-compact {
+    font-size: 0.7rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    transform: scale(0.9);
+}
+
+.badge-new-compact {
+    color: #16a34a;
+    border: 1px solid #16a34a;
+}
+
+.badge-pending-compact {
+    color: #f59e0b;
+    border: 1px solid #f59e0b;
+}
+
+.badge-restock-compact {
+    color: #06b6d4;
+    border: 1px solid #06b6d4;
+}
+
+.badge-back-compact {
+    color: #8b5cf6;
+    border: 1px solid #8b5cf6;
+}
+
+/* Search Bar Slimming */
+#global-search {
+    font-size: 0.9rem !important;
+}
+
+/* Ticket Updates Improvements */
+.ticket-update-item {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Subtle Alternating Backgrounds (Zebra Striping) */
+.ticket-update-item:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.01);
+    /* Extremely subtle grey */
+    padding-left: 8px;
+    /* Compensate for background */
+    padding-right: 8px;
+    border-radius: 8px;
+}
+
+.update-time {
+    color: #9CA3AF;
+    /* Neutral Grey 400 - Lighter than before */
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+/* Event List Main - Single Line Layout */
+/* Now inherits from .clean-list via JS/HTML classes */
+
+/* Now inherits from .clean-list-item via JS/HTML classes */
+
+.event-row:hover {
+    background-color: #F4F6F4;
+}
+
+.event-row:last-child {
+    border-bottom: none;
+}
+
+.event-left-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    /* Enable text truncation */
+    margin-right: 12px;
+}
+
+.event-city-badge {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.event-title-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-right-group {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.event-date-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: var(--font-number);
+}
+
+/* Filter Pills / Tags - More Rounded */
+.filter-pill {
+    padding: 6px 16px;
+    border-radius: 50px;
+    /* Fully rounded */
+    font-size: 0.85rem;
+    background: #F3F4F6;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.filter-pill:hover {
+    background: #E5E7EB;
+    color: var(--text-primary);
+}
+
+.filter-pill.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 126, 96, 0.3);
+    border-color: transparent;
+}
+
 .input-panel input {
     padding: 12px 20px;
     border: 1px solid var(--border-color);
@@ -599,32 +1079,549 @@ main {
 }
 
 /* 移动端响应式设计 - 保持表格布局，支持横向滚动 */
+
+/* ==============================================
+   UTILITY CLASSES (工具类)
+   快速复用的原子类,用于安全替换内联样式
+   ============================================== */
+
+/* Spacing Utilities */
+.p-xs {
+    padding: var(--space-4);
+}
+
+.p-sm {
+    padding: var(--space-8);
+}
+
+.p-md {
+    padding: var(--space-16);
+}
+
+.p-lg {
+    padding: var(--space-24);
+}
+
+.p-xl {
+    padding: var(--space-40);
+}
+
+.pt-sm {
+    padding-top: var(--space-8);
+}
+
+.pt-md {
+    padding-top: var(--space-16);
+}
+
+.pb-sm {
+    padding-bottom: var(--space-8);
+}
+
+.pb-md {
+    padding-bottom: var(--space-16);
+}
+
+.pl-sm {
+    padding-left: var(--space-8);
+}
+
+.pl-md {
+    padding-left: var(--space-16);
+}
+
+.pr-sm {
+    padding-right: var(--space-8);
+}
+
+.pr-md {
+    padding-right: var(--space-16);
+}
+
+.px-sm {
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+}
+
+.px-md {
+    padding-left: var(--space-16);
+    padding-right: var(--space-16);
+}
+
+.py-sm {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-8);
+}
+
+.py-md {
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-16);
+}
+
+.m-sm {
+    margin: var(--space-8);
+}
+
+.m-md {
+    margin: var(--space-16);
+}
+
+.m-lg {
+    margin: var(--space-24);
+}
+
+.mt-sm {
+    margin-top: var(--space-8);
+}
+
+.mt-md {
+    margin-top: var(--space-16);
+}
+
+.mb-sm {
+    margin-bottom: var(--space-8);
+}
+
+.mb-md {
+    margin-bottom: var(--space-16);
+}
+
+.gap-sm {
+    gap: var(--space-8);
+}
+
+.gap-md {
+    gap: var(--space-12);
+}
+
+.gap-lg {
+    gap: var(--space-16);
+}
+
+/* Layout Utilities */
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.h-full {
+    height: 100%;
+}
+
+/* Typography Utilities */
+.text-primary {
+    color: var(--text-primary);
+}
+
+.text-secondary {
+    color: var(--text-secondary);
+}
+
+.text-xs {
+    font-size: var(--text-xs);
+}
+
+.text-sm {
+    font-size: var(--text-sm);
+}
+
+.text-base {
+    font-size: var(--text-base);
+}
+
+.text-lg {
+    font-size: var(--text-lg);
+}
+
+.text-xl {
+    font-size: var(--text-xl);
+}
+
+.font-bold {
+    font-weight: var(--font-weight-bold);
+}
+
+.font-semibold {
+    font-weight: var(--font-weight-semibold);
+}
+
+.font-medium {
+    font-weight: var(--font-weight-medium);
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Radius Utilities */
+.rounded-sm {
+    border-radius: var(--radius-sm);
+}
+
+.rounded-md {
+    border-radius: var(--radius-md);
+}
+
+.rounded-lg {
+    border-radius: var(--radius-lg);
+}
+
+.rounded-pill {
+    border-radius: var(--radius-pill);
+}
+
+/* Shadow Utilities */
+.shadow-soft {
+    box-shadow: var(--shadow-soft);
+}
+
+.shadow-card {
+    box-shadow: var(--shadow-card);
+}
+
+/* Background Utilities */
+.bg-card {
+    background-color: var(--card-bg);
+}
+
+.bg-primary {
+    background-color: var(--primary-color);
+}
+
+/* Border Utilities */
+.border {
+    border: 1px solid var(--border-color);
+}
+
+/* ==============================================
+   RESPONSIVE DESIGN
+   ============================================== */
+
 @media (max-width: 768px) {
+
+    /* Force 100% width for all major containers */
+    header,
+    .nav-ribbon,
+    main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Mobile Content Spacing */
+    main {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    /* Align Event List width with Ticket Updates Card */
+    .event-list-main {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+
+    .grid-3-cols {
+        grid-template-columns: 60px 1fr 110px;
+        font-size: 0.9rem;
+    }
+
+    /* Tool-Focused Header Redesign - Compact & Sticky */
+    .mobile-header.tool-minimal {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 20px;
+        /* 大幅缩减垂直间距：从 40px 降至 12px */
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        position: sticky;
+        /* 吸顶效果 */
+        top: 0;
+        z-index: 999;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s ease;
+    }
+
+    /* 移除顶部装饰线，简化设计 */
+    .mobile-header.tool-minimal::before {
+        display: none;
+    }
+
+    /* 品牌区域行布局 */
+    .header-brand-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .brand-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        /* 紧凑间距 */
+    }
+
+    .brand-name {
+        font-family: var(--font-heading);
+        font-size: 1.5rem;
+        /* 适度缩小 */
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: 0.12em;
+        /* 增强字间距，提升设计感 */
+        line-height: 1;
+        position: relative;
+        display: inline-block;
+    }
+
+    /* 精致的点装饰 */
+    .brand-name::after {
+        content: '.';
+        color: var(--accent-color);
+        font-size: 1.6rem;
+        line-height: 0;
+        position: absolute;
+        bottom: 0.15em;
+        right: -0.35em;
+    }
+
+    .brand-tagline {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0.5;
+        /* 降低透明度，更加低调 */
+    }
+
+    /* 搜索框容器 */
+    .header-search-container {
+        display: flex;
+        align-items: center;
+        background: #f8f9fa;
+        border-radius: 50px;
+        padding: 10px 18px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+    }
+
+    .header-search-container:focus-within {
+        background: white;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(99, 126, 96, 0.08);
+    }
+
+    .header-search-container .search-icon {
+        color: #999;
+        margin-right: 10px;
+        font-size: 1.2rem;
+    }
+
+    .header-search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        font-family: var(--font-body);
+    }
+
+    .header-search-input::placeholder {
+        color: #aaa;
+    }
+
+    /* Domain Badge 低调化 */
+    .domain-badge {
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-size: 0.65rem;
+        /* 缩小字号 */
+        color: var(--text-secondary);
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        font-weight: 400;
+        /* 降低字重 */
+        border: none;
+        font-style: italic;
+        letter-spacing: 0.02em;
+        opacity: 0.4;
+        /* 大幅降低透明度，使其更加隐蔽 */
+        text-align: center;
+    }
+
+    /* Hide Desktop Header on Mobile if needed, or keep for search */
+    /* header { display: none; } */
 
     /* 导航栏优化 */
     .nav-ribbon {
-        margin: 10px;
-        border-radius: 12px;
-        position: relative;
-        top: 0;
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto;
-        /* allow scroll if needed */
-        justify-content: flex-start;
-        /* start from left if scrolling */
-        -webkit-overflow-scrolling: touch;
+        /* ... existing styles ... */
+        /* Bottom Navigation Bar Transformation */
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: auto;
+        min-height: 80px;
+        /* Increased height */
+
+        /* Glassmorphism */
+        background: rgba(255, 255, 255, 0.98);
+        /* Less transparent for contrast */
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+
+        border: none !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.08) !important;
+        z-index: 1000;
+
+        justify-content: space-between !important;
+        /* Space between items */
+        padding: 10px 15px env(safe-area-inset-bottom, 20px) !important;
+        /* Optimization for safe area and height */
     }
 
     .nav-btn {
-        font-size: 0.85rem;
-        padding: 12px 10px;
-        border-right: 1px solid var(--border-color);
-        flex: 1 0 auto;
-        /* Grow, don't shrink too much */
-        white-space: nowrap;
+        font-size: 0.75rem;
+        padding: 8px 4px;
+        /* Balanced padding */
+        border-right: none !important;
+        flex: 1 1 0px !important;
+        min-width: 0;
+        /* Allow shrinkage */
+
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: normal !important;
+        text-align: center;
+        gap: 6px !important;
+
+        color: #999;
+        background: transparent;
+        border-radius: 12px;
+        margin: 0 4px;
+        /* Gap between buttons */
+        transition: all 0.2s ease;
     }
+
+    .nav-btn span {
+        display: block;
+        line-height: 1.1;
+    }
+
+    .nav-btn i {
+        font-size: 24px;
+        margin-bottom: 2px;
+        transition: transform 0.2s;
+    }
+
+    .nav-btn .desktop-text {
+        display: none;
+    }
+
+    .nav-btn .mobile-text {
+        display: block;
+        font-size: 11px;
+        /* Slightly larger */
+        font-weight: 500;
+        line-height: 1.2;
+        text-align: center;
+        white-space: normal;
+        /* Allow wrapping for <br> */
+    }
+
+    /* Active State for Bottom Tab - Modern Clean Style */
+    .nav-btn.active {
+        background-color: transparent !important;
+        /* Remove block bg */
+        color: var(--primary-color) !important;
+        box-shadow: none;
+        position: relative;
+    }
+
+    /* Top Accent Line for Active State */
+    .nav-btn.active::after {
+        content: "";
+        display: block !important;
+        position: absolute;
+        top: 0;
+        left: 20%;
+        right: 20%;
+        /* Centered line, not full width */
+        height: 3px;
+        background-color: var(--primary-color);
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 2px 4px rgba(99, 126, 96, 0.2);
+    }
+
+    .nav-btn.active .mobile-text {
+        font-weight: 700;
+        color: var(--primary-color) !important;
+    }
+
+    .nav-btn i {
+        font-size: 26px;
+        /* Slightly larger icon */
+        margin-bottom: 4px;
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .nav-btn.active i {
+        transform: translateY(-2px);
+        /* Slight bounce up */
+    }
+
+    /* Add padding to body/main to prevent content blocked by bottom bar */
+    main {
+        margin-bottom: 90px !important;
+        /* 60px bar + 30px buffer */
+    }
+
+    /* Hide scrollbar for nav if any */
+    .nav-ribbon::-webkit-scrollbar {
+        display: none;
+    }
+
 
     /* 主容器 */
     main {
@@ -741,6 +1738,92 @@ main {
     #city-filter {
         font-size: 0.85rem;
         padding: 4px 8px;
+    }
+
+    /* 订阅模态框移动端优化 */
+    .subscription-modal {
+        max-width: 95% !important;
+        margin: 10px !important;
+    }
+
+    .subscription-modal .modal-body {
+        padding: 15px !important;
+        max-height: 60vh !important;
+    }
+
+    .subscription-modal .form-group label {
+        font-size: 0.9rem;
+    }
+
+    .subscription-modal .type-selector {
+        gap: 8px !important;
+    }
+
+    .subscription-modal .type-option {
+        padding: 12px !important;
+    }
+
+    .subscription-modal .type-option .material-icons {
+        font-size: 1.5rem;
+    }
+
+    .subscription-modal .type-option span {
+        font-size: 0.85rem;
+    }
+
+    .subscription-modal input,
+    .subscription-modal select {
+        font-size: 0.9rem !important;
+    }
+
+    /* 订阅列表卡片移动端优化 */
+    .sub-item {
+        padding: 12px !important;
+        border-radius: 12px !important;
+        gap: 10px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+
+    .sub-item>div:first-child {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 8px !important;
+    }
+
+    .sub-item>div:first-child .material-icons {
+        font-size: 18px !important;
+    }
+
+    .sub-item>div:nth-child(2) {
+        min-width: 0;
+    }
+
+    .sub-item>div:nth-child(2)>div:first-child span {
+        font-size: 0.7rem !important;
+        padding: 1px 6px !important;
+    }
+
+    .sub-item>div:nth-child(2)>div:first-child strong {
+        font-size: 0.9rem !important;
+    }
+
+    .sub-item>div:nth-child(2)>div:last-child {
+        font-size: 0.75rem !important;
+    }
+
+    .sub-item>div:nth-child(2)>div:last-child .material-icons {
+        font-size: 0.8rem !important;
+    }
+
+    .sub-item button {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 6px !important;
+    }
+
+    .sub-item button .material-icons {
+        font-size: 16px !important;
     }
 }
 
@@ -1207,12 +2290,12 @@ main {
 
 /* === Ticket Updates Dashboard === */
 .ticket-updates-card {
-    margin: 20px;
-    border-radius: 12px;
-    background: #fff;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e5e7eb;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+    box-shadow: none;
+    border: none;
 }
 
 .updates-header {
@@ -1680,6 +2763,31 @@ main {
     position: relative;
     z-index: 1;
     letter-spacing: 0.02em;
+}
+
+/* Filter Pills (Sticky) */
+.filter-pills-scroll-wrapper.sticky-filters {
+    margin-bottom: 24px;
+    padding: 0 20px;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-top: -8px;
+}
+
+.sticky-filters-secondary {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 56px;
+    /* Offset for primary filters */
+    background: #fff;
+    z-index: 9;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 /* Bento Grid */
@@ -2622,113 +3730,11 @@ main {
 .filter-chip {
     flex-shrink: 0;
 }
-}
+
 
 /* 6. Main List Refinements (v2.1) */
-.event-list-main {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 0 16px;
-}
-
-.event-row {
-    display: flex;
-    flex-direction: column;
-    /* Mobile Default: Stack */
-    padding: 16px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    gap: 8px;
-}
-
-.event-row:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.event-city {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    background: #f5f5f5;
-    padding: 2px 8px;
-    border-radius: 4px;
-    align-self: flex-start;
-    /* Fit content */
-    margin-bottom: 4px;
-}
-
-.event-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.4;
-}
-
-.event-date {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-family: 'SF Mono', Consolas, monospace;
-}
-
-.event-arrow {
-    display: none;
-    /* Hidden on mobile usually, or shown absolute */
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #ddd;
-    font-size: 1.5rem;
-}
-
-/* Desktop Main List */
-@media (min-width: 1024px) {
-    .event-list-main {
-        padding: 0 30px;
-    }
-
-    .event-row {
-        flex-direction: row;
-        align-items: center;
-        padding: 18px 24px;
-        gap: 20px;
-    }
-
-    .event-city {
-        width: 60px;
-        /* Fixed width for alignment */
-        margin-bottom: 0;
-        text-align: center;
-        font-size: 0.9rem;
-        flex-shrink: 0;
-    }
-
-    .event-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        /* Keep title above date? Or Row? */
-        /* User Requirement: Left City, Right Flow Title & Date */
-        /* Actually User said: "Right flow display Play Name (Bold) AND Date Range (Gray) - TWO ROWS vertical alignment" */
-        gap: 4px;
-    }
-
-    .event-title {
-        font-size: 1.1rem;
-    }
-
-    .event-arrow {
-        display: block;
-        position: static;
-        transform: none;
-    }
-}
+/* 6. Main List Refinements (Deprecated - see .event-list-main at top) */
+/* Old styles removed to fix mobile single-line layout */
 
 /* 7. Card & Snippet Tweaks v2.1 */
 .snippet-stock {
@@ -3089,6 +4095,7 @@ main {
 .site-footer {
     margin-top: 0;
     margin-bottom: 20px;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
 }
 
 /* Modal System */
@@ -3125,25 +4132,155 @@ main {
 }
 
 /* Subscription UI Specific */
-.type-option {
-    transition: all 0.2s ease;
+.sub-tabs-list .sub-tab.active {
+    background: var(--status-green-bg);
+    color: var(--primary-color) !important;
+    font-weight: 700 !important;
 }
 
-.type-option:active {
-    transform: scale(0.95);
-}
-
-.suggestion-item:hover {
-    background: #f5f5f5 !important;
+.sub-list-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 20px;
 }
 
 .sub-item {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.sub-item.compact {
+    padding: 12px 16px;
+    border-radius: 12px;
+    gap: 10px;
 }
 
 .sub-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 6px 16px rgba(99, 126, 96, 0.08) !important;
+    border-color: var(--primary-color);
+}
+
+.sub-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sub-icon.play {
+    background: rgba(99, 126, 96, 0.1);
+    color: var(--primary-color);
+}
+
+.sub-icon.actor {
+    background: rgba(217, 136, 94, 0.1);
+    color: var(--accent-color);
+}
+
+.sub-icon.event {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--status-blue-text);
+}
+
+.sub-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.sub-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-heading);
+}
+
+.sub-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sub-tag {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.city-tag {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.level-tag {
+    background: var(--status-orange-bg);
+    color: var(--status-orange-text);
+    border: 1px solid var(--status-orange-border);
+}
+
+.sub-delete-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.sub-delete-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 40px;
+    color: var(--text-secondary);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.empty-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.empty-subtext {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    line-height: 1.5;
 }
 
 .footer-content {
@@ -3169,4 +4306,207 @@ main {
 
 .footer-content a:hover {
     text-decoration: underline;
+}
+
+/* --- Ticket Updates Table Layout --- */
+.updates-table-container {
+    padding: 0 12px 10px 12px;
+    /* Padding to avoid sticking to edges */
+    background: #f8fafc;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    margin-top: -4px;
+    /* Connect with header */
+    margin-bottom: 8px;
+}
+
+.updates-session-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+    font-size: 0.85rem;
+}
+
+.updates-session-table td {
+    padding: 6px 0;
+    border: none;
+    /* No borders requested */
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.col-date {
+    text-align: left;
+    width: 45%;
+    font-family: var(--font-number);
+}
+
+.col-price {
+    text-align: center;
+    width: 30%;
+    font-family: var(--font-number);
+}
+
+.col-stock {
+    text-align: right;
+    width: 25%;
+}
+
+.stock-urgent {
+    color: var(--text-urgency);
+    font-weight: 600;
+}
+
+.stock-normal {
+    color: var(--text-primary);
+}
+
+/* Ensure compact list item doesn't have overlapping borders or margins when expanded */
+.compact-list-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+
+/* Subscription Multi-Input Row Styles */
+.sub-inputs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sub-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2px 12px;
+    transition: all 0.2s;
+    flex: 1;
+    /* Take remaining space */
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(99, 126, 96, 0.1);
+}
+
+.sub-row-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 12px 4px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    outline: none;
+}
+
+/* Autocomplete Suggestions */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    margin-top: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+.autocomplete-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background: #f8fafc;
+}
+
+.ac-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ac-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Fix for Secondary Button Shadow */
+.secondary-btn {
+    box-shadow: none !important;
+    /* Force remove shadow */
+    background: #f1f5f9;
+    color: var(--text-secondary);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background: #e2e8f0;
+    color: var(--text-primary);
+}
+
+/* Circle Buttons for Add/Remove */
+.circle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: var(--bg-color);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    box-shadow: none;
+}
+
+.circle-btn:hover {
+    transform: scale(1.1);
+}
+
+.circle-btn.add {
+    background: rgba(99, 126, 96, 0.1);
+    color: var(--primary-color);
+}
+
+.circle-btn.add:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.circle-btn.remove {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--text-urgency);
+}
+
+.circle-btn.remove:hover {
+    background: var(--text-urgency);
+    color: white;
 }

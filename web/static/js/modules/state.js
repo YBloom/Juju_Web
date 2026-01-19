@@ -4,7 +4,8 @@ export const state = {
     dateEvents: [], // For Student Ticket Calendar
 
     // Global data cache
-    allArtistNames: [],
+    allArtistNames: [],  // 演员名称列表（向后兼容）
+    artists: [],         // 完整演员对象数组（用于订阅等功能）
 
     // Current Tab
     currentTab: 'tab-hlq',
