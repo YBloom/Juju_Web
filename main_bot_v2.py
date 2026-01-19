@@ -20,8 +20,8 @@ def main():
     
     # Force Config
     from ncatbot.utils.config import ncatbot_config
-    ncatbot_config.set_bot_uin("3132859862")
-    ncatbot_config.set_root("3022402752")
+    ncatbot_config.set_bot_uin("3132859862")  # TODO: Move rigid UIN to config
+    ncatbot_config.set_root("3022402752")     # TODO: Move rigid Admin ID to config
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
     
     # Import and run (同步方式，ncatbot 内部处理 asyncio)
@@ -88,6 +88,7 @@ def main():
             asyncio.create_task(scheduled_sync_task())
     
     logging.info("🤖 [启动] Bot 正在启动...")
+    # TODO: Refactor to use config value
     bot.run(bt_uin="3132859862", enable_webui_interaction=False)
 
 if __name__ == "__main__":

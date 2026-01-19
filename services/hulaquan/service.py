@@ -138,6 +138,12 @@ class HulaquanService:
         """
         log.info("Starting full Hulaquan data synchronization...")
         
+        # 0. Ensure Saoju Indexes (Async Prefetch)
+        try:
+            await self._saoju._ensure_artist_indexes()
+        except Exception as e:
+            log.warning(f"Failed to prefetch Saoju artist indexes: {e}")
+
         # 1. Fetch recommended events with retry logic (legacy behavior)
         # 1. 使用重试逻辑获取推荐事件（旧有行为）
         limit = 95
@@ -483,6 +489,66 @@ class HulaquanService:
                 # This handles the case where cast associations were created AFTER the TicketUpdate object
                 # 这处理了在 TicketUpdate 对象创建之后才建立卡司关联的情况
                 final_cast_names = update.cast_names
+                
+                # --- CAST SORTING LOGIC ---
+                # Sort cast names by official role sequence if possible
+                try: 
+                    # We need musical_id. Event might have it.
+                    # Note: event object is in session context
+                    current_event = session.get(HulaquanEvent, update.event_id)
+                    musical_id = current_event.saoju_musical_id if current_event else None
+                    
+                    if musical_id:
+                        # Helper to get sequence
+                        # Since we are in sync method, and get_role_seq is async, we need a way to call it.
+                        # Actually HulaquanService has reference to _saoju (SaojuService).
+                        # SaojuService methods are async. We need a synchronous way or access internal data?
+                        # SaojuService.data is a dict. We can access it directly if we are careful.
+                        # But get_role_seq logic ensures index is built.
+                        # Index should have been built during _sync_event_details -> _enrich_ticket_data_async -> ...
+                        # It's better to preload it or access data directly.
+                        
+                        # Let's check if we can access data directly for now, assuming indexes are loaded.
+                        # Or better: We can fetch role map in `sync_all_data` once and pass it down.
+                        # But `_save_synced_data_sync` is sync.
+                        
+                        # Accessing `self._saoju.data["artist_indexes"]["role_orders"]` directly.
+                        role_orders = self._saoju.data.get("artist_indexes", {}).get("role_orders", {}).get(str(musical_id), {})
+                        
+                        if not role_orders and self._saoju.data.get("artist_indexes") is None:
+                             # If indexes not loaded, we can't sort efficiently in sync context without blocking.
+                             # Skip sorting or accept best effort.
+                             pass
+                        
+                        if role_orders:
+                             # We need to map artist name -> role name to get seq
+                             # But `final_cast_names` is just a list of names.
+                             # We need the association to know the role.
+                             # `update.cast_names` came from enrichment which had role info but we only kept names list.
+                             # `ticket.cast_members` is list of casts.
+                             # We need to look up role for each artist name.
+                             # `TicketCastAssociation` has the role.
+                             
+                             # Re-fetch associations to be sure
+                             stmt_roles = select(HulaquanCast.name, TicketCastAssociation.role).join(TicketCastAssociation).where(
+                                 TicketCastAssociation.ticket_id == update.ticket_id,
+                                 HulaquanCast.id == TicketCastAssociation.cast_id
+                             )
+                             cast_roles = session.exec(stmt_roles).all()
+                             # Map: ArtistName -> RoleName
+                             artist_role_map = {cname: role for cname, role in cast_roles}
+                             
+                             def get_seq(artist_name):
+                                 role = artist_role_map.get(artist_name)
+                                 if not role: return 999
+                                 return role_orders.get(role, 999)
+                                 
+                             if final_cast_names:
+                                 final_cast_names.sort(key=get_seq)
+                except Exception as e:
+                    log.warning(f"Failed to sort cast names: {e}")
+                # --------------------------
+
                 if not final_cast_names:
                     # Flush to ensure all associations are committed
                     # 刷新以确保所有关联都已提交
@@ -590,6 +656,50 @@ class HulaquanService:
                 
                 result.append(self._format_event_info(event, tickets))
             return result
+
+    async def get_event(self, event_id: str) -> Optional[EventInfo]:
+        """Get single event details by ID.
+        按 ID 获取单个事件详情。
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_event_sync, event_id)
+
+    def _get_event_sync(self, event_id: str) -> Optional[EventInfo]:
+        with session_scope() as session:
+            event = session.get(HulaquanEvent, event_id)
+            if not event:
+                return None
+            
+            # Load tickets
+            tickets = []
+            for t in event.tickets:
+                if t.status == "expired": continue
+                
+                # Fetch cast info
+                cast_infos = []
+                stmt_c = (
+                    select(HulaquanCast, TicketCastAssociation.role)
+                    .join(TicketCastAssociation)
+                    .where(TicketCastAssociation.ticket_id == t.id)
+                )
+                cast_results = session.exec(stmt_c).all()
+                for c_obj, role in cast_results:
+                    cast_infos.append(CastInfo(name=c_obj.name, role=role))
+
+                tickets.append(TicketInfo(
+                    id=t.id,
+                    title=t.title,
+                    session_time=t.session_time,
+                    price=t.price,
+                    stock=t.stock,
+                    total_ticket=t.total_ticket,
+                    city=t.city,
+                    status=t.status,
+                    valid_from=t.valid_from,
+                    cast=cast_infos
+                ))
+            
+            return self._format_event_info(event, tickets)
 
     def _format_event_info(self, event: HulaquanEvent, tickets: List[TicketInfo]) -> EventInfo:
         """Helper to format HulaquanEvent into EventInfo with calculated fields.
@@ -1180,17 +1290,10 @@ class HulaquanService:
             # Modify select to include Ticket for data fallback (esp. valid_from)
             stmt = select(TicketUpdateLog, HulaquanTicket).join(HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id)
             
-            # Filter 1: Real-time Status (Active/Pending AND (Pending OR Stock>0))
-            # 过滤 1: 实时状态 (Active/Pending 且 (Pending 或 Stock>0))
-            stmt = stmt.where(
-                or_(
-                    HulaquanTicket.status == TicketStatus.PENDING,
-                    and_(
-                        HulaquanTicket.status == TicketStatus.ACTIVE,
-                        HulaquanTicket.stock > 0
-                    )
-                )
-            )
+            # Filter 1: Real-time Status (Removed strict filter to show history)
+            # 过滤 1: 实时状态 (移除严格过滤以显示历史记录)
+            # We want to show updates even if ticket is now sold out or expired, 
+            # as long as the session hasn't passed (handled below).
             
             # Filter 2: Future Session Logic
             # 过滤 2: 未来场次逻辑

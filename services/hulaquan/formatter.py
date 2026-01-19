@@ -7,6 +7,8 @@ from .models import TicketInfo, EventInfo, TicketUpdate
 
 # Web 链接配置
 import os
+import os
+import urllib.parse
 WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
 HLQ_EVENT_URL_TEMPLATE = "https://clubz.cloudsation.com/event/{event_id}.html"
 
@@ -28,18 +30,44 @@ class HulaquanFormatter:
         else:
             icon = "❌"  # 售罄
         
-        # 日期时间
-        if ticket.session_time:
-            date_str = ticket.session_time.strftime("%m-%d %H:%M")
-        else:
-            date_str = "日期未知"
+        # 识别冗余信息：如果 title 已经包含了日期、时间或价格，则不再重复显示
+        title_val = ticket.title
         
-        # 价格（含原价）
-        if hasattr(ticket, 'original_price') and ticket.original_price and ticket.original_price != ticket.price:
-            price_str = f"￥{ticket.price}(原价：￥{ticket.original_price})"
+        # 处理书名号：如果已以《开头，则不再包裹（避免《《剧名》...》）
+        clean_title = title_val.strip()
+        if show_title:
+            title_str = clean_title if clean_title.startswith("《") else f"《{clean_title}》"
         else:
-            price_str = f"￥{ticket.price}"
+            title_str = ""
+
+        # 检查价格冗余
+        price_in_title = f"{int(ticket.price)}" in title_val or f"{ticket.price:.1f}" in title_val or f"￥{int(ticket.price)}" in title_val
+        if price_in_title:
+            price_str = ""
+        else:
+            # 价格（含原价）
+            if hasattr(ticket, 'original_price') and ticket.original_price and ticket.original_price != ticket.price:
+                price_str = f" ￥{int(ticket.price)}(原价：￥{int(ticket.original_price)})"
+            else:
+                price_str = f" ￥{int(ticket.price)}"
+
+        # 检查时间冗余 (MM-DD HH:MM)
+        date_in_title = False
+        if ticket.session_time and show_title:
+            short_date = ticket.session_time.strftime("%m-%d")
+            short_time = ticket.session_time.strftime("%H:%M")
+            if short_date in title_val and short_time in title_val:
+                date_in_title = True
         
+        if date_in_title:
+            date_str = ""
+        else:
+            # 日期时间
+            if ticket.session_time:
+                date_str = " " + ticket.session_time.strftime("%m-%d %H:%M")
+            else:
+                date_str = " 日期未知"
+
         # 卡司
         if ticket.cast:
             if isinstance(ticket.cast[0], str):
@@ -48,11 +76,17 @@ class HulaquanFormatter:
                 cast_str = " ".join([c.name for c in ticket.cast if hasattr(c, 'name')])
         else:
             cast_str = "无卡司信息"
+
+        # 检查是否已包含“学生票”
+        type_str = "" if "学生票" in title_val else " 学生票"
+
+        # 拼接行，注意处理空格
+        parts = [icon, title_str]
+        if date_str: parts.append(date_str)
+        if price_str: parts.append(price_str)
+        parts.append(f"{type_str} 余票{ticket.stock}/{ticket.total_ticket} {cast_str}")
         
-        # 剧名
-        title_str = f"《{ticket.title}》" if show_title else ""
-        
-        return f"{icon}{title_str}{date_str} {price_str} 学生票 余票{ticket.stock}/{ticket.total_ticket} {cast_str}"
+        return "".join(parts).replace("  ", " ").strip()
 
     @staticmethod
     def format_ticket_detail(ticket: TicketInfo, show_id: bool = False) -> str:
@@ -94,7 +128,8 @@ class HulaquanFormatter:
         
         if not show_all and len(active_tickets) > 20:
             lines.append(f"\n...等 {len(active_tickets)} 个场次")
-            lines.append(f"💡 使用 -all 查看全部，或访问网页: {WEB_BASE_URL}/?q={event.title}")
+            safe_title = urllib.parse.quote(event.title)
+            lines.append(f"💡 使用 -all 查看全部，或访问网页: {WEB_BASE_URL}/?q={safe_title}")
         
         # 数据更新时间
         lines.append(f"\n数据更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

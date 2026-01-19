@@ -2,7 +2,7 @@ import asyncio
 import logging
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import aiohttp
 from sqlmodel import select
@@ -29,6 +29,12 @@ class SaojuService:
         self.data.setdefault("artist_indexes", {})
         self.data.setdefault("show_cache", {})
         self.data.setdefault("show_cache_updated", {})
+        
+        # NOTE: Always ensure indexes are loaded for sorting features
+        # We can't await in __init__, so we rely on explicit calls or lazy loading.
+        # But HulaquanService needs it.
+        # Done: We will ensure `HulaquanService.sync_all_data` calls `saoju.ensure_artist_indexes()`
+
 
     def load_data(self):
         try:
@@ -541,6 +547,10 @@ class SaojuService:
 
     async def _ensure_artist_indexes(self):
         indexes = self.data.get("artist_indexes") or {}
+        # Check if role_orders exists (migration)
+        if indexes and "role_orders" not in indexes:
+             indexes = None # Force rebuild
+             
         # Skipping sophisticated lock/TTL for brevity in this port, just check if exists
         if indexes: return indexes
         
@@ -597,13 +607,36 @@ class SaojuService:
                 roles = sorted({role for role in payload["roles"] if role})
                 normalized[artist_id][musical_id] = {"roles": roles, "name": payload.get("name", "")}
                 
+        # Build Role Orders
+        # Map: musical_id -> {role_name: seq}
+        role_orders = defaultdict(dict)
+        for item in role_data:
+            fields = item.get("fields", {})
+            mid = fields.get("musical")
+            name = fields.get("name")
+            seq = fields.get("seq", 999) # Default high number if missing
+            if mid and name:
+                role_orders[str(mid)][name] = seq
+
         from services.hulaquan.utils import dateTimeToStr
         result = {
             "artist_musicals": normalized,
+            "role_orders": role_orders,
             "updated_at": dateTimeToStr(timezone_now(), with_second=True),
         }
         self.save_data()
         return result
+    async def get_role_seq(self, musical_id: str, role_name: str) -> int:
+        """Get official loop sequence number for a role in a musical. Default 999."""
+        if not musical_id or not role_name:
+            return 999
+            
+        indexes = await self._ensure_artist_indexes()
+        role_orders = indexes.get("role_orders", {})
+        
+        musical_roles = role_orders.get(str(musical_id), {})
+        return musical_roles.get(role_name, 999)
+
     async def sync_future_days(self, start_days: int = 0, end_days: int = 120):
         """
         Sync future days using search_day API with Change Data Capture (CDC).
@@ -1031,3 +1064,40 @@ class SaojuService:
 
         log.info(f"Synced {len(all_shows)} shows for musical {musical_id}.")
         return all_shows
+
+    async def get_total_shows_count(self) -> int:
+        """获取收录的演出总数。"""
+        from sqlmodel import func
+        with session_scope() as session:
+            count = session.exec(select(func.count()).select_from(SaojuShow)).one()
+            return count
+
+    async def get_heatmap_data(self, year: int) -> Dict[str, Any]:
+        """获取指定年份的演出热力图数据。"""
+        import calendar
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year, 12, 31, 23, 59, 59)
+        
+        with session_scope() as session:
+            stmt = select(SaojuShow.date).where(SaojuShow.date >= start_date, SaojuShow.date <= end_date)
+            # 仅在 Python 侧进行简单计数，避免复杂的 SQL 分组操作（考虑到 SQLite 的局限性）
+            all_dates = session.exec(stmt).all()
+            
+            counts = {}
+            for dt in all_dates:
+                d_str = dt.strftime("%Y-%m-%d")
+                counts[d_str] = counts.get(d_str, 0) + 1
+            
+            data = [[d, c] for d, c in counts.items()]
+            total = sum(counts.values())
+            peak = max(counts.values()) if counts else 0
+            
+            days_in_year = 366 if calendar.isleap(year) else 365
+            zero_days = days_in_year - len(counts)
+            
+            return {
+                "total": total,
+                "peak": peak,
+                "zero_days": zero_days,
+                "data": data
+            }
