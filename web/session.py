@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from services.db.models import UserSession
 from services.db.connection import session_scope
 
+SESSION_COOKIE_NAME = "mb_session"
 
 def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     """从数据库获取 Session"""
