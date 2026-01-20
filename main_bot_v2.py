@@ -7,6 +7,10 @@ MusicalBot QQ Bot Entry Point (v2)
 import logging
 import asyncio
 from services.db.init import init_db
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
