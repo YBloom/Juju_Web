@@ -185,9 +185,9 @@ export async function batchDeleteSubscriptions() {
         selectedSubIds.clear();
         isEditMode = false;
         await initSubscriptionManagement();
-        showToast(`成功删除订阅`);
+        UI.toast(`成功删除订阅`);
     } catch (e) {
-        showToast('删除失败: ' + e.message, 'error');
+        UI.toast('删除失败: ' + e.message, 'error');
     } finally {
         btn.disabled = false;
     }
@@ -228,6 +228,18 @@ function bindSubAutocomplete(input) {
             const type = document.getElementById('selected-sub-type').value;
 
             if (type === 'play') {
+                // Fix: Ensure data is loaded
+                if (!state.allEvents || state.allEvents.length === 0) {
+                    try {
+                        const res = await api.fetchEventList();
+                        if (res && res.results) {
+                            state.allEvents = res.results;
+                        }
+                    } catch (e) {
+                        console.error("Auto-fetch events failed:", e);
+                    }
+                }
+
                 if (!state.allEvents) return [];
                 return state.allEvents
                     .filter(e => {
@@ -267,7 +279,7 @@ function bindSubAutocomplete(input) {
                     id: '',
                     display_name: name,
                     pure_name: name,
-                    desc: '演员'
+                    desc: ''
                 }));
             }
         },
