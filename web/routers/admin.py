@@ -3,7 +3,7 @@ Admin Router
 提供管理后台页面和独立的 admin 认证
 """
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, Cookie
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from pathlib import Path
 import os
@@ -510,7 +510,7 @@ async def toggle_maintenance_mode(admin_session: str = Cookie(None, alias=ADMIN_
 
 # --- 日志管理 ---
 
-@api_router.get("/logs")
+@api_router.get("/logs", response_class=PlainTextResponse)
 async def get_logs(
     file: str, 
     request: Request,

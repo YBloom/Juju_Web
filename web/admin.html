@@ -710,8 +710,13 @@
                         return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
                     };
 
-                    // 改进的语法高亮,支持换行符渲染
-                    const html = text.split('\n').map(line => {
+                    // 处理行分割，兼容不同操作系统的换行符并过滤掉最后一个可能的空行
+                    const logLines = text.split(/\r?\n/);
+                    if (logLines.length > 0 && logLines[logLines.length - 1] === '') {
+                        logLines.pop();
+                    }
+
+                    const html = logLines.map(line => {
                         // 移除 ANSI 代码
                         const cleanLine = stripAnsi(line);
 
