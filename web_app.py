@@ -317,8 +317,11 @@ async def wechat_verification():
 @app.get("/api/meta/config")
 async def get_public_config():
     """获取公开的配置信息 (前端使用)"""
+    from services.captcha import get_site_key
+    
     return {
-        "bot_uin": os.getenv("BOT_UIN", "3132859862")
+        "bot_uin": os.getenv("BOT_UIN", "3132859862"),
+        "turnstile_site_key": get_site_key()
     }
 
 @app.get("/", response_class=HTMLResponse)

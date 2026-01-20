@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr
 from services.db.models import User, UserSession, EmailVerification, UserAuthMethod
 from services.db.connection import session_scope
 from services.email import send_verification_code, send_welcome_email
+from services.captcha import verify_turnstile, is_turnstile_enabled
 from typing import Optional
 from sqlmodel import select
 import jwt
@@ -185,6 +186,7 @@ def set_session_cookie(response: Response, session_id: str, request: Request = N
 class EmailSendCodeRequest(BaseModel):
     email: EmailStr
     purpose: str = "register"  # register, login, reset_password
+    captcha_token: Optional[str] = None  # Cloudflare Turnstile token
 
 
 class EmailVerifyRequest(BaseModel):
@@ -231,9 +233,27 @@ async def send_email_code(req: EmailSendCodeRequest, request: Request):
     """发送邮箱验证码"""
     email = req.email.lower().strip()
     purpose = req.purpose
+    captcha_token = req.captcha_token
     
-    # 1. IP 限流检查
+    # 1. 人机验证 (Cloudflare Turnstile)
     client_ip = request.client.host if request.client else "unknown"
+    
+    if is_turnstile_enabled():
+        if not captcha_token:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "缺少人机验证，请刷新页面重试"}
+            )
+        
+        is_valid = await verify_turnstile(captcha_token, client_ip)
+        if not is_valid:
+            logger.warning(f"❌ [Auth] Turnstile验证失败: {email} (IP: {client_ip})")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "人机验证失败，请重试"}
+            )
+    
+    # 2. IP 限流检查 (降级保护)
     if not check_ip_limit(client_ip):
          return JSONResponse(
             status_code=429,

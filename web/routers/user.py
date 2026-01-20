@@ -168,3 +168,38 @@ async def get_auth_methods(
         })
     
     return {"auth_methods": result}
+
+
+@router.get("/check-password-status")
+async def check_password_status(
+    user_session: dict = Depends(require_auth),
+    session: Session = Depends(get_session)
+):
+    """检查当前用户是否设置过密码和绑定情况"""
+    uid = user_session.get("user_id") or user_session.get("qq_id")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Invalid session state")
+    
+    # 查询用户信息
+    db_user = session.get(User, uid)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 查询邮箱认证方式
+    stmt = select(UserAuthMethod).where(
+        UserAuthMethod.user_id == uid,
+        UserAuthMethod.provider == "email"
+    )
+    email_auth = session.exec(stmt).first()
+    
+    has_email = bool(email_auth)
+    has_password = False
+    
+    if email_auth and email_auth.extra_data:
+        has_password = bool(email_auth.extra_data.get("password_hash"))
+    
+    return {
+        "has_email": has_email,
+        "has_password": has_password,
+        "email": db_user.email if has_email else None
+    }
