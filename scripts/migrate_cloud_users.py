@@ -233,31 +233,59 @@ def import_legacy_users():
             
             # 导入剧目订阅
             subscribe_data = user_info.get('subscribe', {})
+            added_targets = set()  # 用于去重
+            
             for event in subscribe_data.get('subscribe_events', []):
                 event_id = event.get('id')
                 if event_id:
-                    target = SubscriptionTarget(
-                        subscription_id=sub.id,
-                        kind="EVENT",
-                        target_id=str(event_id)
-                    )
-                    session.add(target)
-                    stats['events_added'] += 1
+                    target_key = (sub.id, 'EVENT', str(event_id))
+                    if target_key not in added_targets:
+                        # 再次检查数据库中是否已存在
+                        existing_target = session.exec(
+                            select(SubscriptionTarget).where(
+                                SubscriptionTarget.subscription_id == sub.id,
+                                SubscriptionTarget.kind == "EVENT",
+                                SubscriptionTarget.target_id == str(event_id)
+                            )
+                        ).first()
+                        
+                        if not existing_target:
+                            target = SubscriptionTarget(
+                                subscription_id=sub.id,
+                                kind="EVENT",
+                                target_id=str(event_id)
+                            )
+                            session.add(target)
+                            stats['events_added'] += 1
+                            added_targets.add(target_key)
             
             # 导入演员订阅
             for actor_data in subscribe_data.get('subscribe_actors', []):
                 actor_name = actor_data.get('actor')
                 if actor_name:
-                    include_events = [str(e) for e in actor_data.get('include_events', [])]
-                    target = SubscriptionTarget(
-                        subscription_id=sub.id,
-                        kind="ACTOR",
-                        target_id=actor_name,
-                        name=actor_name,
-                        include_plays=include_events if include_events else None
-                    )
-                    session.add(target)
-                    stats['actors_added'] += 1
+                    target_key = (sub.id, 'ACTOR', actor_name)
+                    if target_key not in added_targets:
+                        # 再次检查数据库中是否已存在
+                        existing_target = session.exec(
+                            select(SubscriptionTarget).where(
+                                SubscriptionTarget.subscription_id == sub.id,
+                                SubscriptionTarget.kind == "ACTOR",
+                                SubscriptionTarget.target_id == actor_name
+                            )
+                        ).first()
+                        
+                        if not existing_target:
+                            include_events = [str(e) for e in actor_data.get('include_events', [])]
+                            target = SubscriptionTarget(
+                                subscription_id=sub.id,
+                                kind="ACTOR",
+                                target_id=actor_name,
+                                name=actor_name,
+                                include_plays=include_events if include_events else None
+                            )
+                            session.add(target)
+                            stats['actors_added'] += 1
+                            added_targets.add(target_key)
         
         session.commit()
     
