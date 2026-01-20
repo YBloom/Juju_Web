@@ -5,7 +5,7 @@ import logging
 import asyncio
 import os
 import re
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 from datetime import datetime, timedelta
 
 from services.hulaquan.service import HulaquanService
@@ -357,10 +357,40 @@ class BotHandler:
             
             return "\n".join(lines)
 
-    async def handle_message(self, message: str, user_id: str, nickname: str = "") -> Optional[str]:
+    async def resolve_user_id(self, qq_id: str) -> str:
+        """
+        Resolve Bot User ID from QQ ID.
+        Checks if the QQ ID is linked to a canonical User ID (via Magic Link/Web).
+        If linked, returns the canonical User ID (e.g. "000001").
+        If not linked, returns the QQ ID as is (legacy behavior).
+        """
+        from services.db.connection import session_scope
+        from services.db.models import UserAuthMethod
+        from sqlmodel import select
+        
+        # Optimization: If it looks like a group ID or already a 6-digit ID, return as is
+        if qq_id.startswith("group_") or (len(qq_id) == 6 and qq_id.isdigit() and qq_id.startswith("0")):
+             return qq_id
+
+        try:
+            with session_scope() as session:
+                stmt = select(UserAuthMethod).where(
+                    UserAuthMethod.provider == "qq",
+                    UserAuthMethod.provider_user_id == qq_id
+                )
+                auth = session.exec(stmt).first()
+                if auth:
+                    log.info(f"🔗 [Auth] Resolved QQ {qq_id} -> User {auth.user_id}")
+                    return auth.user_id
+        except Exception as e:
+             log.error(f"❌ [Auth] Failed to resolve user ID for {qq_id}: {e}")
+        
+        return qq_id
+
+    async def handle_message(self, message: str, user_id: str, nickname: str = "") -> Optional[Union[str, List[str]]]:
         return await self.handle_group_message(0, int(user_id), message, nickname=nickname)
 
-    async def handle_group_message(self, group_id: int, user_id: int, message: str, sender_role: str = "member", nickname: str = "") -> Optional[str]:
+    async def handle_group_message(self, group_id: int, user_id: int, message: str, sender_role: str = "member", nickname: str = "") -> Optional[Union[str, List[str]]]:
         msg = message.strip()
         uid_str = str(user_id)
         
@@ -377,14 +407,17 @@ class BotHandler:
         
         # --- Auth / Login ---
         if msg in ["/web", "/登录", "/login"]:
+            # For login token, we act on the raw QQ ID to let them link it
             token = create_magic_link_token(uid_str, nickname)
             link = f"{WEB_BASE_URL}/auth/magic-link?token={token}"
-            return (
-                f"🔐 点击下方链接登录 Web 控制台（5分钟内有效）：\n\n"
-                f"👉 {link}\n\n"
-                f"✨ 登录后可查看完整演出信息、管理订阅等\n\n"
-                f"💡 提示：如在 QQ 内打开遇到问题，请复制链接到外部浏览器"
-            )
+            return [
+                (
+                    f"🔐 点击下方链接登录 Web 控制台（5分钟内有效）：\n\n"
+                    f"✨ 登录后可查看完整演出信息、管理订阅等\n\n"
+                    f"💡 提示：如在 QQ 内打开遇到问题，请复制链接到外部浏览器"
+                ),
+                link
+            ]
 
         # --- 权限与目标确定 ---
         is_root = str(user_id) == ROOT_ID
@@ -393,8 +426,11 @@ class BotHandler:
             target_desc = f"当前群组 ({group_id})"
             self._ensure_user_exists(effective_uid, nickname=f"群组 {group_id}")
         else:
-            effective_uid = uid_str
+            # Resolve to canonical User ID if linked
+            effective_uid = await self.resolve_user_id(uid_str)
             target_desc = "个人"
+            # Ensure the resolved user exists (if it's a raw QQ ID, this creates it; 
+            # if it's a linked ID, it should already exist, but safe to check)
             self._ensure_user_exists(effective_uid, nickname=nickname)
 
         # --- 订阅管理命令 ---
