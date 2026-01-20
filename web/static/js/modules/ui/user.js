@@ -3,10 +3,11 @@ import { api } from '../api.js';
 import { escapeHtml } from '../utils.js';
 import { router } from '../router.js';
 import { renderAvatarImg } from './avatar.js';
+import { UI } from './ui_shared.js';
 
 export async function initUserTab() {
     const container = document.getElementById('user-profile-container');
-    container.innerHTML = '<div class="loading-spinner"></div>';
+    UI.showLoading(container);
 
     try {
         const authData = await api.checkLogin();
@@ -401,7 +402,8 @@ function renderUserProfile(container, user) {
         } catch (err) {
             console.error(err);
             statusEl.innerHTML = '<span style="color:#ff4d4f;">保存失败</span>';
-            alert('设置更新失败: ' + err.message);
+            statusEl.innerHTML = '<span style="color:#ff4d4f;">保存失败</span>';
+            UI.toast('设置更新失败: ' + err.message, 'error');
         }
     };
 
@@ -412,14 +414,14 @@ function renderUserProfile(container, user) {
 
     window.saveNickname = async () => {
         const newName = document.getElementById('new-nickname').value.trim();
-        if (!newName) return alert("昵称不能为空");
+        if (!newName) return UI.toast("昵称不能为空", 'error');
 
         try {
             await api.updateUserSettings({ nickname: newName });
             document.getElementById('profile-nickname').innerText = newName;
             document.getElementById('edit-nickname-area').style.display = 'none';
         } catch (e) {
-            alert("保存失败: " + e.message);
+            UI.toast("保存失败: " + e.message, 'error');
         }
     };
 
@@ -428,10 +430,23 @@ function renderUserProfile(container, user) {
 }
 
 window.handleLogout = async () => {
-    if (confirm('确定要退出登录吗？')) {
-        await api.logout();
-        window.location.reload();
-    }
+    UI.modal({
+        title: '退出登录',
+        content: '确定要退出当前账号吗？',
+        actions: [
+            { text: '取消', class: 'btn-ghost', id: 'logout-cancel' }, // Default implicit close
+            {
+                text: '退出',
+                class: 'btn-danger',
+                id: 'logout-confirm',
+                onClick: async (e, close) => {
+                    await api.logout();
+                    window.location.reload();
+                    close();
+                }
+            }
+        ]
+    });
 };
 
 // 加载认证方式列表
@@ -494,35 +509,40 @@ async function loadAuthMethods() {
 
 // 显示绑定QQ指南
 window.showBindQQGuide = () => {
-    const guide = document.createElement('div');
-    guide.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:9999;';
-    guide.innerHTML = `
-        <div style="background:#fff; border-radius:16px; padding:30px; max-width:400px; margin:20px; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
-            <h3 style="margin:0 0 20px 0; font-size:1.3rem; text-align:center;">🐧 绑定QQ账号</h3>
-            <div style="background:#f0f7ff; border:1px solid #d6e4ff; border-radius:12px; padding:20px; margin-bottom:20px;">
-                <p style="margin:0 0 12px 0; color:#666; line-height:1.6;">
-                    向QQ机器人发送 <code style="background:#fff; padding:2px 8px; border-radius:4px; color:#1890ff; font-weight:600;">/web</code> 命令获取绑定链接
-                </p>
-                <p style="margin:0; color:#999; font-size:0.85rem;">
-                    机器人QQ号: <strong style="color:#1890ff;">3132859862</strong>
-                </p>
+    UI.modal({
+        title: '🐧 绑定QQ账号',
+        content: `
+            <div style="padding:10px;">
+                <div style="background:#f0f7ff; border:1px solid #d6e4ff; border-radius:12px; padding:20px; margin-bottom:20px;">
+                    <p style="margin:0 0 12px 0; color:#666; line-height:1.6;">
+                        向QQ机器人发送 <code style="background:#fff; padding:2px 8px; border-radius:4px; color:#1890ff; font-weight:600;">/web</code> 命令获取绑定链接
+                    </p>
+                    <p style="margin:0; color:#999; font-size:0.85rem;">
+                        机器人QQ号: <strong style="color:#1890ff;">3132859862</strong>
+                    </p>
+                </div>
+                <div style="text-align:center;">
+                    <button id="copy-qq-btn" class="btn btn-primary" style="margin-right:10px;">
+                        复制QQ号
+                    </button>
+                    <!-- Close button is handled by modal footer or X icon, but we can add one if we want -->
+                </div>
             </div>
-            <div style="margin-top:20px; text-align:center;">
-                <button onclick="navigator.clipboard.writeText('3132859862').then(() => alert('已复制机器人QQ号'));this.parentElement.parentElement.parentElement.remove()" 
-                    style="background:#1890ff; color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; margin-right:10px;">
-                    复制QQ号
-                </button>
-                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
-                    style="background:#f5f5f5; color:#666; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;">
-                    关闭
-                </button>
-            </div>
-        </div>
-    `;
-    guide.onclick = (e) => {
-        if (e.target === guide) guide.remove();
-    };
-    document.body.appendChild(guide);
+        `,
+        actions: [],
+        onClose: () => { }
+    });
+
+    // Bind copy button explicitly since it's inside content string
+    setTimeout(() => {
+        const copyBtn = document.getElementById('copy-qq-btn');
+        if (copyBtn) {
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText('3132859862')
+                    .then(() => UI.toast('已复制机器人QQ号'));
+            };
+        }
+    }, 50);
 };
 
 export const doLogout = window.handleLogout;

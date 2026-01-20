@@ -26,7 +26,15 @@ from .user import User
 from .user_auth_method import UserAuthMethod, AccountMergeLog
 
 # Import SaojuCache for database initialization
-from services.hulaquan.tables import SaojuCache
+from services.hulaquan.tables import (
+    SaojuCache,
+    HulaquanEvent,
+    HulaquanTicket,
+    HulaquanCast,
+    TicketCastAssociation,
+    HulaquanAlias,
+    TicketUpdateLog,
+)
 
 __all__ = [
     "ErrorLog",
@@ -46,6 +54,12 @@ __all__ = [
     "PlaySource",
     "PlaySourceLink",
     "SaojuCache",
+    "TicketUpdateLog",
+    "HulaquanEvent",
+    "HulaquanTicket",
+    "HulaquanCast",
+    "TicketCastAssociation",
+    "HulaquanAlias",
     "SendQueue",
     "SendQueueStatus",
     "SoftDelete",

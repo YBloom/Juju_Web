@@ -63,16 +63,7 @@ class HulaquanCast(SQLModel, table=True):
     # 例如 "丁辰西"
     tickets: List[HulaquanTicket] = Relationship(back_populates="cast_members", link_model=TicketCastAssociation)
 
-class HulaquanSubscription(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: str = Field(index=True) # User or Group ID
-    # 用户或群组 ID
-    target_id: str # event_id or cast_name
-    # event_id 或 cast_name
-    target_type: str = "event" # "event", "cast", "ticket", "global"
-    mode: int = 1 # 1: basic, 2: return, 3: back/sold
-    # 1: 基础, 2: 回流, 3: 票增/售罄
-    created_at: datetime = Field(default_factory=timezone_now)
+
 
 class HulaquanAlias(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

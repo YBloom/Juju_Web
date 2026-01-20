@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { api } from '../api.js';
 import { escapeHtml } from '../utils.js';
+import { UI } from './ui_shared.js';
 
 let currentSubTab = 'play';
 let allSubscriptions = [];
@@ -14,49 +15,7 @@ const NOTIFICATION_LEVEL_MAP = {
     5: "全部动态"
 };
 
-function showToast(message, type = 'success') {
-    let toast = document.getElementById('toast-notification');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast-notification';
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 50px;
-            z-index: 10000;
-            font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0;
-            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        document.body.appendChild(toast);
-    }
-
-    const icon = type === 'success' ? 'check_circle' : 'error_outline';
-    const color = type === 'success' ? '#4ade80' : '#f87171'; // Green-400 : Red-400
-
-    toast.innerHTML = `<i class="material-icons" style="color:${color}; font-size:18px;">${icon}</i> <span>${escapeHtml(message)}</span>`;
-
-    requestAnimationFrame(() => {
-        toast.style.opacity = '1';
-        toast.style.transform = 'translate(-50%, -5px)';
-    });
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translate(-50%, 0)';
-    }, 3000);
-}
+// Function showToast removed, using UI.toast instead
 
 export async function initSubscriptionManagement() {
     const container = document.getElementById('subscriptions-container');
@@ -246,7 +205,7 @@ function addSubInputRow() {
     row.innerHTML = `
         <div class="input-wrapper">
             <input type="text" class="sub-row-input" placeholder="${type === 'play' ? '搜索剧目名称...' : '搜索演员姓名...'}" autocomplete="off">
-            <div class="autocomplete-suggestions"></div>
+            <!-- Autocomplete dropdown injected by UI.bindAutocomplete -->
             <input type="hidden" class="sub-row-target-id">
             <input type="hidden" class="sub-row-target-name">
         </div>
@@ -262,103 +221,69 @@ function addSubInputRow() {
 
 function bindSubAutocomplete(input) {
     if (!input) return;
-    const dropdown = input.parentNode.querySelector('.autocomplete-suggestions');
-    const targetIdInput = input.parentNode.querySelector('.sub-row-target-id');
-    const targetNameInput = input.parentNode.querySelector('.sub-row-target-name');
 
-    const handleInput = async () => {
-        const val = input.value.trim();
-        const type = document.getElementById('selected-sub-type').value;
+    UI.bindAutocomplete(input, {
+        fetchSuggestions: async (val) => {
+            const type = document.getElementById('selected-sub-type').value;
 
-        if (!val) {
-            dropdown.style.display = 'none';
-            return;
+            if (type === 'play') {
+                if (!state.allEvents) return [];
+                return state.allEvents
+                    .filter(e => {
+                        if (!e.title) return false;
+                        const valLower = val.toLowerCase();
+                        const titleMatch = e.title.match(/[《](.*?)[》]/);
+                        const pureTitle = titleMatch ? titleMatch[1] : e.title;
+
+                        return e.title.toLowerCase().includes(valLower) ||
+                            (pureTitle && pureTitle.toLowerCase().includes(valLower));
+                    })
+                    .slice(0, 10)
+                    .map(e => {
+                        const titleMatch = e.title.match(/[《](.*?)[》]/);
+                        const pureName = titleMatch ? titleMatch[1] : e.title;
+                        return {
+                            id: e.id,
+                            display_name: `[${e.city || '未知'}] ${pureName}`,
+                            pure_name: pureName,
+                            desc: e.city ? `近期在 ${e.city} 有演出` : '暂无近期排期'
+                        };
+                    });
+            } else {
+                let artistNames = state.allArtistNames || [];
+                const pinyin = window.pinyinPro;
+
+                return artistNames.filter(name => {
+                    if (name.includes(val)) return true;
+                    try {
+                        if (pinyin) {
+                            const firstLetters = pinyin.pinyin(name, { pattern: 'first', toneType: 'none', type: 'array' }).join('');
+                            return firstLetters.includes(val.toLowerCase());
+                        }
+                    } catch (e) { return false; }
+                    return false;
+                }).slice(0, 10).map(name => ({
+                    id: '',
+                    display_name: name,
+                    pure_name: name,
+                    desc: '演员'
+                }));
+            }
+        },
+        onSelect: (item) => {
+            const row = input.closest('.sub-row');
+            row.querySelector('.sub-row-input').value = item.pure_name;
+            row.querySelector('.sub-row-target-id').value = item.id;
+            row.querySelector('.sub-row-target-name').value = item.pure_name;
+        },
+        renderItem: (item) => {
+            return `
+            <div class="autocomplete-item">
+                <div class="ac-title">${escapeHtml(item.display_name)}</div>
+                <div class="ac-desc">${escapeHtml(item.desc)}</div>
+            </div>`;
         }
-
-        dropdown.style.display = 'block';
-        dropdown.innerHTML = '<div class="autocomplete-loading">搜索中...</div>';
-
-        let matches = [];
-
-        if (type === 'play') {
-            matches = state.allEvents
-                .filter(e => {
-                    if (!e.title) return false;
-                    const valLower = val.toLowerCase();
-                    const titleMatcher = e.title.match(/[《](.*?)[》]/);
-                    const pureTitle = titleMatcher ? titleMatcher[1] : e.title;
-
-                    return e.title.toLowerCase().includes(valLower) ||
-                        (pureTitle && pureTitle.toLowerCase().includes(valLower));
-                })
-                .slice(0, 10)
-                .map(e => {
-                    const titleMatcher = e.title.match(/[《](.*?)[》]/);
-                    const pureName = titleMatcher ? titleMatcher[1] : e.title;
-                    return {
-                        id: e.id,
-                        city: e.city || '未知',
-                        display_name: `[${e.city || '未知'}] ${pureName}`,
-                        pure_name: pureName
-                    };
-                });
-        } else {
-            let artistNames = state.allArtistNames || [];
-            const pinyin = window.pinyinPro;
-
-            matches = artistNames.filter(name => {
-                if (name.includes(val)) return true;
-                try {
-                    if (pinyin) {
-                        const firstLetters = pinyin.pinyin(name, { pattern: 'first', toneType: 'none', type: 'array' }).join('');
-                        return firstLetters.includes(val.toLowerCase());
-                    }
-                } catch (e) { return false; }
-                return false;
-            }).slice(0, 10).map(name => ({
-                id: '',
-                display_name: name,
-                pure_name: name
-            }));
-        }
-
-        if (matches.length === 0) {
-            dropdown.innerHTML = '<div class="autocomplete-no-results">未找到匹配项</div>';
-            return;
-        }
-
-        dropdown.innerHTML = matches.map(m => `
-            <div class="autocomplete-item" onclick="subscription.selectSubSuggestionRow(this, '${escapeHtml(m.pure_name)}', '${m.id}', '${escapeHtml(m.city || '')}')">
-                <div class="ac-title">${escapeHtml(m.display_name)}</div>
-            </div>
-        `).join('');
-    };
-
-    let timeout;
-    input.addEventListener('input', () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(handleInput, 300);
     });
-
-    input.addEventListener('focus', () => {
-        if (input.value.trim()) handleInput();
-    });
-}
-
-export function selectSubSuggestionRow(itemEl, name, id, city = '') {
-    const row = itemEl.closest('.sub-row');
-    const input = row.querySelector('.sub-row-input');
-    const dropdown = row.querySelector('.autocomplete-suggestions');
-    const targetIdInput = row.querySelector('.sub-row-target-id');
-    const targetNameInput = row.querySelector('.sub-row-target-name');
-
-    // Format: [City] Name for plays
-    const displayValue = city ? `[${city}] ${name}` : name;
-
-    input.value = displayValue;
-    targetIdInput.value = id || '';
-    targetNameInput.value = name || '';
-    dropdown.style.display = 'none';
 }
 
 export async function doAddSubscription(e) {
@@ -401,11 +326,11 @@ export async function doAddSubscription(e) {
 
     if (duplicates.length > 0) {
         const names = duplicates.map(d => d.name).join(', ');
-        showToast(`已订阅: ${names}`, 'error');
+        UI.toast(`已订阅: ${names}`, 'error');
         return;
     }
 
-    if (targets.length === 0) return showToast('请输入订阅目标', 'error');
+    if (targets.length === 0) return UI.toast('请输入订阅目标', 'error');
 
     btn.disabled = true;
     const originalText = btn.innerText;
@@ -424,9 +349,9 @@ export async function doAddSubscription(e) {
 
         initSubscriptionManagement();
         hideAddSubModal();
-        showToast('订阅添加成功！');
+        UI.toast('订阅添加成功！');
     } catch (e) {
-        showToast('添加失败: ' + e.message, 'error');
+        UI.toast('添加失败: ' + e.message, 'error');
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
@@ -438,9 +363,9 @@ export async function handleDeleteSubscription(id) {
     try {
         await api.deleteSubscription(id);
         initSubscriptionManagement();
-        showToast('订阅已取消');
+        UI.toast('订阅已取消');
     } catch (e) {
-        showToast('取消失败: ' + e.message, 'error');
+        UI.toast('取消失败: ' + e.message, 'error');
     }
 }
 

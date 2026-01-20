@@ -46,7 +46,6 @@ from services.hulaquan.models import TicketInfo
 from services.hulaquan.tables import (
     HulaquanEvent, 
     HulaquanTicket, 
-    HulaquanSubscription,
     HulaquanCast,
     TicketCastAssociation,
     HulaquanAlias
@@ -216,15 +215,17 @@ class Hulaquan(BasePlugin):
         return await super().on_close(*arg, **kwd)
     
     async def _hulaquan_announcer_loop(self):
+        # 旧版通知系统已废弃,使用 NotificationEngine 代替
+        # 保留此方法以避免破坏现有调用,但不执行任何操作
         while self._hulaquan_announcer_running:
             try:
-                await self.on_hulaquan_announcer()
-            except Exception as e:
-                await self.on_traceback_message(f"呼啦圈定时任务异常: {e}")
-            try:
                 await asyncio.sleep(int(self._hulaquan_announcer_interval))
+            except asyncio.CancelledError:
+                log.info("呼啦圈检测定时任务循环被取消")
+                break
             except Exception as e:
-                await self.on_traceback_message(f"定时任务sleep异常: {e}")
+                log.error(f"呼啦圈检测定时任务循环异常: {e}")
+                await self.on_traceback_message(f"呼啦圈检测定时任务循环异常: {e}")
             
     def start_hulaquan_announcer(self, interval=None):
         if interval:
@@ -369,16 +370,7 @@ class Hulaquan(BasePlugin):
             metadata={"category": "utility"}
         )
         
-        self.register_admin_func(
-            name="呼啦圈手动刷新（管理员）",
-            handler=self.on_hulaquan_announcer_manual,
-            prefix="/refresh",
-            description="呼啦圈手动刷新（管理员）",
-            usage="/refresh",
-            examples=["/refresh"],
-            tags=["呼啦圈", "学生票", "查询", "hlq"],
-            metadata={"category": "utility"}
-        )
+        # 呼啦圈手动刷新命令已删除 - 使用 NotificationEngine 代替
         
         self.register_user_func(
             name=HLQ_DATE_NAME,
@@ -556,91 +548,7 @@ class Hulaquan(BasePlugin):
         m = f"当前版本：{self.version}\n\n版本更新日志：\n{get_update_log()}"
         await msg.reply(m)
     
-    @user_command_wrapper("hulaquan_announcer")
-    async def on_hulaquan_announcer(self, test=False, manual=False, announce_admin_only=False):
-        """Hulaquan Updates Announcer (Unified System)"""
-        # ... (sync logic kept as is) ...
-        MODE_MAP = {
-            "new": 1,
-            "restock": 1,
-            "back": 3,
-            "sold_out": 3,
-            "pending": 2,
-        }
-        
-        try:
-            async with self.hlq_service as service:
-                updates = await service.sync_all_data()
-        except Exception as e:
-            log.error(f"Announcer sync failed: {e}")
-            return False
-
-        if not updates:
-            return True
-
-        with session_scope() as session:
-            # Get all user_ids that have any subscription
-            stmt = select(HulaquanSubscription.user_id).distinct()
-            user_ids = session.exec(stmt).all()
-            
-            if announce_admin_only:
-                user_ids = [uid for uid in user_ids if uid == str(User.admin_id)]
-
-            for user_id in user_ids:
-                # Get user subscriptions
-                stmt_s = select(HulaquanSubscription).where(HulaquanSubscription.user_id == user_id)
-                subs = session.exec(stmt_s).all()
-                
-                user_updates = []
-                for u in updates:
-                    matched = False
-                    required_mode = MODE_MAP.get(u.change_type, 99)
-                    
-                    # 1. Check global sub
-                    global_sub = next((s for s in subs if s.target_type == "global"), None)
-                    if global_sub and global_sub.mode >= required_mode:
-                        matched = True
-                    
-                    # 2. Check event sub
-                    if not matched:
-                        event_sub = next((s for s in subs if s.target_type == "event" and s.target_id == u.event_id), None)
-                        if event_sub and event_sub.mode >= required_mode:
-                            matched = True
-                            
-                    # 3. Check ticket sub
-                    if not matched:
-                        ticket_sub = next((s for s in subs if s.target_type == "ticket" and s.target_id == u.ticket_id), None)
-                        if ticket_sub and ticket_sub.mode >= required_mode:
-                            matched = True
-                    
-                    # 4. Check cast (actor) sub
-                    if not matched:
-                        cast_subs = [s for s in subs if s.target_type == "cast"]
-                        if cast_subs:
-                            # Fetch ticket cast names
-                            stmt_c = (
-                                select(HulaquanCast.name)
-                                .join(TicketCastAssociation)
-                                .where(TicketCastAssociation.ticket_id == u.ticket_id)
-                            )
-                            ticket_casts = set(session.exec(stmt_c).all())
-                            for cs in cast_subs:
-                                if cs.target_id in ticket_casts and cs.mode >= required_mode:
-                                    matched = True
-                                    break
-                    
-                    if matched:
-                        user_updates.append(u)
-                
-                if user_updates:
-                    messages = self.hlq_formatter.format_updates_announcement(user_updates)
-                    for m in messages:
-                        is_group = user_id in User.groups()
-                        if is_group:
-                            await self.api.post_group_msg(user_id, m)
-                        else:
-                            await self.api.post_private_msg(user_id, m)
-        return True
+    # on_hulaquan_announcer 已删除 - 使用 NotificationEngine 代替
 
     def __generate_announce_text(self, MODE, event_id_to_ticket_ids, event_msgs, PREFIXES, categorized, tickets, user_id, user, is_group=False):
         announce = {} # event_id: {ticket_id: msg}, ...
@@ -1347,6 +1255,7 @@ class Hulaquan(BasePlugin):
             return
         await self.output_messages_by_pages(result, msg, page_size=10)
 
+    # on_hulaquan_announcer_manual 已删除 - 使用 NotificationEngine 代替
     @user_command_wrapper("report_error_repo")
     async def on_hulaquan_report_error(self, msg: BaseMessage):
         if isinstance(msg, GroupMessage):
@@ -1463,84 +1372,7 @@ class Hulaquan(BasePlugin):
             
             await self.output_messages_by_pages(lines, msg, page_size=40)
             
-    @user_command_wrapper("set_hulaquan_notify")
-    async def on_set_hulaquan_notify(self, level: int = None):
-        """/呼啦圈通知 [0-5]"""
-        user_id = self.ctx.user_id
-        if level is None:
-            await self.api.post_private_msg(user_id, 
-                "🔔 呼啦圈通知设置\n"
-                "用法: /呼啦圈通知 [0-5]\n"
-                "0: 关闭\n1: 上新\n2: +补票\n3: +回流\n4: +余票减\n5: 全量")
-            return
-
-        if not (0 <= level <= 5):
-            await self.api.post_private_msg(user_id, "❌ 级别必须在 0-5 之间")
-            return
-
-        from services.db.models import User
-        from services.db.models.subscription import NotificationLevel
-        with session_scope() as session:
-            user = session.get(User, user_id)
-            if not user:
-                user = User(user_id=user_id, auth_provider="qq", auth_id=user_id)
-                session.add(user)
-            user.global_notification_level = level
-            
-        level_name = NotificationLevel(level).name # Simplified for now
-        await self.api.post_private_msg(user_id, f"✅ 全局推送级别已设置为: {level} ({level_name})")
-
-    @user_command_wrapper("follow_ticket_v2")
-    async def on_follow_ticket(self, name: str = "", mode: int = 2, city: str = None, include: str = None, exclude: str = None):
-        """/关注学生票 [剧名/演员] [级别2-5] [-C 城市] [-I 包含] [-X 排除]"""
-        user_id = self.ctx.user_id
-        if not name:
-            await self.api.post_private_msg(user_id, "💡 用法: /关注学生票 [剧名/演员] [级别2-5] [-C 城市] ...")
-            return
-
-        # Simple logic for Bot Command (real implementation would need better arg parsing)
-        from services.db.models import User, Subscription, SubscriptionTarget, SubscriptionOption
-        from services.db.models.base import SubscriptionTargetKind
-        
-        with session_scope() as session:
-            user = session.get(User, user_id)
-            if not user or user.global_notification_level > mode:
-                await self.api.post_private_msg(user_id, f"❌ 订阅级别({mode})不得低于全局设置")
-                return
-            
-            # Find or create sub
-            stmt = select(Subscription).where(Subscription.user_id == user_id)
-            sub = session.exec(stmt).first()
-            if not sub:
-                sub = Subscription(user_id=user_id)
-                session.add(sub)
-                session.flush()
-
-            # Determine kind (simplified heuristic: if searchable in plays, it's a play)
-            kind = SubscriptionTargetKind.PLAY # Default
-            # In a real system, we'd search DB for play names here.
-            
-            target = SubscriptionTarget(
-                subscription_id=sub.id,
-                kind=kind,
-                target_id=name, # Should be ID in production
-                name=name,
-                city_filter=city,
-                include_plays=include.split(",") if include else None,
-                exclude_plays=exclude.split(",") if exclude else None
-            )
-            session.add(target)
-            
-            # Update Option
-            stmt_o = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
-            opt = session.exec(stmt_o).first()
-            if not opt:
-                opt = SubscriptionOption(subscription_id=sub.id, notification_level=mode)
-                session.add(opt)
-            else:
-                opt.notification_level = max(opt.notification_level, mode)
-                
-        await self.api.post_private_msg(user_id, f"✅ 已成功订阅: {name} (级别 {mode})")
+    # 错误添加的订阅命令已删除 - 将在 BotHandler 中重新实现
     @user_command_wrapper("follow_ticket")        
     async def on_follow_ticket(self, msg: BaseMessage):
         args = self.extract_args(msg)

@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import IntEnum
 from typing import List, Optional
 
-from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy import JSON, Column, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -64,6 +64,7 @@ class SubscriptionTarget(TimeStamped, SQLModel, table=True):
             "target_id",
             name="uq_subscription_target",
         ),
+        Index('idx_sub_kind_target', 'subscription_id', 'kind', 'target_id'),
     )
 
 

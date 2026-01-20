@@ -14,3 +14,4 @@ export * from './ui/date_search.js';
 export * from './ui/user.js';
 export * from './ui/subscription.js';
 export * from './ui/avatar.js';
+export * from './ui/ui_shared.js';

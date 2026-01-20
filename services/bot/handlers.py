@@ -74,26 +74,238 @@ class BotHandler:
             log.warning(f"⚠️ [用户] 获取用户 {user_id} 交互模式失败: {e}")
         return "legacy"  # 默认旧版模式
 
-    async def _handle_subscription(self, user_id: str, nickname: str) -> str:
-        """Handle /subscribe command"""
-        token = create_magic_link_token(user_id, nickname)
-        # Using URL fragment for detailed tab navigation if supported by frontend
-        # The frontend router likely handles #user or similar. 
-        # We pass redirect param to magic link. 
-        # Note: If passing # in query param, it must be encoded? 
-        # Ideally: /auth/magic-link?token=...&redirect=/#user
-        # The browser will handle the redirect.
-        link = f"{WEB_BASE_URL}/auth/magic-link?token={token}&redirect=/%23user"
+    async def _handle_set_notify_level(self, user_id: str, level: Optional[int] = None) -> str:
+        """处理 /呼啦圈通知 [0-5] 命令"""
+        from services.db.connection import session_scope
+        from services.db.models import Subscription, SubscriptionOption
+        from sqlmodel import select
         
-        return (
-            "🔔 <b>订阅管理</b>\n\n"
-            "为了提供更丰富的功能（如静音时段、精确屏蔽、演员关注），我们将订阅管理迁移到了 Web 端。\n\n"
-            f"👉 <a href='{link}'>点击此处管理我的订阅</a>\n\n"
-            "在网页中，您可以：\n"
-            "- 添加/删除剧目和演员订阅\n"
-            "- 设置静音时段（如夜间不打扰）\n"
-            "- 开启或关闭每日汇总日报"
-        )
+        if level is None:
+            return (
+                "🔔 呼啦圈通知设置\n\n"
+                "用法: /呼啦圈通知 [0-5]\n\n"
+                "级别说明:\n"
+                "0: 关闭通知\n"
+                "1: 仅上新\n"
+                "2: 上新+补票 (推荐)\n"
+                "3: 上新+补票+回流\n"
+                "4: 上新+补票+回流+票减\n"
+                "5: 全量 (上新+补票+回流+票增+票减)"
+            )
+        
+        if not (0 <= level <= 5):
+            return "❌ 级别必须在 0-5 之间"
+        
+        with session_scope() as session:
+            # 查找或创建订阅
+            stmt = select(Subscription).where(Subscription.user_id == user_id)
+            sub = session.exec(stmt).first()
+            
+            if not sub:
+                sub = Subscription(user_id=user_id)
+                session.add(sub)
+                session.flush()
+            
+            # 更新或创建SubscriptionOption
+            stmt_opt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
+            opt = session.exec(stmt_opt).first()
+            
+            if opt:
+                opt.notification_level = level
+            else:
+                opt = SubscriptionOption(
+                    subscription_id=sub.id,
+                    notification_level=level
+                )
+                session.add(opt)
+            
+            session.commit()
+        
+        level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
+        return f"✅ 全局通知级别已设置为: {level} ({level_names[level]})"
+    
+    async def _handle_subscribe(self, user_id: str, args: dict) -> str:
+        """处理 /关注学生票 命令"""
+        from services.db.connection import session_scope
+        from services.db.models import Subscription, SubscriptionTarget
+        from services.db.models.base import SubscriptionTargetKind
+        from sqlmodel import select
+        
+        mode_args = args.get("mode_args", [])
+        text_args = args.get("text_args", [])
+        
+        if not text_args:
+            return (
+                "💡 用法:\n"
+                "/关注学生票 -E [剧名] [级别]  # 关注剧目\n"
+                "/关注学生票 -A [演员] [级别]  # 关注演员\n"
+                "\n示例:\n"
+                "/关注学生票 -E 连璧 2"
+            )
+        
+        # 解析参数
+        kind = SubscriptionTargetKind.PLAY  # 默认剧目
+        level = 2  # 默认级别2
+        
+        if "-A" in mode_args:
+            kind = SubscriptionTargetKind.ACTOR
+        elif "-E" in mode_args or not any(arg.startswith("-") for arg in mode_args):
+            kind = SubscriptionTargetKind.PLAY
+        
+        # 尝试解析级别
+        for arg in text_args:
+            try:
+                l = int(arg)
+                if 1 <= l <= 5:
+                    level = l
+                    text_args.remove(arg)
+                    break
+            except ValueError:
+                continue
+        
+        target_name = " ".join(text_args) if text_args else ""
+        if not target_name:
+            return "❌ 请提供剧目或演员名称"
+        
+        with session_scope() as session:
+            # 查找或创建订阅
+            stmt = select(Subscription).where(Subscription.user_id == user_id)
+            sub = session.exec(stmt).first()
+            
+            if not sub:
+                sub = Subscription(user_id=user_id)
+                session.add(sub)
+                session.flush()
+            
+            # 检查是否已存在
+            stmt_target = select(SubscriptionTarget).where(
+                SubscriptionTarget.subscription_id == sub.id,
+                SubscriptionTarget.kind == kind,
+               SubscriptionTarget.name == target_name
+            )
+            existing = session.exec(stmt_target).first()
+            
+            if existing:
+                # 更新级别
+                existing.flags = {"mode": level}
+                session.add(existing)
+                msg = f"✅ 已更新订阅: {target_name} (级别 {level})"
+            else:
+                # 创建新订阅
+                target = SubscriptionTarget(
+                    subscription_id=sub.id,
+                    kind=kind,
+                    target_id=target_name,  # 简化版,实际应查询ID
+                    name=target_name,
+                    flags={"mode": level}
+                )
+                session.add(target)
+                kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
+                msg = f"✅ 已成功关注{kind_name}: {target_name} (级别 {level})"
+            
+            session.commit()
+        
+        return msg
+    
+    async def _handle_unsubscribe(self, user_id: str, args: dict) -> str:
+        """处理 /取消关注学生票 命令"""
+        from services.db.connection import session_scope
+        from services.db.models import Subscription, SubscriptionTarget
+        from services.db.models.base import SubscriptionTargetKind
+        from sqlmodel import select
+        
+        mode_args = args.get("mode_args", [])
+        text_args = args.get("text_args", [])
+        
+        if not text_args:
+            return (
+                "💡 用法:\n"
+                "/取消关注学生票 -E [剧名]  # 取消关注剧目\n"
+                "/取消关注学生票 -A [演员]  # 取消关注演员"
+            )
+        
+        kind = SubscriptionTargetKind.PLAY
+        if "-A" in mode_args:
+            kind = SubscriptionTargetKind.ACTOR
+        
+        target_name = " ".join(text_args)
+        
+        with session_scope() as session:
+            stmt = select(Subscription).where(Subscription.user_id == user_id)
+            sub = session.exec(stmt).first()
+            
+            if not sub:
+                return "❌ 您还没有任何订阅"
+            
+            stmt_target = select(SubscriptionTarget).where(
+                SubscriptionTarget.subscription_id == sub.id,
+                SubscriptionTarget.kind == kind,
+                SubscriptionTarget.name == target_name
+            )
+            target = session.exec(stmt_target).first()
+            
+            if not target:
+                kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
+                return f"❌ 未找到对{kind_name} {target_name} 的订阅"
+            
+            session.delete(target)
+            session.commit()
+        
+        kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
+        return f"✅ 已取消关注{kind_name}: {target_name}"
+    
+    async def _handle_list_subscriptions(self, user_id: str) -> str:
+        """处理 /查看关注 命令"""
+        from services.db.connection import session_scope
+        from services.db.models import Subscription, SubscriptionOption, SubscriptionTarget
+        from services.db.models.base import SubscriptionTargetKind
+        from sqlmodel import select
+        
+        with session_scope() as session:
+            stmt = select(Subscription).where(Subscription.user_id == user_id)
+            sub = session.exec(stmt).first()
+            
+            if not sub:
+                return "您目前没有任何订阅。\n\n使用 /呼啦圈通知 2 开启全局通知"
+            
+            lines = ["📋 我的订阅\n"]
+            
+            # 显示全局设置
+            stmt_opt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
+            opt = session.exec(stmt_opt).first()
+            
+            if opt:
+                level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
+                lines.append(f"🔔 全局通知级别: {opt.notification_level} ({level_names[opt.notification_level]})")
+                if opt.silent_hours:
+                    lines.append(f"🌙 静音时段: {opt.silent_hours}")
+            else:
+                lines.append("🔔 全局通知: 未设置")
+            
+            # 获取所有订阅目标
+            stmt_targets = select(SubscriptionTarget).where(SubscriptionTarget.subscription_id == sub.id)
+            targets = session.exec(stmt_targets).all()
+            
+            if not targets:
+                lines.append("\n暂无具体订阅项")
+            else:
+                # 按类型分组
+                plays = [t for t in targets if t.kind == SubscriptionTargetKind.PLAY]
+                actors = [t for t in targets if t.kind == SubscriptionTargetKind.ACTOR]
+                
+                if plays:
+                    lines.append("\n【关注的剧目】")
+                    for i, t in enumerate(plays, 1):
+                        mode = t.flags.get("mode", 2) if t.flags else 2
+                        lines.append(f"{i}. {t.name} (级别 {mode})")
+                
+                if actors:
+                    lines.append("\n【关注的演员】")
+                    for i, t in enumerate(actors, 1):
+                        mode = t.flags.get("mode", 2) if t.flags else 2
+                        lines.append(f"{i}. {t.name} (级别 {mode})")
+            
+            return "\n".join(lines)
 
     async def handle_message(self, message: str, user_id: str, nickname: str = "") -> Optional[str]:
         return await self.handle_group_message(0, int(user_id), message, nickname=nickname)
@@ -119,9 +331,29 @@ class BotHandler:
                 f"💡 提示：如在 QQ 内打开遇到问题，请复制链接到外部浏览器"
             )
 
-        # --- Subscribe Command ---
-        if msg in ["/subscribe", "/订阅", "订阅"]:
-            return await self._handle_subscription(uid_str, nickname)
+        # --- 订阅管理命令 ---
+        # /呼啦圈通知 [0-5]
+        if msg.startswith("/呼啦圈通知"):
+            parts = msg.split()
+            level = None
+            if len(parts) > 1:
+                try:
+                    level = int(parts[1])
+                except ValueError:
+                    pass
+            return await self._handle_set_notify_level(uid_str, level)
+        
+        # /关注学生票
+        if msg.startswith("/关注学生票"):
+            return await self._handle_subscribe(uid_str, args)
+        
+        # /取消关注学生票
+        if msg.startswith("/取消关注学生票"):
+            return await self._handle_unsubscribe(uid_str, args)
+        
+        # /查看关注
+        if msg in ["/查看关注", "/我的订阅", "/订阅列表"]:
+            return await self._handle_list_subscriptions(uid_str)
 
         # --- Parse Args ---
         args = extract_args(msg)

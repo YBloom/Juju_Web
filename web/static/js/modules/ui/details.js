@@ -50,31 +50,42 @@ function renderDetailView(event) {
     state.currentDetailHasCast = hasCast;
 
     let html = `
-        <div style="background:#fcfcfc; padding:20px; border-radius:10px; border:1px solid #eee; margin-bottom:20px">
-            <h2 style="margin-top:0; color:var(--primary-color)">${escapeHtml(event.title)}</h2>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; gap:20px; color:#666">
+        <div class="page-header">
+            <h2 class="page-title">${escapeHtml(event.title)}</h2>
+            <div class="page-subtitle" style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div style="display:flex; gap:12px;">
                     <span>📍 ${escapeHtml(event.location || '未知场馆')}</span>
                     <span>📅 排期: ${escapeHtml(event.schedule_range || '待定')}</span>
                 </div>
-                <div style="font-size:0.85em; color:var(--text-secondary); opacity:0.8;">
+                <div class="text-xs text-secondary">
                     💡 点击场次可跳转呼啦圈购票
                 </div>
             </div>
         </div>
         
-        <div style="background:rgba(99, 126, 96, 0.03); padding:20px; border-radius:18px; margin-bottom:20px; border:1px solid rgba(99, 126, 96, 0.1);">
-            <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:center;">
-                <label style="display:flex; align-items:center; background:#fff; padding:6px 14px; border-radius:50px; border:1px solid var(--border-color); cursor:pointer; font-size:0.85rem; color:var(--text-secondary); transition: all 0.2s;">
-                    <style>#filter-available:checked + span { color: var(--primary-color); font-weight: 600; }</style>
-                    <input type="checkbox" id="filter-available" style="margin-right:6px"><span>只看有票</span>
-                </label>
-                <div style="width:1px; height:20px; background:var(--border-color);"></div>
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:0.85rem; color:var(--text-secondary); margin-right:5px">价位:</span>
-                    ${allPrices.map(price => `<label style="display:flex; align-items:center; background:#fff; padding:4px 12px; border-radius:50px; border:1px solid var(--border-color); cursor:pointer; font-size:0.8rem; color:var(--text-secondary);"><input type="checkbox" class="filter-price" value="${price}" checked style="margin-right:4px"><span>¥${price}</span></label>`).join('')}
+        <div class="card card-flat p-sm mb-md">
+            <div class="filter-section">
+                <!-- Top Row: Toggle & Prices -->
+                <div class="flex items-center gap-sm flex-wrap" style="margin-bottom: ${hasCast ? '12px' : '0'}">
+                    <label class="filter-pill-toggle" style="display:flex; align-items:center; background:#fff; padding:6px 14px; border-radius:50px; border:1px solid var(--border-color); cursor:pointer; font-size:0.85rem; color:var(--text-secondary); white-space:nowrap; flex-shrink:0;">
+                        <style>#filter-available:checked + span { color: var(--primary-color); font-weight: 600; }</style>
+                        <input type="checkbox" id="filter-available" style="margin-right:6px;"><span>只看有票</span>
+                    </label>
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 4px;"></div>
+                    <div class="flex items-center gap-xs flex-wrap">
+                        <span style="font-size:0.85rem; color:var(--text-secondary); margin-right:4px; white-space:nowrap;">价位:</span>
+                        ${allPrices.map(price => `<label style="display:inline-flex; align-items:center; background:#fff; padding:4px 10px; border-radius:50px; border:1px solid var(--border-color); cursor:pointer; font-size:0.8rem; color:var(--text-secondary); margin-bottom:4px; white-space:nowrap;"><input type="checkbox" class="filter-price" value="${price}" checked style="margin-right:4px"><span>¥${price}</span></label>`).join('')}
+                    </div>
                 </div>
-                ${hasCast ? `<div style="width:1px; height:20px; background:var(--border-color);"></div><div style="display:flex; align-items:center; background:#fff; padding:2px 4px 2px 14px; border-radius:50px; border:1px solid var(--border-color); flex:1; min-width:200px;"><i class="material-icons" style="font-size:1.1rem; color:var(--primary-color); margin-right:8px">search</i><input type="text" id="filter-cast" placeholder="输入演员姓名筛选场次..." style="border:none; outline:none; font-size:0.85rem; padding:8px 0; width:100%; color:var(--text-primary); background:transparent;"></div>` : ''}
+                
+                <!-- Bottom Row: Search (Full Width on Mobile) -->
+                ${hasCast ? `
+                <div class="search-row" style="width:100%;">
+                    <div style="display:flex; align-items:center; background:#fff; padding:8px 14px; border-radius:50px; border:1px solid var(--border-color); width:100%;">
+                        <i class="material-icons" style="font-size:1.1rem; color:var(--primary-color); margin-right:8px; flex-shrink:0;">search</i>
+                        <input type="text" id="filter-cast" placeholder="搜卡司..." style="border:none; outline:none; font-size:0.9rem; width:100%; color:var(--text-primary); background:transparent; min-width:0;">
+                    </div>
+                </div>` : ''}
             </div>
         </div>
         

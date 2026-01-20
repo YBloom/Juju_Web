@@ -16,7 +16,6 @@ from services.hulaquan.tables import (
     HulaquanTicket, 
     HulaquanCast, 
     TicketCastAssociation,
-    HulaquanSubscription,
     HulaquanAlias,
     TicketUpdateLog,
     TicketStatus
@@ -881,48 +880,8 @@ class HulaquanService:
                 ))
             return result
 
-    async def manage_subscription(self, user_id: str, target_id: str, target_type: str, mode: int):
-        """Add or update a user subscription. mode=0 means unsubscribe.
-        添加或更新用户订阅。mode=0 表示取消订阅。
-        """
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._manage_subscription_sync, user_id, target_id, target_type, mode)
 
-    def _manage_subscription_sync(self, user_id: str, target_id: str, target_type: str, mode: int):
-        with session_scope() as session:
-            statement = select(HulaquanSubscription).where(
-                HulaquanSubscription.user_id == user_id,
-                HulaquanSubscription.target_id == target_id,
-                HulaquanSubscription.target_type == target_type
-            )
-            sub = session.exec(statement).first()
-            if mode == 0:
-                if sub:
-                    session.delete(sub)
-            else:
-                if not sub:
-                    sub = HulaquanSubscription(
-                        user_id=user_id,
-                        target_id=target_id,
-                        target_type=target_type,
-                        mode=mode
-                    )
-                    session.add(sub)
-                else:
-                    sub.mode = mode
-            session.commit()
 
-    async def get_user_subscriptions(self, user_id: str) -> List[HulaquanSubscription]:
-        """Get all subscriptions for a user.
-        获取用户的所有订阅。
-        """
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._get_user_subscriptions_sync, user_id)
-
-    def _get_user_subscriptions_sync(self, user_id: str) -> List[HulaquanSubscription]:
-        with session_scope() as session:
-            stmt = select(HulaquanSubscription).where(HulaquanSubscription.user_id == user_id)
-            return session.exec(stmt).all()
 
     async def get_all_events(self) -> List[EventInfo]:
         """Get all known events."""

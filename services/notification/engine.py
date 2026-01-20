@@ -85,22 +85,33 @@ class NotificationEngine:
                 if u.cast_names:
                     actor_names.update(u.cast_names)
             
-            # 2. 查询所有有订阅的用户
-            stmt = select(Subscription.user_id).distinct()
-            user_ids = session.exec(stmt).all()
+            #  2. 查询所有有订阅的用户 (使用 joinedload 一次性加载关联数据)
+            from sqlalchemy.orm import joinedload
             
-            for user_id in user_ids:
-                # 获取用户订阅
-                stmt_sub = select(Subscription).where(Subscription.user_id == user_id)
-                subs = session.exec(stmt_sub).all()
-                
+            stmt = (
+                select(Subscription)
+                .options(
+                    joinedload(Subscription.targets),
+                    joinedload(Subscription.options)
+                )
+                .distinct()
+            )
+            subscriptions = session.exec(stmt).all()
+            
+            # 按用户分组
+            user_subs = {}
+            for sub in subscriptions:
+                if sub.user_id not in user_subs:
+                    user_subs[sub.user_id] = []
+                user_subs[sub.user_id].append(sub)
+            
+            for user_id, subs in user_subs.items():
                 if not subs:
                     continue
                 
-                # 获取第一个订阅的 options
+                # 获取第一个订阅的 options (已通过 joinedload 加载)
                 sub = subs[0]
-                stmt_opt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
-                option = session.exec(stmt_opt).first()
+                option = sub.options[0] if sub.options else None
                 
                 # 检查静音
                 if option and option.mute:
@@ -110,11 +121,10 @@ class NotificationEngine:
                 if option and option.silent_hours and self._is_silent_hour(option.silent_hours):
                     continue
                 
-                # 获取所有 targets
+                # 收集所有 targets (已通过 joinedload 加载)
                 all_targets = []
                 for s in subs:
-                    stmt_t = select(SubscriptionTarget).where(SubscriptionTarget.subscription_id == s.id)
-                    all_targets.extend(session.exec(stmt_t).all())
+                    all_targets.extend(s.targets)
                 
                 # 匹配更新
                 user_updates = []

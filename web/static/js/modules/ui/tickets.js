@@ -178,18 +178,18 @@ export function renderEventTable(events) {
         }
 
         // Determine city color class
-        let cityClass = 'tag-city-default';
+        let cityClass = 'badge-default';
         const city = e.city || '';
-        if (city.includes('上海')) cityClass = 'tag-city-sh';
-        else if (city.includes('南京')) cityClass = 'tag-city-nj';
-        else if (city.includes('北京')) cityClass = 'tag-city-bj';
-        else if (city.includes('广州') || city.includes('深圳')) cityClass = 'tag-city-gz';
-        else if (city.includes('杭州')) cityClass = 'tag-city-hz';
+        if (city.includes('上海')) cityClass = 'badge-city-sh';
+        else if (city.includes('南京')) cityClass = 'badge-city-nj';
+        else if (city.includes('北京')) cityClass = 'badge-city-bj';
+        else if (city.includes('广州') || city.includes('深圳')) cityClass = 'badge-city-gz';
+        else if (city.includes('杭州')) cityClass = 'badge-city-hz';
 
         html += `
         <div class="event-row clean-list-item grid-3-cols" data-event-id="${e.id}">
             <div class="col-city">
-                <span class="event-city-badge ${cityClass}">${escapeHtml(city)}</span>
+                <span class="event-city-badge badge ${cityClass}">${escapeHtml(city)}</span>
             </div>
             <div class="col-title">
                 <span class="event-title-text">${escapeHtml(showTitle)}</span>
