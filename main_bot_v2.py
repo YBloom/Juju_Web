@@ -1,5 +1,5 @@
 
-import asyncio
+import os
 """
 MusicalBot QQ Bot Entry Point (v2)
 使用 ncatbot v4，同步启动方式
@@ -20,7 +20,8 @@ def main():
     
     # Force Config
     from ncatbot.utils.config import ncatbot_config
-    ncatbot_config.set_bot_uin("3132859862")  # TODO: Move rigid UIN to config
+    bot_uin = os.getenv("BOT_UIN", "3132859862")
+    ncatbot_config.set_bot_uin(bot_uin)
     ncatbot_config.set_root("3022402752")     # TODO: Move rigid Admin ID to config
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
     
@@ -87,9 +88,9 @@ def main():
         if not _scheduled_task_running:
             asyncio.create_task(scheduled_sync_task())
     
-    logging.info("🤖 [启动] Bot 正在启动...")
+    logging.info(f"🤖 [启动] Bot ({bot_uin}) 正在启动...")
     # TODO: Refactor to use config value
-    bot.run(bt_uin="3132859862", enable_webui_interaction=False)
+    bot.run(bt_uin=bot_uin, enable_webui_interaction=False)
 
 if __name__ == "__main__":
     main()

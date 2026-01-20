@@ -80,10 +80,21 @@ function renderLoginPrompt(container) {
 
             <div style="background:#f0f7ff; border:1px solid #d6e4ff; border-radius:12px; padding:16px; text-align:center;">
                 <p style="margin:0 0 12px 0; color:#666; font-size:0.9rem;">向 QQ 机器人发送 <code style="background:#fff; padding:2px 8px; border-radius:4px; color:var(--primary-color);">/web</code> 获取登录链接</p>
-                <button onclick="navigator.clipboard.writeText('3132859862')" style="background:#1890ff; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer;">复制机器人QQ: 3132859862</button>
+                <button id="login-copy-bot-btn" style="background:#1890ff; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer;">复制机器人QQ</button>
             </div>
         </div>
     `;
+
+    // Init dynamic bot UIN for login prompt
+    api.getPublicConfig().then(config => {
+        const btn = document.getElementById('login-copy-bot-btn');
+        if (btn) {
+            btn.innerText = `复制机器人QQ: ${config.bot_uin}`;
+            btn.onclick = () => {
+                navigator.clipboard.writeText(config.bot_uin).then(() => UI.toast('Bot账号已复制'));
+            };
+        }
+    });
 
     window.switchAuthTab = (tab) => {
         document.querySelectorAll('.auth-view').forEach(v => v.style.display = 'none');
@@ -518,7 +529,7 @@ window.showBindQQGuide = () => {
                         向QQ机器人发送 <code style="background:#fff; padding:2px 8px; border-radius:4px; color:#1890ff; font-weight:600;">/web</code> 命令获取绑定链接
                     </p>
                     <p style="margin:0; color:#999; font-size:0.85rem;">
-                        机器人QQ号: <strong style="color:#1890ff;">3132859862</strong>
+                        机器人QQ号: <strong style="color:#1890ff;" id="bind-bot-uin">LOADING...</strong>
                     </p>
                 </div>
                 <div style="text-align:center;">
@@ -534,11 +545,16 @@ window.showBindQQGuide = () => {
     });
 
     // Bind copy button explicitly since it's inside content string
-    setTimeout(() => {
+    setTimeout(async () => {
+        const config = await api.getPublicConfig();
+
+        const uinDisplay = document.getElementById('bind-bot-uin');
+        if (uinDisplay) uinDisplay.innerText = config.bot_uin;
+
         const copyBtn = document.getElementById('copy-qq-btn');
         if (copyBtn) {
             copyBtn.onclick = () => {
-                navigator.clipboard.writeText('3132859862')
+                navigator.clipboard.writeText(config.bot_uin)
                     .then(() => UI.toast('已复制机器人QQ号'));
             };
         }

@@ -305,6 +305,13 @@ async def wechat_verification():
     """微信验证文件"""
     return "563f0d9e2f141bb88997c42d353289de5668be13"
 
+@app.get("/api/meta/config")
+async def get_public_config():
+    """获取公开的配置信息 (前端使用)"""
+    return {
+        "bot_uin": os.getenv("BOT_UIN", "3132859862")
+    }
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     index_file = static_path / "index.html"

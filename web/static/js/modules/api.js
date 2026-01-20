@@ -2,6 +2,18 @@
 
 export const api = {
     // Auth
+    async getPublicConfig() {
+        if (this._configCache) return this._configCache;
+        try {
+            const res = await fetch('/api/meta/config');
+            if (res.ok) {
+                this._configCache = await res.json();
+                return this._configCache;
+            }
+        } catch (e) { console.error("Config load failed", e); }
+        return { bot_uin: "3132859862" }; // Fallback
+    },
+
     async checkLogin() {
         // Use new router endpoint
         const res = await fetch('/auth/me');
