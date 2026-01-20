@@ -24,7 +24,16 @@ logger = logging.getLogger(__name__)
 # Initialize with Beijing Time
 START_TIME = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
 # Version for cache busting (using timestamp relative to start)
-SERVER_VERSION = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d_%H%M%S")
+# Version for cache busting (using Git Commit Hash for persistence across restarts)
+def get_git_revision_short_hash() -> str:
+    import subprocess
+    try:
+        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
+    except Exception:
+        # Fallback to timestamp if not a git repo or git not found
+        return datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y%m%d_%H%M%S")
+
+SERVER_VERSION = get_git_revision_short_hash()
 
 
 # --- Services ---

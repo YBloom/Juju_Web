@@ -457,6 +457,12 @@ class HulaquanService:
 
                 # Apply Enrichment (Casts)
                 if t_enrich.get("casts"):
+                     # 获取 musical_id 和 role_orders 用于排序
+                     musical_id = event.saoju_musical_id
+                     role_orders = {}
+                     if musical_id:
+                         role_orders = self._saoju.data.get("artist_indexes", {}).get("role_orders", {}).get(str(musical_id), {})
+                     
                      for c_item in t_enrich["casts"]:
                         artist_name = c_item.get("artist")
                         role_name = c_item.get("role")
@@ -469,15 +475,28 @@ class HulaquanService:
                             session.add(cast_obj)
                             session.flush() # Need ID
                         
+                        # 获取角色排序序号
+                        rank = role_orders.get(role_name, 999) if role_name else 999
+                        
                         # Check exist
                         stmt_assoc = select(TicketCastAssociation).where(
                             TicketCastAssociation.ticket_id == tid,
                             TicketCastAssociation.cast_id == cast_obj.id,
                             TicketCastAssociation.role == role_name
                         )
-                        if not session.exec(stmt_assoc).first():
-                            assoc = TicketCastAssociation(ticket_id=tid, cast_id=cast_obj.id, role=role_name)
+                        existing_assoc = session.exec(stmt_assoc).first()
+                        if not existing_assoc:
+                            assoc = TicketCastAssociation(
+                                ticket_id=tid, 
+                                cast_id=cast_obj.id, 
+                                role=role_name,
+                                rank=rank
+                            )
                             session.add(assoc)
+                        elif existing_assoc.rank != rank:
+                            # 更新 rank（如果官方顺序变了）
+                            existing_assoc.rank = rank
+                            session.add(existing_assoc)
 
 
             # Write updates to TicketUpdateLog table for persistence
@@ -635,6 +654,7 @@ class HulaquanService:
                         select(HulaquanCast, TicketCastAssociation.role)
                         .join(TicketCastAssociation)
                         .where(TicketCastAssociation.ticket_id == t.id)
+                        .order_by(TicketCastAssociation.rank, HulaquanCast.name)
                     )
                     cast_results = session.exec(stmt_c).all()
                     for c_obj, role in cast_results:
@@ -680,6 +700,7 @@ class HulaquanService:
                     select(HulaquanCast, TicketCastAssociation.role)
                     .join(TicketCastAssociation)
                     .where(TicketCastAssociation.ticket_id == t.id)
+                    .order_by(TicketCastAssociation.rank, HulaquanCast.name)
                 )
                 cast_results = session.exec(stmt_c).all()
                 for c_obj, role in cast_results:

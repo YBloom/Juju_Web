@@ -399,7 +399,7 @@ class BotHandler:
     def _get_help_text(self) -> str:
         """返回帮助文档"""
         return (
-            f"📖 <b>剧剧 (YYJ) 帮助文档已升级！</b>\n\n"
+            f"📖 剧剧 BOT 帮助文档已升级！\n\n"
             f"为了提供更好的阅读体验，我们将帮助文档迁移到了 Web 端。\n"
             f"请点击下方链接查看完整命令说明：\n\n"
             f"👉 {WEB_BASE_URL}/help\n\n"

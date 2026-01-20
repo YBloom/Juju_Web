@@ -9,6 +9,7 @@ let isEditMode = false;
 let selectedSubIds = new Set();
 
 const NOTIFICATION_LEVEL_MAP = {
+    1: "仅上新",
     2: "上新/补票",
     3: "上新/补票/回流",
     4: "上新/补票/回流/票减",

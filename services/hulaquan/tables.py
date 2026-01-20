@@ -16,6 +16,8 @@ class TicketCastAssociation(SQLModel, table=True):
     cast_id: int = Field(foreign_key="hulaquancast.id", primary_key=True)
     role: Optional[str] = None  # e.g. "陆光"
     # 例如 "陆光"
+    rank: int = Field(default=999)  # 角色排序序号，越小越靠前
+    # 角色排序序号，越小越靠前
 
 class HulaquanEvent(SQLModel, table=True):
     id: str = Field(primary_key=True) # e.g. "3911"
