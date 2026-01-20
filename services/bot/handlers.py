@@ -30,6 +30,8 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 5
 WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
 
+ROOT_ID = "3022402752"
+
 
 def create_magic_link_token(qq_id: str, nickname: str = "") -> str:
     """Generate Magic Link Token for Bot User"""
@@ -62,6 +64,20 @@ class BotHandler:
     def __init__(self, service: HulaquanService):
         self.service = service
         self.saoju_service = SaojuService()
+
+    def _ensure_user_exists(self, user_id: str, nickname: str = ""):
+        """确保用户在数据库中存在 (由于外键约束)"""
+        from services.db.models import User
+        try:
+            with session_scope() as session:
+                user = session.get(User, user_id)
+                if not user:
+                    user = User(user_id=user_id, nickname=nickname or user_id)
+                    session.add(user)
+                    session.commit()
+                    log.info(f"👤 [用户] 已为 {user_id} 创建新用户记录")
+        except Exception as e:
+            log.error(f"❌ [用户] 确保用户 {user_id} 存在时出错: {e}")
 
     async def get_user_mode(self, user_id: str) -> str:
         """Get user's preferred interaction mode from DB (default: legacy)."""
@@ -331,6 +347,17 @@ class BotHandler:
                 f"💡 提示：如在 QQ 内打开遇到问题，请复制链接到外部浏览器"
             )
 
+        # --- 权限与目标确定 ---
+        is_root = str(user_id) == ROOT_ID
+        if is_root and group_id != 0:
+            effective_uid = f"group_{group_id}"
+            target_desc = f"当前群组 ({group_id})"
+            self._ensure_user_exists(effective_uid, nickname=f"群组 {group_id}")
+        else:
+            effective_uid = uid_str
+            target_desc = "个人"
+            self._ensure_user_exists(effective_uid, nickname=nickname)
+
         # --- 订阅管理命令 ---
         # /呼啦圈通知 [0-5]
         if msg.startswith("/呼啦圈通知"):
@@ -341,19 +368,31 @@ class BotHandler:
                     level = int(parts[1])
                 except ValueError:
                     pass
-            return await self._handle_set_notify_level(uid_str, level)
+            response = await self._handle_set_notify_level(effective_uid, level)
+            if effective_uid.startswith("group_"):
+                response = response.replace("✅ ", f"✅ [群订阅] ")
+            return response
         
         # /关注学生票
         if msg.startswith("/关注学生票"):
-            return await self._handle_subscribe(uid_str, args)
+            # Update args with correct command/text mapping
+            args = extract_args(msg)
+            response = await self._handle_subscribe(effective_uid, args)
+            if effective_uid.startswith("group_"):
+                response = response.replace("✅ ", f"✅ [群订阅] ")
+            return response
         
         # /取消关注学生票
         if msg.startswith("/取消关注学生票"):
-            return await self._handle_unsubscribe(uid_str, args)
+            args = extract_args(msg)
+            response = await self._handle_unsubscribe(effective_uid, args)
+            if effective_uid.startswith("group_"):
+                response = response.replace("✅ ", f"✅ [群订阅] ")
+            return response
         
         # /查看关注
         if msg in ["/查看关注", "/我的订阅", "/订阅列表"]:
-            return await self._handle_list_subscriptions(uid_str)
+            return await self._handle_list_subscriptions(effective_uid)
 
         # --- Parse Args ---
         args = extract_args(msg)

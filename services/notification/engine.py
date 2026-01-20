@@ -201,7 +201,6 @@ class NotificationEngine:
     def _enqueue_notification(self, session: Session, user_id: str, updates: List[TicketUpdate]) -> int:
         """将通知入队到 SendQueue。"""
         # 格式化消息
-        # 使用 Hybrid 模式生成精简消息
         messages = []
         for u in updates:
             messages.append({
@@ -213,7 +212,6 @@ class NotificationEngine:
             })
         
         # 检查是否已存在相同 ref_id (防重复)
-        # 使用第一个 update 的 ticket_id 作为 ref
         ref_id = f"batch_{updates[0].ticket_id}_{datetime.now().strftime('%Y%m%d%H')}"
         
         stmt = select(SendQueue).where(
@@ -225,9 +223,12 @@ class NotificationEngine:
             log.debug(f"Skipping duplicate notification for user {user_id}, ref {ref_id}")
             return 0
         
+        # Determine channel
+        channel = "qq_group" if user_id.startswith("group_") else "qq_private"
+
         queue_item = SendQueue(
             user_id=user_id,
-            channel="qq_private",
+            channel=channel,
             scope="ticket_update",
             payload={"updates": messages},
             status=SendQueueStatus.PENDING,
@@ -248,7 +249,6 @@ class NotificationEngine:
             return 0
         
         # --- Safety: Test Whitelist ---
-        # If TEST_USER_WHITELIST is set (comma-separated IDs), only send to these users.
         whitelist_str = os.getenv("TEST_USER_WHITELIST", "")
         whitelist = set(whitelist_str.split(",")) if whitelist_str else set()
         
@@ -258,20 +258,26 @@ class NotificationEngine:
         sent_count = 0
         for item in pending_items:
             try:
-                # 通过UserAuthMethod查询QQ号
-                qq_id = await loop.run_in_executor(None, self._get_qq_number, item.user_id)
+                target_id = None
+                is_group = item.channel == "qq_group"
                 
-                if not qq_id:
-                    log.warning(f"User {item.user_id} has no QQ binding, skipping notification")
-                    await loop.run_in_executor(None, self._mark_sent, item.id)
-                    continue
-                
-                # Check whitelist
-                if whitelist and str(qq_id) not in whitelist:
-                    log.info(f"SAFE MODE: Skipping notification for non-whitelisted QQ {qq_id}")
-                    # Mark as sent to remove from queue without actually sending
-                    await loop.run_in_executor(None, self._mark_sent, item.id)
-                    continue
+                if is_group:
+                    target_id = item.user_id.replace("group_", "")
+                else:
+                    # 通过UserAuthMethod查询QQ号
+                    qq_id = await loop.run_in_executor(None, self._get_qq_number, item.user_id)
+                    
+                    if not qq_id:
+                        log.warning(f"User {item.user_id} has no QQ binding, skipping notification")
+                        await loop.run_in_executor(None, self._mark_sent, item.id)
+                        continue
+                    
+                    # Check whitelist
+                    if whitelist and str(qq_id) not in whitelist:
+                        log.info(f"SAFE MODE: Skipping notification for non-whitelisted QQ {qq_id}")
+                        await loop.run_in_executor(None, self._mark_sent, item.id)
+                        continue
+                    target_id = qq_id
 
                 # 格式化消息
                 payload = item.payload or {}
@@ -290,13 +296,17 @@ class NotificationEngine:
                 
                 text = "\n".join(lines)
                 
-                # 发送 (使用真实QQ号)
-                await self.bot_api.post_private_msg(int(qq_id), text=text)
+                # 发送
+                if is_group:
+                    await self.bot_api.post_group_msg(group_id=int(target_id), text=text)
+                else:
+                    await self.bot_api.post_private_msg(int(target_id), text=text)
+                    
                 await loop.run_in_executor(None, self._mark_sent, item.id)
                 sent_count += 1
                 
             except Exception as e:
-                log.error(f"Failed to send notification to user {item.user_id}: {e}")
+                log.error(f"Failed to send notification to {item.user_id}: {e}")
                 await loop.run_in_executor(None, self._mark_failed, item.id, str(e))
         
         return sent_count
