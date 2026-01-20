@@ -25,7 +25,7 @@ def main():
     
     # Force Config
     from ncatbot.utils.config import ncatbot_config
-    bot_uin = os.getenv("BOT_UIN", "3132859862")
+    bot_uin = os.getenv("BOT_UIN", "3044829389")
     ncatbot_config.set_bot_uin(bot_uin)
     ncatbot_config.set_root("3022402752")     # TODO: Move rigid Admin ID to config
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
