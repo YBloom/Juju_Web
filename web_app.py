@@ -281,8 +281,14 @@ app.include_router(events.router)
 app.include_router(tasks.router)
 app.include_router(avatar.router)
 app.include_router(admin.router)
+app.include_router(admin.api_router)
 app.include_router(analytics.router)
 
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon.ico"""
+    return Response(content=None, status_code=301, headers={"Location": "/static/img/logo.png"})
 
 @app.head("/")
 async def head_root():

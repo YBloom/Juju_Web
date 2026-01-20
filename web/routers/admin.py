@@ -13,6 +13,7 @@ import json
 from typing import List
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+api_router = APIRouter(prefix="/api/admin", tags=["Admin API"])
 
 # Admin 页面路径
 ADMIN_PAGE = Path(__file__).parent.parent / "admin.html"
@@ -310,3 +311,60 @@ async def toggle_maintenance_mode(admin_session: str = Cookie(None, alias=ADMIN_
         "enabled": new_status,
         "message": f"维护模式已{'开启' if new_status else '关闭'}"
     }
+
+
+# --- 日志管理 ---
+
+@api_router.get("/logs")
+async def get_logs(
+    file: str, 
+    request: Request,
+    admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)
+):
+    """获取指定日志文件的内容"""
+    # 验证 session (API 方式)
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    # 定义允许访问的日志文件映射
+    # 尝试在 logs/ 目录和项目根目录下寻找
+    log_dir = Path(__file__).parent.parent.parent / "logs"
+    root_dir = Path(__file__).parent.parent.parent
+    
+    # 安全检查：只允许特定的文件名（防止目录遍历）
+    allowed_files = [
+        "bot_err.log", "bot_out.log", 
+        "web_err.log", "web_out.log", 
+        "auto_update.log", "app.log"
+    ]
+    
+    if file not in allowed_files:
+        raise HTTPException(status_code=400, detail="Invalid log file name")
+    
+    # 尝试查找文件
+    target_file = log_dir / file
+    if not target_file.exists():
+        target_file = root_dir / file
+        
+    if not target_file.exists():
+        # 特殊处理 app.log -> logs/app.log (如果前端请求 app.log)
+        if file == "app.log":
+           target_file = log_dir / "app.log"
+    
+    if not target_file.exists():
+        return f"Log file '{file}' not found on server."
+        
+    try:
+        # 读取最后 2000 行
+        import collections
+        from collections import deque
+        
+        lines = deque(maxlen=2000)
+        with open(target_file, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                lines.append(line)
+        
+        return "".join(lines)
+    except Exception as e:
+        return f"Failed to read log file: {str(e)}"
+
