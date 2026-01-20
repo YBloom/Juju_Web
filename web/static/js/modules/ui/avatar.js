@@ -1,5 +1,10 @@
 
 import { api } from '../api.js';
+import { UI } from './ui_shared.js';
+import AnimalAvatar from 'animal-avatar-generator';
+
+window.AnimalAvatar = AnimalAvatar;
+window.UI = UI;
 
 let avatarGen = null;
 if (window.AnimalAvatar) {
@@ -11,7 +16,7 @@ export function renderAvatarImg(user, customStyle = '') {
     const style = customStyle || 'width:100%;height:100%;object-fit:cover;';
 
     if (user.avatar_url) {
-        return `<img src="${user.avatar_url}" style="${style}">`;
+        return `<img src="${user.avatar_url}" style="${style}" onerror="this.onerror=null; console.error('Avatar load failed:', this.src); UI.toast('头像加载失败', 'error'); this.style.display='none';">`;
     }
     // Specific check for 'user_' prefix to avoid generating for emails if wanted, but generally we want avatars for everyone.
     // Use user_id or email as seed.
@@ -236,7 +241,8 @@ window.confirmCrop = () => { // Exported to window for HTML onclick
             // Re-render with new URL. If we used HTML, replace innerHTML.
             if (avatarContainer) {
                 // Ensure layout is correct (img inside div)
-                avatarContainer.innerHTML = `<img src="${public_url}" style="width:100%; height:100%; object-fit:cover;">`;
+                console.log("Updating avatar UI with:", public_url);
+                avatarContainer.innerHTML = `<img src="${public_url}" style="width:100%; height:100%; object-fit:cover;" onerror="console.error('Failed to load avatar:', this.src); UI.toast('头像图片加载失败，请检查网络', 'error');">`;
             }
 
             // Hide save button if visible
