@@ -45,6 +45,7 @@ class UserSettingsResponse(BaseModel):
     email: Optional[str] = None
     avatar_url: Optional[str]
     bot_interaction_mode: str
+    global_notification_level: int = 2  # Added field
 
 class AuthMethodResponse(BaseModel):
     """认证方式响应模型"""
@@ -72,7 +73,8 @@ async def get_user_settings(
         nickname=db_user.nickname,
         email=db_user.email,
         avatar_url=db_user.avatar_url,
-        bot_interaction_mode=db_user.bot_interaction_mode or "hybrid"
+        bot_interaction_mode=db_user.bot_interaction_mode or "hybrid",
+        global_notification_level=db_user.global_notification_level
     )
 
 @router.put("/settings", response_model=UserSettingsResponse)
@@ -140,7 +142,8 @@ async def update_user_settings(
         nickname=db_user.nickname,
         email=db_user.email,
         avatar_url=db_user.avatar_url,
-        bot_interaction_mode=db_user.bot_interaction_mode or "hybrid"
+        bot_interaction_mode=db_user.bot_interaction_mode or "hybrid",
+        global_notification_level=db_user.global_notification_level
     )
 
 

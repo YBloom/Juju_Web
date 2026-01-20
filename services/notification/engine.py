@@ -97,7 +97,7 @@ class NotificationEngine:
                 )
                 .distinct()
             )
-            subscriptions = session.exec(stmt).all()
+            subscriptions = session.exec(stmt).unique().all()
             
             # 按用户分组
             user_subs = {}

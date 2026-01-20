@@ -276,11 +276,9 @@ function renderSummaryList(container, groups) {
 
         let dateStr = '';
         if (uniqueDates.length > 0) {
-            if (uniqueDates.length <= 2) dateStr = uniqueDates.map(d => `2026-${d.replace('.', '-')}`).join(', ');
-            else dateStr = `2026-${uniqueDates[0].replace('.', '-')}-2026-${uniqueDates[uniqueDates.length - 1].replace('.', '-')}`;
-
-            // Add "至" prefix
-            dateStr = `至${dateStr}`;
+            // 使用 "." 作为分隔符,不需要 "至" 前缀
+            if (uniqueDates.length <= 2) dateStr = uniqueDates.map(d => `2026.${d}`).join(', ');
+            else dateStr = `2026.${uniqueDates[0]}-2026.${uniqueDates[uniqueDates.length - 1]}`;
         }
 
         const sessionCount = group.sessions.length;
@@ -311,7 +309,7 @@ function renderSummaryList(container, groups) {
 
             const detailRows = sortedSessions.map(s => {
                 const d = new Date(s.session_time);
-                const datePart = `2026-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const datePart = `2026.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
                 const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                 const price = s.price ? `¥${s.price}` : '';
                 const stock = s.stock !== null ? `余${s.stock}` : '';

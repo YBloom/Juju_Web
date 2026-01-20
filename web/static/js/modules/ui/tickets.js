@@ -156,18 +156,18 @@ export function renderEventTable(events) {
                 const y = lastSession.getFullYear();
                 const m = String(lastSession.getMonth() + 1).padStart(2, '0');
                 const d = String(lastSession.getDate()).padStart(2, '0');
-                dateDisplay = `至${y}-${m}-${d}`;
+                dateDisplay = `至${y}.${m}.${d}`;
             }
         } else if (e.schedule_range && e.schedule_range.includes('-')) {
             // Fallback to schedule_range parsing if tickets not available
             const parts = e.schedule_range.split('-');
             if (parts.length === 2) {
                 let endDate = parts[1].trim();
-                // Replace dots with dashes
-                endDate = endDate.replace(/\./g, '-');
+                // 统一使用 "." 作为分隔符
+                endDate = endDate.replace(/-/g, '.');
                 // Ensure year 2026 if missing
                 if (!endDate.startsWith('202')) {
-                    endDate = `2026-${endDate}`;
+                    endDate = `2026.${endDate}`;
                 }
                 dateDisplay = `至${endDate}`;
             }

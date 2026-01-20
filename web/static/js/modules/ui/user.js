@@ -500,7 +500,7 @@ function renderUserProfile(container, user) {
         <div class="user-card" style="background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.05); overflow:hidden;">
             <div style="padding:30px 20px; text-align:center; background:linear-gradient(180deg, #f9fafb 0%, #fff 100%); border-bottom:1px solid #eee;">
                 <div style="position:relative; width:88px; height:88px; margin:0 auto 16px;">
-                    <div id="profile-avatar" style="width:100%; height:100%; border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:3px solid #fff; overflow:hidden;">
+                    <div id="profile-avatar" style="width:100%; height:100%; border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,0.08); border:3px solid #fff; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         ${renderAvatarImg(user, 'width:100%; height:100%; object-fit:cover;')}
                     </div>
                     

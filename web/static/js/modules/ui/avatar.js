@@ -71,9 +71,7 @@ export function renderAvatarImg(user, customStyle = '') {
     if (gen) {
         try {
             const svg = gen.generate(seed);
-            if (customStyle) {
-                return `<div style="${customStyle}">${svg}</div>`;
-            }
+            // SVG 直接返回,不需要额外包装,由父容器 flex 控制居中
             return svg;
         } catch (e) {
             console.error('SVG Generation error:', e);
@@ -265,7 +263,8 @@ window.confirmCrop = () => {
             const avatarContainer = document.querySelector('#profile-avatar');
             if (avatarContainer) {
                 console.log("Updating avatar UI with:", public_url);
-                avatarContainer.innerHTML = `<img src="${public_url}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; console.error('Failed to load avatar:', this.src); UI.toast('头像图片加载失败，请检查网络', 'error');">`;
+                const cacheBuster = `?t=${Date.now()}`;
+                avatarContainer.innerHTML = `<img src="${public_url}${cacheBuster}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; console.error('Failed to load avatar:', this.src); UI.toast('头像图片加载失败', 'error');">`;
             }
 
             const saveActions = document.getElementById('avatar-save-actions');
