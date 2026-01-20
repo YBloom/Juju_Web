@@ -687,6 +687,9 @@ async def login_with_magic_link(token: str, request: Request, response: Response
                 user_id = auth_method.user_id
             else:
                 # 首次QQ登录,创建新用户
+                # Check for legacy user (where user_id == qq_id)
+                legacy_user = db.get(User, qq_id)
+                
                 user_id = User.generate_next_id()
                 logger.info(f"✨ [Auth] Creating new user for QQ {qq_id} -> user_id={user_id}")
                 
@@ -704,6 +707,17 @@ async def login_with_magic_link(token: str, request: Request, response: Response
                     is_primary=True
                 )
                 db.add(auth_method)
+                db.flush() # Ensure New User and Auth exist
+
+                # Perform Merge if Legacy User exists
+                if legacy_user:
+                    try:
+                        from services.user_service import UserService
+                        svc = UserService(db)
+                        svc.merge_users(qq_id, user_id, operator="auto_migration")
+                        logger.info(f"🔄 [Auth] Automatically merged legacy user {qq_id} into {user_id}")
+                    except Exception as e:
+                        logger.error(f"❌ [Auth] Failed to merge legacy user {qq_id}: {e}")
             
             # 创建持久化 Session
             session = UserSession.create(

@@ -169,10 +169,14 @@ async def create_subscription(
     if not data.targets:
         raise HTTPException(status_code=400, detail="至少需要一个订阅目标")
     
-    # 创建 Subscription
-    subscription = Subscription(user_id=user_id)
-    session.add(subscription)
-    session.flush()  # 获取 subscription.id
+    # 检查是否已存在 Subscription
+    statement = select(Subscription).where(Subscription.user_id == user_id)
+    subscription = session.exec(statement).first()
+    
+    if not subscription:
+        subscription = Subscription(user_id=user_id)
+        session.add(subscription)
+        session.flush()  # 获取 subscription.id
     
     # 创建 SubscriptionTargets
     for target_data in data.targets:
