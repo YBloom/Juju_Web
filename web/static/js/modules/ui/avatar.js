@@ -8,10 +8,13 @@ import AnimalAvatarRaw from 'animal-avatar-generator';
  */
 
 // 处理不同的导入场景 (ESM/CommonJS 互操作性)
+console.log('Raw AnimalAvatar Import:', AnimalAvatarRaw);
 let AnimalAvatar = AnimalAvatarRaw;
 if (AnimalAvatarRaw && typeof AnimalAvatarRaw === 'object' && AnimalAvatarRaw.default) {
     AnimalAvatar = AnimalAvatarRaw.default;
+    console.log('Used AnimalAvatar.default');
 }
+console.log('Final AnimalAvatar Constructor:', AnimalAvatar);
 
 // 暴露给全局以便 HTML onclick 使用 (虽然建议用事件监听，但目前代码结构如此)
 window.AnimalAvatar = AnimalAvatar;
