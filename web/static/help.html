@@ -263,7 +263,7 @@
                 fetch('/api/meta/config')
                     .then(r => r.json())
                     .then(config => {
-                        const uin = config.bot_uin || '3132859862';
+                        const uin = config.bot_uin || '3044829389';
                         document.getElementById('bot-uin-display').innerText = uin;
                         document.getElementById('bot-link-mobile').href = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${uin}&card_type=person&source=qrcode`;
                         document.getElementById('bot-copy-btn').onclick = () => {
@@ -272,10 +272,10 @@
                     })
                     .catch(e => {
                         console.error(e);
-                        document.getElementById('bot-uin-display').innerText = '3132859862';
-                        document.getElementById('bot-link-mobile').href = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=3132859862&card_type=person&source=qrcode`;
+                        document.getElementById('bot-uin-display').innerText = '3044829389';
+                        document.getElementById('bot-link-mobile').href = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=3044829389&card_type=person&source=qrcode`;
                         document.getElementById('bot-copy-btn').onclick = () => {
-                            navigator.clipboard.writeText('3132859862').then(() => alert('Bot账号已复制'));
+                            navigator.clipboard.writeText('3044829389').then(() => alert('Bot账号已复制'));
                         };
                     });
             </script>

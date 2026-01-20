@@ -11,7 +11,7 @@ export const api = {
                 return this._configCache;
             }
         } catch (e) { console.error("Config load failed", e); }
-        return { bot_uin: "3132859862" }; // Fallback
+        return { bot_uin: "3044829389" }; // Fallback
     },
 
     async checkLogin() {

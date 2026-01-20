@@ -15,7 +15,7 @@ class UserAuthMethod(TimeStamped, SQLModel, table=True):
     例如:
         User(user_id="000001")
           ├─ UserAuthMethod(provider="email", provider_user_id="user@example.com")
-          └─ UserAuthMethod(provider="qq", provider_user_id="3132859862")
+          └─ UserAuthMethod(provider="qq", provider_user_id="3044829389")
     """
     __tablename__ = "user_auth_method"
     

@@ -320,7 +320,7 @@ async def get_public_config():
     from services.captcha import get_site_key
     
     return {
-        "bot_uin": os.getenv("BOT_UIN", "3132859862"),
+        "bot_uin": os.getenv("BOT_UIN", "3044829389"),
         "turnstile_site_key": get_site_key()
     }
 
