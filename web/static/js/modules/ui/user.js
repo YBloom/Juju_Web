@@ -529,7 +529,7 @@ function renderUserProfile(container, user) {
                 </div>
                 
                 <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-                    <!-- ID hidden -->
+                    <span style="background:#f5f5f5; color:#666; padding:4px 10px; border-radius:20px; font-size:0.75rem;">ID: ${parseInt(user.user_id)}</span>
                     ${user.is_admin ? '<span style="background:#fff7e6; color:#fa8c16; padding:4px 10px; border-radius:20px; font-size:0.75rem; border:1px solid #ffd591;">管理员</span>' : ''}
                 </div>
 

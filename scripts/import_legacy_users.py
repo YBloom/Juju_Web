@@ -29,7 +29,7 @@ MODE_MAPPING = {
     3: 5,  # 全量 (包含余票增减)
 }
 
-def import_users():
+def import_users(db_path: str = None):
     """导入历史用户数据"""
     print(f"📖 正在读取历史数据: {LEGACY_JSON}")
     if not Path(LEGACY_JSON).exists():
@@ -51,7 +51,7 @@ def import_users():
         'skipped_inactive': 0
     }
     
-    with session_scope() as session:
+    with session_scope(db_path) as session:
         # 初始化 ID 计数器
         existing_users = session.exec(select(User)).all()
         if existing_users:
@@ -188,30 +188,19 @@ def import_users():
         print(f"   - 导入演员订阅: {stats['actors_added']}")
         print(f"   - 跳过未激活用户: {stats['skipped_inactive']}")
 
+
 if __name__ == "__main__":
+    import sys
     print("=" * 60)
     print("历史用户订阅数据导入工具 (V2 - 统一 6 位 ID版)")
     print("=" * 60)
+    
+    db_path = sys.argv[1] if len(sys.argv) > 1 else None
+    
     try:
-        import_users()
+        import_users(db_path)
     except Exception as e:
         print(f"\n❌ 运行出错: {e}")
         import traceback
         traceback.print_exc()
-    print("=" * 60)
-
-if __name__ == "__main__":
-    # 支持命令行参数
-    db = DB_PATH
-    json_file = LEGACY_JSON
-    
-    if len(sys.argv) > 1:
-        db = sys.argv[1]
-    if len(sys.argv) > 2:
-        json_file = sys.argv[2]
-    
-    print("=" * 60)
-    print("历史用户订阅数据导入工具")
-    print("=" * 60)
-    import_users(db, json_file)
     print("=" * 60)

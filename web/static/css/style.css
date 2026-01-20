@@ -559,11 +559,11 @@ button[disabled] {
 
 /* Specific for Co-Cast "Other Casts" which should stretch */
 .cast-cell {
-    min-width: 200px;
-    max-width: 320px;
-    /* Limit width to force wrap */
+    min-width: 80px;
+    max-width: 150px;
     white-space: normal;
-    /* Allow wrapping */
+    padding: 12px 8px !important;
+    font-size: 0.9em;
 }
 
 .cast-list-layout {
@@ -1309,15 +1309,21 @@ button[disabled] {
     border-color: var(--primary-color);
 }
 
-/* 售罄行样式 */
+/* 售罄行样式 - 灰色字体，无删除线 */
 .data-table tr.sold-out {
-    background-color: #F5F5F5;
+    background-color: #FAFAFA;
     color: #999;
-    opacity: 0.75;
 }
 
 .data-table tr.sold-out td {
-    text-decoration: line-through;
+    color: #999;
+    opacity: 0.7;
+}
+
+/* 售罄行的卡司链接也使用灰色 */
+.data-table tr.sold-out .cast-link {
+    color: #999 !important;
+    text-decoration: none;
 }
 
 /* 跳转定位的高亮动画 */
@@ -1346,8 +1352,7 @@ button[disabled] {
 }
 
 .data-table tr.sold-out:hover {
-    background-color: #EDEDED;
-    opacity: 0.85;
+    background-color: #F0F0F0;
 }
 
 /* 移动端响应式设计 - 保持表格布局，支持横向滚动 */

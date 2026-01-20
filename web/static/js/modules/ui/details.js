@@ -44,10 +44,27 @@ function renderDetailView(event) {
     const showYear = years.length > 1;
     const allPrices = [...new Set(allTickets.map(t => t.price))].sort((a, b) => a - b);
 
+    // 提取所有角色列表（保持顺序）
+    let allRoles = [];
+    if (hasCast) {
+        const roleSet = new Set();
+        allTickets.forEach(t => {
+            if (t.cast && t.cast.length > 0) {
+                t.cast.forEach(c => {
+                    if (c.role && !roleSet.has(c.role)) {
+                        roleSet.add(c.role);
+                        allRoles.push(c.role);
+                    }
+                });
+            }
+        });
+    }
+
     state.currentDetailEvent = event;
     state.currentDetailTickets = allTickets;
     state.currentDetailShowYear = showYear;
     state.currentDetailHasCast = hasCast;
+    state.currentDetailRoles = allRoles;
 
     let html = `
         <div class="page-header">
@@ -91,7 +108,17 @@ function renderDetailView(event) {
         
         <div id="detail-table-container">
             <table class="data-table">
-                <thead><tr><th>演出时间</th><th width="80">库存</th>${hasCast ? '<th>卡司</th>' : ''}<th width="150">价格</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="vertical-align: middle;">演出时间</th>
+                        <th rowspan="2" width="80" style="vertical-align: middle;">库存</th>
+                        ${hasCast && allRoles.length > 0 ? `<th colspan="${allRoles.length}" style="text-align: center; border-bottom: 1px solid var(--border-color);">卡司</th>` : ''}
+                        <th rowspan="2" width="150" style="vertical-align: middle;">价格</th>
+                    </tr>
+                    ${hasCast && allRoles.length > 0 ? `<tr>
+                        ${allRoles.map(role => `<th style="font-size: 0.85em; color: var(--text-secondary); font-weight: 500; white-space: nowrap;">${escapeHtml(role)}</th>`).join('')}
+                    </tr>` : '<tr></tr>'}
+                </thead>
                 <tbody id="detail-table-body"></tbody>
             </table>
         </div>
@@ -102,11 +129,11 @@ function renderDetailView(event) {
     document.querySelectorAll('.filter-price').forEach(el => el.addEventListener('change', () => applyDetailFilters(event.id)));
     document.getElementById('filter-cast')?.addEventListener('input', () => applyDetailFilters(event.id));
 
-    renderDetailTableRows(allTickets, showYear, hasCast, event.id);
+    renderDetailTableRows(allTickets, showYear, hasCast, allRoles, event.id);
 }
 
 export function applyDetailFilters(eventId) {
-    const { currentDetailTickets: allTickets, currentDetailShowYear: showYear, currentDetailHasCast: hasCast } = state;
+    const { currentDetailTickets: allTickets, currentDetailShowYear: showYear, currentDetailHasCast: hasCast, currentDetailRoles: allRoles } = state;
     if (!allTickets) return;
 
     const onlyAvailable = document.getElementById('filter-available')?.checked || false;
@@ -123,10 +150,10 @@ export function applyDetailFilters(eventId) {
         return true;
     });
 
-    renderDetailTableRows(filtered, showYear, hasCast, eventId);
+    renderDetailTableRows(filtered, showYear, hasCast, allRoles, eventId);
 }
 
-function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
+function renderDetailTableRows(tickets, showYear, hasCast, allRoles, eventId) {
     const tbody = document.getElementById('detail-table-body');
     if (!tbody) return;
 
@@ -145,7 +172,29 @@ function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
             timeStr = showYear ? `${year}年${month}月${day}日 周${weekday} ${hours}:${minutes}` : `${month}月${day}日 周${weekday} ${hours}:${minutes}`;
         }
 
-        const castStr = hasCast && t.cast && t.cast.length > 0 ? t.cast.map(c => `<span class="cast-link" data-name="${escapeHtml(c.name)}" style="color:var(--primary-color); cursor:pointer; text-decoration:underline;">${escapeHtml(c.name)}</span>`).join(' | ') : '-';
+        // 生成卡司列（每个角色一个td）
+        let castCells = '';
+        if (hasCast && allRoles && allRoles.length > 0) {
+            // 创建角色到演员的映射
+            const roleActorMap = {};
+            if (t.cast && t.cast.length > 0) {
+                t.cast.forEach(c => {
+                    if (c.role) {
+                        roleActorMap[c.role] = c.name;
+                    }
+                });
+            }
+
+            // 按照allRoles的顺序生成每个角色的td
+            castCells = allRoles.map(role => {
+                const actorName = roleActorMap[role];
+                if (actorName) {
+                    return `<td class="cast-cell" data-label="${escapeHtml(role)}"><span class="cast-link" data-name="${escapeHtml(actorName)}" style="color:var(--primary-color); cursor:pointer; text-decoration:underline;">${escapeHtml(actorName)}</span></td>`;
+                } else {
+                    return `<td class="cast-cell" data-label="${escapeHtml(role)}" style="color:var(--text-secondary);">—</td>`;
+                }
+            }).join('');
+        }
 
         let priceStr = t.price_label && t.price_label !== `¥${t.price}` ? t.price_label : (t.original_price && t.original_price !== t.price ? `${t.price}（原价${t.original_price}）` : `¥${t.price}`);
         const isSoldOut = (t.stock !== undefined ? t.stock : 0) === 0 || t.status === 'sold_out';
@@ -169,7 +218,7 @@ function renderDetailTableRows(tickets, showYear, hasCast, eventId) {
         html += `<tr class="${isSoldOut ? 'sold-out' : ''}" data-session-id="${sessionId}" style="cursor:pointer">
             <td class="time-cell" data-label="演出时间">${escapeHtml(timeStr)}${validFromInfo}</td>
             <td class="stock-cell" data-label="库存">${escapeHtml(t.stock)}/${escapeHtml(t.total_ticket)}</td>
-            ${hasCast ? `<td class="cast-cell" data-label="卡司">${castStr}</td>` : ''}
+            ${castCells}
             <td class="price-cell" data-label="价格">${escapeHtml(priceStr)}</td>
         </tr>`;
     });

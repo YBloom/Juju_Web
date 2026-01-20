@@ -137,7 +137,7 @@ async def get_service_status():
             "last_updated": saoju_updated
         },
         "service_info": {
-            "version": "v1.3",
+            "version": "v1.4",
             "start_time": START_TIME
         }
     }
