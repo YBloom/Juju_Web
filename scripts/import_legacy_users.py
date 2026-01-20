@@ -74,6 +74,11 @@ def import_users(db_path=DB_PATH, json_path=LEGACY_JSON):
         user_cols = [c[1] for c in cursor.fetchall()]
         has_global_level = 'global_notification_level' in user_cols
         
+        # 检查subscriptiontarget表结构
+        cursor.execute("PRAGMA table_info(subscriptiontarget)")
+        target_cols = [c[1] for c in cursor.fetchall()]
+        has_include_plays = 'include_plays' in target_cols
+        
         for user_id, user_info in users_data.items():
             # 检查用户激活状态
             if not user_info.get('activate', False):
@@ -174,13 +179,23 @@ def import_users(db_path=DB_PATH, json_path=LEGACY_JSON):
                 
                 if not cursor.fetchone():
                     now = get_now()
-                    # 将include_events转为JSON存储在include_plays字段
-                    include_plays = json.dumps(include_events) if include_events else None
-                    cursor.execute("""
-                        INSERT INTO subscriptiontarget (
-                            subscription_id, kind, target_id, name, include_plays, created_at, updated_at
-                        ) VALUES (?, 'ACTOR', ?, ?, ?, ?, ?)
-                    """, (sub_id, actor_name, actor_name, include_plays, now, now))
+                    
+                    # 根据表结构决定是否包含include_plays字段
+                    if has_include_plays:
+                        # 将include_events转为JSON存储在include_plays字段
+                        include_plays = json.dumps(include_events) if include_events else None
+                        cursor.execute("""
+                            INSERT INTO subscriptiontarget (
+                                subscription_id, kind, target_id, name, include_plays, created_at, updated_at
+                            ) VALUES (?, 'ACTOR', ?, ?, ?, ?, ?)
+                        """, (sub_id, actor_name, actor_name, include_plays, now, now))
+                    else:
+                        # 云端旧版本结构,不包含include_plays字段
+                        cursor.execute("""
+                            INSERT INTO subscriptiontarget (
+                                subscription_id, kind, target_id, name, created_at, updated_at
+                            ) VALUES (?, 'ACTOR', ?, ?, ?, ?)
+                        """, (sub_id, actor_name, actor_name, now, now))
                     stats['actors_added'] += 1
             
             # 7. 跳过 subscribe_tickets（不再适用）
