@@ -243,7 +243,18 @@ async def friendly_rate_limit_handler(request: Request, exc: RateLimitExceeded):
             "tip": "每分钟最多可发起 5 次搜索请求"
         },
     )
+    )
 app.add_exception_handler(RateLimitExceeded, friendly_rate_limit_handler)
+
+# 404 Redirect Handler
+from fastapi.responses import RedirectResponse
+async def not_found_handler(request: Request, exc):
+    """
+    Redirect all 404 (Not Found) requests to the homepage.
+    """
+    return RedirectResponse(url="/")
+
+app.add_exception_handler(404, not_found_handler)
 
 # CORS
 app.add_middleware(

@@ -54,8 +54,10 @@ def extract_args(message: str) -> Dict:
         return {"command": "", "text_args": [], "mode_args": []}
     
     command = parts[0]
-    mode_args = [p.lower() for p in parts[1:] if p.startswith("-")]
-    text_args = [p for p in parts[1:] if not p.startswith("-")]
+    # 模式参数：以 - 开头且后面不是纯数字的 (如 -E, -A, -all)
+    # 文本参数：不以 - 开头，或者是类似 -3 这样的负数形式（用于指定级别）
+    mode_args = [p.lower() for p in parts[1:] if p.startswith("-") and not p[1:].isdigit()]
+    text_args = [p for p in parts[1:] if not p.startswith("-") or p[1:].isdigit()]
     
     return {"command": command, "text_args": text_args, "mode_args": mode_args}
 
@@ -168,20 +170,40 @@ class BotHandler:
         elif "-E" in mode_args or not any(arg.startswith("-") for arg in mode_args):
             kind = SubscriptionTargetKind.PLAY
         
-        # 尝试解析级别
+        # 尝试解析级别 (支持 3 或 -3)
+        extracted_level = level
+        remaining_text_args = []
         for arg in text_args:
             try:
-                l = int(arg)
-                if 1 <= l <= 5:
-                    level = l
-                    text_args.remove(arg)
-                    break
+                # 去掉可能的负号前缀，尝试转为数字
+                val = int(arg.lstrip("-"))
+                if 1 <= val <= 5:
+                    extracted_level = val
+                else:
+                    remaining_text_args.append(arg)
             except ValueError:
-                continue
+                remaining_text_args.append(arg)
+        
+        text_args = remaining_text_args
+        level = extracted_level
         
         target_name = " ".join(text_args) if text_args else ""
         if not target_name:
             return "❌ 请提供剧目或演员名称"
+        
+        # 尝试解析真实 ID (针对剧目)
+        target_id = target_name
+        if kind == SubscriptionTargetKind.PLAY:
+            try:
+                results = await self.service.search_events(target_name)
+                if results:
+                    # 获取最匹配的结果
+                    event = results[0]
+                    target_id = str(event.id)
+                    target_name = event.title  # 使用清洗后的官方标题
+                    log.info(f"🔍 [订阅] 已将 '{target_name}' 解析为 ID: {target_id}")
+            except Exception as e:
+                log.warning(f"⚠️ [订阅] 解析剧目 ID 失败: {e}")
         
         with session_scope() as session:
             # 查找或创建订阅
@@ -332,6 +354,11 @@ class BotHandler:
         
         log.info(f"💬 [消息] 收到来自 {user_id} 的消息: {msg}")
         
+        # --- 提前解析参数，避免各分支重复解析及 UnboundLocalError ---
+        args = extract_args(msg)
+        mode_args = args["mode_args"]
+        text_args = args["text_args"]
+        
         # --- Help Command ---
         if msg.lower() in ["/help", "help", "帮助", "菜单", "/帮助"]:
             return self._get_help_text()
@@ -361,11 +388,10 @@ class BotHandler:
         # --- 订阅管理命令 ---
         # /呼啦圈通知 [0-5]
         if msg.startswith("/呼啦圈通知"):
-            parts = msg.split()
             level = None
-            if len(parts) > 1:
+            if text_args:
                 try:
-                    level = int(parts[1])
+                    level = int(text_args[0])
                 except ValueError:
                     pass
             response = await self._handle_set_notify_level(effective_uid, level)
@@ -375,8 +401,6 @@ class BotHandler:
         
         # /关注学生票
         if msg.startswith("/关注学生票"):
-            # Update args with correct command/text mapping
-            args = extract_args(msg)
             response = await self._handle_subscribe(effective_uid, args)
             if effective_uid.startswith("group_"):
                 response = response.replace("✅ ", f"✅ [群订阅] ")
@@ -384,7 +408,6 @@ class BotHandler:
         
         # /取消关注学生票
         if msg.startswith("/取消关注学生票"):
-            args = extract_args(msg)
             response = await self._handle_unsubscribe(effective_uid, args)
             if effective_uid.startswith("group_"):
                 response = response.replace("✅ ", f"✅ [群订阅] ")
@@ -394,10 +417,7 @@ class BotHandler:
         if msg in ["/查看关注", "/我的订阅", "/订阅列表"]:
             return await self._handle_list_subscriptions(effective_uid)
 
-        # --- Parse Args ---
-        args = extract_args(msg)
-        mode_args = args["mode_args"]
-        text_args = args["text_args"]
+        # --- 其他查询命令 ---
         show_all = "-all" in mode_args
         
         # 价格筛选支持 (e.g. -219)
@@ -405,7 +425,6 @@ class BotHandler:
         for arg in mode_args:
             if arg == "-all": continue
             try:
-                # 尝试解析 -数字
                 p = float(arg.lstrip("-"))
                 price_filters.append(p)
             except ValueError:
