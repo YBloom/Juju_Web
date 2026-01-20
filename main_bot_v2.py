@@ -31,7 +31,7 @@ def main():
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
     
     # Import and run (同步方式，ncatbot 内部处理 asyncio)
-    from ncatbot.core import BotClient, GroupMessage, PrivateMessage
+    from ncatbot.core import BotClient, GroupMessage, PrivateMessage, RequestEvent
     from services.bot.handlers import BotHandler
     from services.hulaquan.service import HulaquanService
     from services.notification import NotificationEngine
@@ -92,6 +92,25 @@ def main():
         # Start scheduled task on first message (ensures bot.api is ready)
         if not _scheduled_task_running:
             asyncio.create_task(scheduled_sync_task())
+    
+    @bot.on_request()
+    async def on_request(event: RequestEvent):
+        """自动批准所有 好友/加群 请求"""
+        req_type = event.request_type
+        uid = event.user_id
+        gid = event.group_id
+        comment = event.comment
+        
+        log.info(f"🔔 [请求] 收到 {req_type} 请求 | User: {uid} | Group: {gid} | Comment: {comment}")
+        
+        if req_type == "friend":
+            await event.approve(approve=True)
+            log.info(f"✅ [自动批准] 已通过好友请求: {uid}")
+            
+        elif req_type == "group":
+            # 自动通过加群/邀请进群
+            await event.approve(approve=True)
+            log.info(f"✅ [自动批准] 已通过加群请求: Group {gid} | User {uid}")
     
     logging.info(f"🤖 [启动] Bot ({bot_uin}) 正在启动...")
     # TODO: Refactor to use config value
