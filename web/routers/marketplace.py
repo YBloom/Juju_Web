@@ -176,7 +176,6 @@ async def get_listing_detail(
         
         # 处理联系方式显示
         if reveal_contact:
-            from web_app import get_current_user
             user = get_current_user(request)
             if not user:
                 raise HTTPException(

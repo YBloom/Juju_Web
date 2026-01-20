@@ -269,55 +269,7 @@ async def delete_subscription(
     return {"status": "ok", "message": "订阅已删除"}
 
 
-@router.put("/{subscription_id}/options", response_model=SubscriptionOptionResponse)
-async def update_subscription_options(
-    subscription_id: int,
-    data: SubscriptionOptionCreate,
-    request: Request,
-    user: dict = Depends(require_auth),
-    session: Session = Depends(get_session)
-):
-    """
-    更新订阅选项（静音、频率等）
-    """
-    user_id = user.get("user_id") or user.get("qq_id")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="无效的用户信息")
-    
-    # 查找订阅
-    subscription = session.get(Subscription, subscription_id)
-    if not subscription:
-        raise HTTPException(status_code=404, detail="订阅不存在")
-    
-    # 验证所有权
-    if subscription.user_id != user_id:
-        raise HTTPException(status_code=403, detail="无权修改此订阅")
-    
-    # 查找或创建 options
-    options = session.exec(
-        select(SubscriptionOption).where(SubscriptionOption.subscription_id == subscription_id)
-    ).first()
-    
-    if options:
-        # 更新现有选项
-        options.mute = data.mute
-        options.freq = data.freq
-        options.allow_broadcast = data.allow_broadcast
-        options.updated_at = datetime.now()
-    else:
-        # 创建新选项
-        options = SubscriptionOption(
-            subscription_id=subscription_id,
-            mute=data.mute,
-            freq=data.freq,
-            allow_broadcast=data.allow_broadcast
-        )
-        session.add(options)
-    
-    session.commit()
-    session.refresh(options)
-    
-    return SubscriptionOptionResponse.model_validate(options)
+
 @router.patch("/options/{subscription_id}")
 async def update_subscription_options(
     subscription_id: int,

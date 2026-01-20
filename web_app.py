@@ -271,9 +271,17 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 
 # --- API Endpoints ---
-from web.routers import auth, subscription, marketplace, user, events, tasks, avatar, admin, analytics
+from web.routers import auth, subscription, marketplace, user, events, tasks, avatar, admin, analytics, feedback
 
 app.include_router(auth.router)
+
+@app.get("/auth")
+async def magic_link_legacy_redirect(token: str = None):
+    """Legacy /auth endpoint redirecting to new /auth/magic-link"""
+    from fastapi.responses import RedirectResponse
+    if token:
+        return RedirectResponse(f"/auth/magic-link?token={token}")
+    return Response(status_code=400, content="Invalid Link")
 app.include_router(subscription.router)
 app.include_router(marketplace.router)
 app.include_router(user.router)
@@ -283,6 +291,7 @@ app.include_router(avatar.router)
 app.include_router(admin.router)
 app.include_router(admin.api_router)
 app.include_router(analytics.router)
+app.include_router(feedback.router)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
