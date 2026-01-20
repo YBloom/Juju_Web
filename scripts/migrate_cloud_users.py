@@ -250,10 +250,20 @@ def import_legacy_users():
                         ).first()
                         
                         if not existing_target:
+                            # 查找正确名称
+                            event_name_in_db = None
+                            try:
+                                hq_event = session.get(HulaquanEvent, str(event_id))
+                                if hq_event:
+                                    event_name_in_db = hq_event.title
+                            except Exception:
+                                pass
+
                             target = SubscriptionTarget(
                                 subscription_id=sub.id,
                                 kind="EVENT",
-                                target_id=str(event_id)
+                                target_id=str(event_id),
+                                name=event_name_in_db  # 使用数据库中的真实名称
                             )
                             session.add(target)
                             stats['events_added'] += 1

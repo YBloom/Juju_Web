@@ -295,7 +295,7 @@ class BotHandler:
     async def _handle_list_subscriptions(self, user_id: str) -> str:
         """处理 /查看关注 命令"""
         from services.db.connection import session_scope
-        from services.db.models import Subscription, SubscriptionOption, SubscriptionTarget
+        from services.db.models import Subscription, SubscriptionOption, SubscriptionTarget, HulaquanEvent
         from services.db.models.base import SubscriptionTargetKind
         from sqlmodel import select
         
@@ -328,14 +328,26 @@ class BotHandler:
                 lines.append("\n暂无具体订阅项")
             else:
                 # 按类型分组
-                plays = [t for t in targets if t.kind == SubscriptionTargetKind.PLAY]
-                actors = [t for t in targets if t.kind == SubscriptionTargetKind.ACTOR]
+                plays = [t for t in targets if t.kind in (SubscriptionTargetKind.PLAY, "EVENT")]
+                actors = [t for t in targets if t.kind in (SubscriptionTargetKind.ACTOR, "ACTOR")]
                 
                 if plays:
                     lines.append("\n【关注的剧目】")
                     for i, t in enumerate(plays, 1):
+                        display_name = t.name
+                        if not display_name:
+                            # 动态查找名称
+                            try:
+                                event = session.get(HulaquanEvent, t.target_id)
+                                if event:
+                                    display_name = event.title
+                                else:
+                                    display_name = f"未知剧目 (ID: {t.target_id})"
+                            except Exception:
+                                display_name = f"未知剧目 (ID: {t.target_id})"
+                                
                         mode = t.flags.get("mode", 2) if t.flags else 2
-                        lines.append(f"{i}. {t.name} (级别 {mode})")
+                        lines.append(f"{i}. {display_name} (级别 {mode})")
                 
                 if actors:
                     lines.append("\n【关注的演员】")
