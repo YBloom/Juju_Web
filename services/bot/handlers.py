@@ -144,6 +144,13 @@ class BotHandler:
                 )
                 session.add(opt)
             
+            # 同时同步到 User 模型
+            from services.db.models import User
+            user = session.get(User, user_id)
+            if user:
+                user.global_notification_level = level
+                session.add(user)
+                
             session.commit()
         
         level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
@@ -334,9 +341,9 @@ class BotHandler:
             if not targets:
                 lines.append("\n暂无具体订阅项")
             else:
-                # 按类型分组
-                plays = [t for t in targets if t.kind in (SubscriptionTargetKind.PLAY, "EVENT")]
-                actors = [t for t in targets if t.kind in (SubscriptionTargetKind.ACTOR, "ACTOR")]
+                # 按类型分组 (兼容多种大小写和枚举格式)
+                plays = [t for t in targets if t.kind in (SubscriptionTargetKind.PLAY, "play", "PLAY", "EVENT", "event")]
+                actors = [t for t in targets if t.kind in (SubscriptionTargetKind.ACTOR, "actor", "ACTOR")]
                 
                 if plays:
                     lines.append("\n【关注的剧目】")

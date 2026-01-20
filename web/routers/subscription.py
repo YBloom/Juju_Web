@@ -290,6 +290,16 @@ async def update_subscription_options(
     for key, value in options.dict().items():
         setattr(db_options, key, value)
     
+    # 同步到 User.global_notification_level
+    sub = db.get(Subscription, subscription_id)
+    if sub:
+        user_id = sub.user_id
+        from services.db.models import User
+        db_user = db.get(User, user_id)
+        if db_user:
+            db_user.global_notification_level = db_options.notification_level
+            db.add(db_user)
+    
     db.add(db_options)
     db.commit()
     return db_options
@@ -309,5 +319,19 @@ async def update_global_level(
     
     db_user.global_notification_level = level
     db.add(db_user)
+    
+    # 同时同步到 SubscriptionOption
+    statement = select(Subscription).where(Subscription.user_id == user_id)
+    sub = db.exec(statement).first()
+    if sub:
+        opt_stmt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
+        opt = db.exec(opt_stmt).first()
+        if not opt:
+            opt = SubscriptionOption(subscription_id=sub.id, notification_level=level)
+            db.add(opt)
+        else:
+            opt.notification_level = level
+            db.add(opt)
+    
     db.commit()
     return {"status": "ok", "level": level}

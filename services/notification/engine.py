@@ -14,6 +14,7 @@ from services.db.models import (
     Subscription,
     SubscriptionOption,
     SubscriptionTarget,
+    User,
     UserAuthMethod,
 )
 from services.db.models.base import SubscriptionTargetKind
@@ -114,6 +115,16 @@ class NotificationEngine:
                 sub = subs[0]
                 option = sub.options[0] if sub.options else None
                 
+                # 获取全局通知级别 (优先从 SubscriptionOption 获取，备选从 User 获取)
+                global_level = 0
+                if option:
+                    global_level = option.notification_level
+                else:
+                    # 如果没有 option，尝试加载 User 的 global_level
+                    user = session.get(User, user_id)
+                    if user:
+                        global_level = user.global_notification_level
+                
                 # 检查静音
                 if option and option.mute:
                     continue
@@ -130,7 +141,7 @@ class NotificationEngine:
                 # 匹配更新
                 user_updates = []
                 for u in updates:
-                    if self._match_update(u, all_targets, event_ids, actor_names):
+                    if self._match_update(u, all_targets, event_ids, actor_names, global_level=global_level):
                         user_updates.append(u)
                 
                 if user_updates:
@@ -147,18 +158,22 @@ class NotificationEngine:
         update: TicketUpdate, 
         targets: List[SubscriptionTarget],
         event_ids: Set[str],
-        actor_names: Set[str]
+        actor_names: Set[str],
+        global_level: int = 0
     ) -> bool:
         """检查 update 是否匹配用户的任一订阅 target。"""
         required_mode = MODE_MAP.get(update.change_type, 99)
         
+        # 如果全局级别允许推送 (required_mode <= global_level)，我们只需要检查 target 匹配
+        # 如果全局级别不足，我们检查单个 target 的 flags 是否有更高的 override
+        
         for target in targets:
-            # 从 flags 中获取 mode，默认为 1
-            mode = 1
-            if target.flags and "mode" in target.flags:
-                mode = target.flags["mode"]
+            # 确定当前 target 的最终有效 mode
+            # 逻辑：取 global_level 和 target.flags["mode"] 的最大值
+            target_mode = target.flags.get("mode", 1) if target.flags else 1
+            effective_mode = max(global_level, target_mode)
             
-            if mode < required_mode:
+            if effective_mode < required_mode:
                 continue
             
             # 按类型匹配

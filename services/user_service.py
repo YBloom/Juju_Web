@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from datetime import datetime
 from sqlmodel import Session, select
-from services.db.models import User, Subscription, SubscriptionTarget, SubscriptionOption, UserAuthMethod, AccountMergeLog
+from services.db.models import User, Subscription, SubscriptionTarget, SubscriptionOption, UserAuthMethod, AccountMergeLog, UserSession
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +84,20 @@ class UserService:
                 # Delete source subscription shell
                 self.session.delete(source_sub)
 
+        # 1.5 Synchronize global notification level
+        target_user = self.session.get(User, target_user_id)
+        if source_user and target_user:
+            # Sync level if source is set (not 0)
+            if source_user.global_notification_level != 0:
+                target_user.global_notification_level = source_user.global_notification_level
+                self.session.add(target_user)
+                
+            # Also sync to SubscriptionOption if exists
+            target_opt = self.session.exec(select(SubscriptionOption).join(Subscription).where(Subscription.user_id == target_user_id)).first()
+            if target_opt and target_user.global_notification_level != 0:
+                target_opt.notification_level = target_user.global_notification_level
+                self.session.add(target_opt)
+
         # 2. Merge Auth Methods
         auths = self.session.exec(select(UserAuthMethod).where(UserAuthMethod.user_id == source_user_id)).all()
         for auth in auths:
@@ -100,6 +114,14 @@ class UserService:
             else:
                 log.warn(f"  - Conflict: Target already has {auth.provider}, removing source auth.")
                 self.session.delete(auth)
+
+        # 2.5 Update User Sessions
+        sessions = self.session.exec(select(UserSession).where(UserSession.user_id == source_user_id)).all()
+        for sess in sessions:
+            sess.user_id = target_user_id
+            self.session.add(sess)
+        if sessions:
+            log.info(f"  - Migrated {len(sessions)} active sessions to {target_user_id}")
 
         # 3. Mark Source as Deleted / Inactive
         source_user.active = False
