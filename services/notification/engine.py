@@ -303,13 +303,12 @@ class NotificationEngine:
     
     def _get_pending_items(self, limit: int) -> List[SendQueue]:
         """获取待发送的队列项。"""
-        from services.db.utils import get_now
         with session_scope() as db:
             stmt = (
                 select(SendQueue)
                 .where(
                     SendQueue.status == SendQueueStatus.PENDING,
-                    (SendQueue.next_retry_at.is_(None)) | (SendQueue.next_retry_at <= get_now()),
+                    (SendQueue.next_retry_at.is_(None)) | (SendQueue.next_retry_at <= datetime.now()),
                 )
                 .order_by(SendQueue.created_at)
                 .limit(limit)
