@@ -10,7 +10,14 @@ import os
 import secrets
 import hashlib
 import json
-from typing import List
+from typing import List, Optional
+from collections import Counter
+from sqlmodel import select, col
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from services.hulaquan.tables import Feedback, HulaquanSearchLog
+from services.db.connection import session_scope
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 api_router = APIRouter(prefix="/api/admin", tags=["Admin API"])
@@ -269,6 +276,194 @@ async def save_maintenance_lyrics(lyrics: List[Lyric], admin_session: str = Cook
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save lyrics file: {str(e)}")
+
+
+# --- 维护模式状态管理 ---
+
+class FeedbackReplyRequest(BaseModel):
+    reply: str
+    is_public: bool = False
+
+
+@api_router.get("/analytics/searches")
+async def get_search_analytics(admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """获取搜索聚类和热门统计。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        logs = session.exec(select(HulaquanSearchLog)).all()
+        
+        artist_counts = Counter()
+        solo_counts = Counter()
+        combo_counts = Counter()
+        view_counts = Counter()
+        
+        for l in logs:
+            if l.search_type == "view_event":
+                view_counts[l.query_str] += 1
+                continue
+                
+            if l.search_type == "co-cast" and l.artists:
+                try:
+                    names = json.loads(l.artists)
+                    for n in names:
+                        artist_counts[n] += 1
+                        
+                    if len(names) == 1:
+                        solo_counts[names[0]] += 1
+                    elif len(names) > 1:
+                        combo_str = " & ".join(names)
+                        combo_counts[combo_str] += 1
+                except:
+                    pass
+
+        def format_top(counter, limit=20):
+            return [{"name": k, "count": v} for k, v in counter.most_common(limit)]
+            
+        return {
+            "top_artists": format_top(artist_counts),
+            "top_solo": format_top(solo_counts),
+            "top_combos": format_top(combo_counts),
+            "top_views": format_top(view_counts)
+        }
+
+
+@api_router.get("/feedbacks")
+async def get_feedbacks(limit: int = 50, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """获取最新的反馈列表（排除已忽略的）。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        stmt = select(Feedback).where(Feedback.is_ignored == False).order_by(col(Feedback.created_at).desc()).limit(limit)
+        items = session.exec(stmt).all()
+        return {
+            "count": len(items),
+            "results": [i.model_dump(mode='json') for i in items]
+        }
+
+
+@api_router.get("/feedbacks/ignored")
+async def get_ignored_feedbacks(limit: int = 100, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """获取被忽略的反馈列表。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        stmt = select(Feedback).where(Feedback.is_ignored == True).order_by(col(Feedback.ignored_at).desc()).limit(limit)
+        items = session.exec(stmt).all()
+        return {
+            "count": len(items),
+            "results": [i.model_dump(mode='json') for i in items]
+        }
+
+
+@api_router.post("/feedback/{feedback_id}/reply")
+async def reply_feedback(feedback_id: int, req: FeedbackReplyRequest, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """回复反馈并设置公开状态。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            raise HTTPException(status_code=404, detail="Not found")
+            
+        fb.admin_reply = req.reply
+        fb.is_public = req.is_public
+        if req.reply:
+            fb.reply_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+            fb.status = "closed"
+            
+        session.add(fb)
+        
+    return {"status": "ok"}
+
+
+@api_router.post("/feedback/{feedback_id}/ignore")
+async def ignore_feedback(feedback_id: int, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """忽略一条反馈。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            raise HTTPException(status_code=404, detail="Not found")
+            
+        fb.is_ignored = True
+        fb.ignored_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+        session.add(fb)
+        
+    return {"status": "ok"}
+
+
+@api_router.post("/feedback/{feedback_id}/unignore")
+async def unignore_feedback(feedback_id: int, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """取消忽略反馈。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            raise HTTPException(status_code=404, detail="Not found")
+            
+        fb.is_ignored = False
+        fb.ignored_at = None
+        session.add(fb)
+        
+    return {"status": "ok"}
+
+
+@api_router.post("/feedback/{feedback_id}/resolve")
+async def resolve_feedback(feedback_id: int, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """将反馈标记为已解决。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            raise HTTPException(status_code=404, detail="Not found")
+            
+        fb.status = "closed"
+        session.add(fb)
+        
+    return {"status": "ok"}
+
+
+@api_router.post("/feedback/{feedback_id}/reopen")
+async def reopen_feedback(feedback_id: int, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """重新开始被解决的反馈。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            raise HTTPException(status_code=404, detail="Not found")
+            
+        fb.status = "open"
+        session.add(fb)
+        
+    return {"status": "ok"}
+
+
+@api_router.delete("/feedback/{feedback_id}")
+async def delete_feedback(feedback_id: int, admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """永久删除一条反馈。"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with session_scope() as session:
+        fb = session.get(Feedback, feedback_id)
+        if not fb:
+            raise HTTPException(status_code=404, detail="Not found")
+        session.delete(fb)
+        
+    return {"status": "ok"}
 
 
 # --- 维护模式状态管理 ---

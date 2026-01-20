@@ -705,15 +705,24 @@
 
                     const text = await res.text();
 
+                    // ANSI 颜色代码清理函数
+                    const stripAnsi = (str) => {
+                        return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+                    };
+
                     // 改进的语法高亮,支持换行符渲染
                     const html = text.split('\n').map(line => {
-                        if (!line.trim()) return '<br>'; // 空行
+                        // 移除 ANSI 代码
+                        const cleanLine = stripAnsi(line);
 
-                        let processedLine = escapeHtml(line);
+                        // 处理空行
+                        if (!cleanLine.trim()) return '<div style="min-height:1em"></div>';
+
+                        let processedLine = escapeHtml(cleanLine);
                         let cls = 'log-line';
 
                         // 检测缩进行(以空格开头)
-                        if (line.match(/^\s{4,}/)) {
+                        if (cleanLine.match(/^\s{4,}/)) {
                             cls += ' log-indent';
                         }
 
@@ -738,15 +747,15 @@
                         );
 
                         // 检测整行级别
-                        if (line.toLowerCase().includes('error')) {
+                        if (cleanLine.toLowerCase().includes('error')) {
                             cls += ' log-error';
-                        } else if (line.toLowerCase().includes('warn')) {
+                        } else if (cleanLine.toLowerCase().includes('warn')) {
                             cls += ' log-warning';
-                        } else if (line.includes('INFO')) {
+                        } else if (cleanLine.toUpperCase().includes('INFO')) {
                             cls += ' log-info';
                         }
 
-                        return `<span class="${cls}">${processedLine}</span>`;
+                        return `<div class="${cls}">${processedLine}</div>`;
                     }).join('');
 
                     term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
