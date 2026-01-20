@@ -16,7 +16,7 @@ def upgrade(db_path=DB_PATH):
     
     try:
         # Step 1: 检查并添加notification_level列
-        print("\n📝 步骤 1/3: 检查并升级表结构...")
+        print("\n📝 步骤 1/4: 检查并升级表结构...")
         cursor.execute("PRAGMA table_info(subscriptionoption)")
         cols = [c[1] for c in cursor.fetchall()]
         
@@ -30,8 +30,23 @@ def upgrade(db_path=DB_PATH):
         else:
             print("   ✓ notification_level 列已存在")
         
-        # Step 2: 创建性能索引
-        print("\n⚡ 步骤 2/3: 创建性能索引...")
+        # Step 2: 检查并添加 include_plays 列 (SubscriptionTarget)
+        print("\n📝 步骤 2/4: 检查并添加 include_plays 列...")
+        cursor.execute("PRAGMA table_info(subscriptiontarget)")
+        target_cols = [c[1] for c in cursor.fetchall()]
+
+        if 'include_plays' not in target_cols:
+            print("   添加 include_plays 列...")
+            cursor.execute("""
+                ALTER TABLE subscriptiontarget 
+                ADD COLUMN include_plays JSON
+            """)
+            print("   ✅ include_plays 列添加成功")
+        else:
+            print("   ✓ include_plays 列已存在")
+        
+        # Step 3: 创建性能索引
+        print("\n⚡ 步骤 3/4: 创建性能索引...")
         try:
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_sub_kind_target 
@@ -41,8 +56,8 @@ def upgrade(db_path=DB_PATH):
         except Exception as e:
             print(f"   ⚠️  索引创建警告: {e}")
         
-        # Step 3: 备份并删除旧表
-        print("\n🗄️  步骤 3/3: 清理废弃表...")
+        # Step 4: 备份并删除旧表
+        print("\n🗄️  步骤 4/4: 清理废弃表...")
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'hulaquansubscription%'")
         old_tables = [r[0] for r in cursor.fetchall()]
         
