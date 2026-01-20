@@ -162,11 +162,13 @@ export function renderEventTable(events) {
             // Fallback to schedule_range parsing if tickets not available
             const parts = e.schedule_range.split('-');
             if (parts.length === 2) {
-                // Try to standardize format if possible, otherwise just use the text
-                // Hulaquan often gives "YYYY.MM.DD"
                 let endDate = parts[1].trim();
-                // Replace dots with dashes for consistency if it matches YYYY.MM.DD
+                // Replace dots with dashes
                 endDate = endDate.replace(/\./g, '-');
+                // Ensure year 2026 if missing
+                if (!endDate.startsWith('202')) {
+                    endDate = `2026-${endDate}`;
+                }
                 dateDisplay = `至${endDate}`;
             }
         }

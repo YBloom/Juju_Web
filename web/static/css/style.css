@@ -337,7 +337,7 @@ button[disabled] {
 /* Event List Grid (3 columns) */
 .grid-3-cols {
     display: grid !important;
-    grid-template-columns: 80px 1fr 140px;
+    grid-template-columns: 80px 1fr 180px;
     align-items: center;
 }
 
@@ -356,6 +356,7 @@ button[disabled] {
     text-align: right;
     color: var(--text-secondary);
     font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 /* Adaptive Row for Ticket Updates Detail Side-by-Side */
@@ -382,7 +383,7 @@ button[disabled] {
 /* Ticket Updates Grid (5 columns) */
 .grid-5-cols-updates {
     display: grid !important;
-    grid-template-columns: 60px 1.5fr 100px 60px 60px;
+    grid-template-columns: 60px 1.5fr 150px 60px 60px;
     align-items: center;
     gap: 8px;
     width: 100%;
@@ -403,6 +404,7 @@ button[disabled] {
     color: var(--text-secondary);
     font-size: 0.85rem;
     text-align: center;
+    white-space: nowrap;
 }
 
 .grid-5-cols-updates .col-count {
