@@ -30,10 +30,10 @@ BACKFILL_HOURS = 24  #补发时限
 # MODE 映射 (复用旧版逻辑)
 MODE_MAP = {
     "new": 1,
-    "restock": 1,
-    "pending": 2,
-    "back": 3,
-    "sold_out": 3,
+    "pending": 1,    # 待开票，随上新通知
+    "back": 2,       # 补票 (等级2及以上可见)
+    "restock": 3,    # 回流 (等级3及以上可见)
+    "sold_out": 99,  # 暂不推送售罄
 }
 
 
