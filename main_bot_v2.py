@@ -5,6 +5,7 @@ MusicalBot QQ Bot Entry Point (v2)
 使用 ncatbot v4，同步启动方式
 """
 import logging
+import asyncio
 from services.db.init import init_db
 
 logging.basicConfig(

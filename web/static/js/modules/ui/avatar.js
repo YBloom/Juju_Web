@@ -122,22 +122,37 @@ window.saveCurrentAvatar = async () => {
             if (seed && gen) {
                 const svg = gen.generate(seed);
                 const blob = new Blob([svg], { type: 'image/svg+xml' });
-                const file = new File([blob], 'avatar.svg', { type: 'image/svg+xml' });
+                // 使用时间戳防止文件名冲突
+                const timestamp = new Date().getTime();
+                const filename = `avatar_gen_${timestamp}.svg`;
 
-                const formData = new FormData();
-                formData.append('file', file);
+                // 1. 获取预签名 URL (复用标准上传流程)
+                const urlRes = await fetch(`/api/avatar/upload-url?filename=${filename}&content_type=image/svg+xml`);
+                if (!urlRes.ok) throw new Error('无法获取上传授权');
 
-                // 头像上传逻辑 (后端需支持此路径)
-                const res = await fetch('/api/user/avatar/upload', {
-                    method: 'POST',
-                    body: formData
+                const { upload_url, public_url } = await urlRes.json();
+
+                // 2. 直接上传到 S3
+                const uploadRes = await fetch(upload_url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'image/svg+xml'
+                    },
+                    body: blob
                 });
 
-                if (!res.ok) throw new Error('上传失败');
+                if (!uploadRes.ok) throw new Error('上传S3失败');
 
-                const data = await res.json();
-                if (data.url) {
-                    await api.updateUserSettings({ avatar_url: data.url });
+                // 3. 更新个人资料
+                await api.updateUserSettings({ avatar_url: public_url });
+
+                // 4. 更新前端显示
+                const avatarContainer = document.querySelector('#profile-avatar');
+                if (avatarContainer) {
+                    console.log("Updating avatar UI with:", public_url);
+                    const cacheBuster = `?t=${Date.now()}`;
+                    // 注意：这里我们直接用 img 标签显示 SVG URL
+                    avatarContainer.innerHTML = `<img src="${public_url}${cacheBuster}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; console.error('Failed to load avatar:', this.src); UI.toast('头像图片加载失败', 'error');">`;
                 }
             }
         }
