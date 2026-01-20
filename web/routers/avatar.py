@@ -8,7 +8,7 @@ import uuid
 
 from web.dependencies import get_current_user as get_current_user_info
 
-router = APIRouter(prefix="/avatar", tags=["Avatar"])
+router = APIRouter(prefix="/api/avatar", tags=["Avatar"])
 
 class UploadSignResponse(BaseModel):
     upload_url: str
