@@ -67,17 +67,24 @@ class BotHandler:
         self.service = service
         self.saoju_service = SaojuService()
 
-    def _ensure_user_exists(self, user_id: str, nickname: str = ""):
+    async def _ensure_user_exists(self, user_id: str, nickname: str = ""):
         """确保用户在数据库中存在 (由于外键约束)"""
         from services.db.models import User
         try:
             with session_scope() as session:
                 user = session.get(User, user_id)
                 if not user:
+                    # 只有 group_ 这种自定义 ID 才会在这里创建
+                    # 正常用户应该在 resolve_user_id 中创建
                     user = User(user_id=user_id, nickname=nickname or user_id)
                     session.add(user)
                     session.commit()
                     log.info(f"👤 [用户] 已为 {user_id} 创建新用户记录")
+                elif nickname and user.nickname != nickname:
+                    # 顺便更新一下昵称
+                    user.nickname = nickname
+                    session.add(user)
+                    session.commit()
         except Exception as e:
             log.error(f"❌ [用户] 确保用户 {user_id} 存在时出错: {e}")
 
@@ -357,35 +364,61 @@ class BotHandler:
             
             return "\n".join(lines)
 
-    async def resolve_user_id(self, qq_id: str) -> str:
+    async def resolve_user_id(self, qq_id: str, nickname: str = "") -> str:
         """
-        Resolve Bot User ID from QQ ID.
-        Checks if the QQ ID is linked to a canonical User ID (via Magic Link/Web).
-        If linked, returns the canonical User ID (e.g. "000001").
-        If not linked, returns the QQ ID as is (legacy behavior).
+        解析 QQ ID 到标准化的 6 位 User ID。
+        1. 检查 UserAuthMethod 是否已存在映射。
+        2. 如果不存在，自动创建一个 6 位 User ID 并建立映射。
+        3. 始终返回 6 位数字 ID。
         """
         from services.db.connection import session_scope
-        from services.db.models import UserAuthMethod
+        from services.db.models import User, UserAuthMethod
         from sqlmodel import select
         
-        # Optimization: If it looks like a group ID or already a 6-digit ID, return as is
+        # 如果已经是 6 位数字 ID 或 Group ID，直接返回
         if qq_id.startswith("group_") or (len(qq_id) == 6 and qq_id.isdigit() and qq_id.startswith("0")):
              return qq_id
 
         try:
             with session_scope() as session:
+                # 1. 查找是否存在映射
                 stmt = select(UserAuthMethod).where(
                     UserAuthMethod.provider == "qq",
                     UserAuthMethod.provider_user_id == qq_id
                 )
                 auth = session.exec(stmt).first()
                 if auth:
-                    log.info(f"🔗 [Auth] Resolved QQ {qq_id} -> User {auth.user_id}")
+                    # log.info(f"🔗 [Auth] Resolved QQ {qq_id} -> User {auth.user_id}")
                     return auth.user_id
+                
+                # 2. 不存在映射，自动创建 standardized user
+                # 检查是否此前有人直接把 QQ 号当成了 user_id (兼容历史数据，直到后续迁移脚本完成)
+                legacy_user = session.get(User, qq_id)
+                
+                new_user_id = User.generate_next_id(session)
+                log.info(f"✨ [Auth] Auto-registering new standardization for QQ {qq_id} -> User {new_user_id}")
+                
+                new_user = User(user_id=new_user_id, nickname=nickname or f"QQ用户_{qq_id[-4:]}")
+                session.add(new_user)
+                
+                new_auth = UserAuthMethod(
+                    user_id=new_user_id,
+                    provider="qq",
+                    provider_user_id=qq_id,
+                    is_primary=True
+                )
+                session.add(new_auth)
+                session.commit()
+                
+                # 如果存在 legacy_user，可能需要在这里合并，但为了安全，我们后续用统一迁移脚本处理。
+                # 目前先返回新分配的 ID。
+                
+                return new_user_id
+                
         except Exception as e:
-             log.error(f"❌ [Auth] Failed to resolve user ID for {qq_id}: {e}")
-        
-        return qq_id
+             log.error(f"❌ [Auth] Failed to resolve or create user for {qq_id}: {e}")
+             # Fallback 保证系统不崩溃，但在标准化后，这里理论上不应该发生
+             return qq_id
 
     async def handle_message(self, message: str, user_id: str, nickname: str = "") -> Optional[Union[str, List[str]]]:
         return await self.handle_group_message(0, int(user_id), message, nickname=nickname)
@@ -424,14 +457,14 @@ class BotHandler:
         if is_root and group_id != 0:
             effective_uid = f"group_{group_id}"
             target_desc = f"当前群组 ({group_id})"
-            self._ensure_user_exists(effective_uid, nickname=f"群组 {group_id}")
+            await self._ensure_user_exists(effective_uid, nickname=f"群组 {group_id}")
         else:
-            # Resolve to canonical User ID if linked
-            effective_uid = await self.resolve_user_id(uid_str)
+            # Resolve to canonical User ID if linked, otherwise create
+            effective_uid = await self.resolve_user_id(uid_str, nickname=nickname)
             target_desc = "个人"
-            # Ensure the resolved user exists (if it's a raw QQ ID, this creates it; 
-            # if it's a linked ID, it should already exist, but safe to check)
-            self._ensure_user_exists(effective_uid, nickname=nickname)
+            # resolve_user_id 已经确保了 user 存在，这里仅用于 group 或后续可能的更新
+            if effective_uid.startswith("group_"):
+                await self._ensure_user_exists(effective_uid, nickname=nickname)
 
         # --- 订阅管理命令 ---
         # /呼啦圈通知 [0-5]
