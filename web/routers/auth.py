@@ -2,7 +2,7 @@
 认证路由 - 邮箱登录/注册 + QQ Magic Link
 """
 from fastapi import APIRouter, Request, Response, HTTPException, status
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from pydantic import BaseModel, EmailStr
 from services.db.models import User, UserSession, EmailVerification, UserAuthMethod
 from services.db.connection import session_scope
@@ -47,6 +47,117 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 
+
+
+# === Error Page Template ===
+
+ERROR_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} - 剧剧</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {{
+            --primary-color: #637e60;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --bg-color: #f8f9fa;
+        }}
+        body {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }}
+        .error-card {{
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            animation: slideUp 0.4s ease forwards;
+        }}
+        @keyframes slideUp {{
+            from {{ transform: translateY(20px); opacity: 0; }}
+            to {{ transform: translateY(0); opacity: 1; }}
+        }}
+        .error-icon {{
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 20px;
+            background: #FEF2F2;
+            color: #EF4444;
+        }}
+        .error-icon i {{
+            font-size: 40px;
+        }}
+        .error-title {{
+            margin: 0 0 10px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }}
+        .error-message {{
+            margin: 0 0 30px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }}
+        .btn {{
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }}
+        .btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(99, 126, 96, 0.3);
+            filter: brightness(1.1);
+        }}
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="error-icon">
+            <i class="material-icons">{icon}</i>
+        </div>
+        <h2 class="error-title">{title}</h2>
+        <p class="error-message">{message}</p>
+        <a href="/" class="btn">
+            <i class="material-icons">home</i>
+            返回首页
+        </a>
+    </div>
+</body>
+</html>
+"""
+
+
+def render_error_page(title: str, message: str, icon: str = "error_outline", status_code: int = 400) -> HTMLResponse:
+    """渲染美观的 HTML 错误页面"""
+    html = ERROR_HTML_TEMPLATE.format(title=title, message=message, icon=icon)
+    return HTMLResponse(content=html, status_code=status_code)
 
 
 def set_session_cookie(response: Response, session_id: str, request: Request = None):
@@ -389,7 +500,11 @@ async def login_with_magic_link(token: str, request: Request, response: Response
         nickname = payload.get("nickname", "User")
         
         if not qq_id:
-            raise HTTPException(status_code=400, detail="Invalid Token Payload")
+            return render_error_page(
+                title="登录失败",
+                message="登录令牌信息不完整，无法识别用户身份。",
+                icon="error"
+            )
         
         logger.info(f"🔐 [Auth] Magic Link Login: QQ {qq_id}")
         
@@ -450,12 +565,25 @@ async def login_with_magic_link(token: str, request: Request, response: Response
         return resp
         
     except jwt.ExpiredSignatureError:
-        return JSONResponse(status_code=400, content={"error": "链接已过期,请重新获取"})
+        return render_error_page(
+            title="登录链接已过期",
+            message="链接超时或已使用，该链接已失效。请返回 QQ 重新获取新链接。",
+            icon="history"
+        )
     except jwt.InvalidTokenError:
-        return JSONResponse(status_code=400, content={"error": "无效的登录链接"})
+        return render_error_page(
+            title="无效的登录链接",
+            message="该链接格式不正确或已被篡改，无法完成登录。请确保您点击的是完整的链接。",
+            icon="link_off"
+        )
     except Exception as e:
         logger.error(f"Login error: {e}", exc_info=True)
-        return JSONResponse(status_code=500, content={"error": "登录失败,请稍后重试"})
+        return render_error_page(
+            title="登录失败",
+            message="服务器在处理您的登录请求时遇到了问题，请稍后重试。",
+            icon="report_problem",
+            status_code=500
+        )
 
 
 @router.get("/me")
