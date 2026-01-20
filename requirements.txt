@@ -26,3 +26,4 @@ pydantic-settings>=2.0.0
 slowapi>=0.1.9
 PyJWT>=2.0.0
 email-validator>=2.0.0  # Pydantic EmailStr 验证所需
+boto3>=1.34.0  # AWS S3 SDK,用于头像存储
