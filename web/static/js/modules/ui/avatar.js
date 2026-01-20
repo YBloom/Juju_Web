@@ -127,7 +127,8 @@ window.saveCurrentAvatar = async () => {
                 const filename = `avatar_gen_${timestamp}.svg`;
 
                 // 1. 获取预签名 URL (复用标准上传流程)
-                const urlRes = await fetch(`/api/avatar/upload-url?filename=${filename}&content_type=image/svg+xml`);
+                const contentType = 'image/svg+xml';
+                const urlRes = await fetch(`/api/avatar/upload-url?filename=${encodeURIComponent(filename)}&content_type=${encodeURIComponent(contentType)}`);
                 if (!urlRes.ok) throw new Error('无法获取上传授权');
 
                 const { upload_url, public_url } = await urlRes.json();
