@@ -4636,6 +4636,15 @@ main {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+/* Desktop: Make updates table appear on a new line */
+@media (min-width: 769px) {
+    .updates-table-container {
+        display: block;
+        width: 100%;
+        clear: both;
+    }
+}
+
 
 /* Subscription Multi-Input Row Styles */
 .sub-inputs-container {

@@ -299,7 +299,14 @@ function renderSummaryList(container, groups) {
         // Detail Rows (Hidden)
         let detailHtml = '';
         if (canExpand) {
-            const detailRows = group.sessions.map(s => {
+            // Sort sessions by date/time ascending (earliest first)
+            const sortedSessions = [...group.sessions].sort((a, b) => {
+                const dateA = a.session_time ? new Date(a.session_time) : new Date(0);
+                const dateB = b.session_time ? new Date(b.session_time) : new Date(0);
+                return dateA - dateB;
+            });
+
+            const detailRows = sortedSessions.map(s => {
                 const d = new Date(s.session_time);
                 const datePart = `${d.getMonth() + 1}月${d.getDate()}日`;
                 const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
