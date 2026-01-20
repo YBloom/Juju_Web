@@ -24,11 +24,28 @@ let avatarGen = null;
 const initAvatarGen = () => {
     if (avatarGen) return avatarGen;
     try {
-        if (typeof AnimalAvatar === 'function') {
-            avatarGen = new AnimalAvatar();
+        // 适配不同的 AnimalAvatar 导出形式
+        let generatorFunc = AnimalAvatar;
+
+        // 如果是对象且有 default 属性 (ESM/CommonJS 互操作常见情况)
+        if (AnimalAvatar && typeof AnimalAvatar === 'object' && AnimalAvatar.default) {
+            generatorFunc = AnimalAvatar.default;
+        }
+
+        if (typeof generatorFunc === 'function') {
+            // 这是一个工厂函数，不是类构造函数
+            // 我们创建一个包装对象来适配现有的 .generate() 调用方式
+            avatarGen = {
+                generate: (seed) => {
+                    // 调用库函数生成 SVG
+                    // 该库文档显示用法: avatar(seed, options)
+                    return generatorFunc(seed, { size: 200 });
+                }
+            };
+            console.log('AnimalAvatar initialized successfully (wrapper mode).');
             return avatarGen;
         } else {
-            console.warn('AnimalAvatar is not a constructor:', AnimalAvatar);
+            console.warn('AnimalAvatar is not a function:', generatorFunc);
             return null;
         }
     } catch (e) {
