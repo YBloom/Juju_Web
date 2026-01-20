@@ -511,6 +511,151 @@ async def reset_password(req: PasswordResetRequest):
 
 # === QQ Magic Link ===
 
+
+SUCCESS_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="2;url={redirect_url}">
+    <title>{title} - 剧剧</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {{
+            --primary-color: #637e60;
+            --success-color: #10B981;
+            --success-bg: #ECFDF5;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --bg-color: #f8f9fa;
+        }}
+        body {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }}
+        .success-card {{
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            animation: slideUp 0.4s ease forwards;
+        }}
+        @keyframes slideUp {{
+            from {{ transform: translateY(20px); opacity: 0; }}
+            to {{ transform: translateY(0); opacity: 1; }}
+        }}
+        .success-icon {{
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 20px;
+            background: var(--success-bg);
+            color: var(--success-color);
+        }}
+        .success-icon i {{
+            font-size: 40px;
+        }}
+        .success-title {{
+            margin: 0 0 10px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }}
+        .success-message {{
+            margin: 0 0 30px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }}
+        .loader {{
+            width: 100%;
+            height: 4px;
+            background: #f3f3f3;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }}
+        .loader-bar {{
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            animation: progress 1.5s linear forwards;
+        }}
+        @keyframes progress {{
+            from {{ width: 0%; }}
+            to {{ width: 100%; }}
+        }}
+        .btn {{
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            margin-top: 20px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease 1s forwards;
+            border: none;
+            cursor: pointer;
+        }}
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        .btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(99, 126, 96, 0.3);
+            filter: brightness(1.1);
+        }}
+    </style>
+</head>
+<body>
+    <div class="success-card">
+        <div class="success-icon">
+            <i class="material-icons">{icon}</i>
+        </div>
+        <h2 class="success-title">{title}</h2>
+        <p class="success-message">{message}</p>
+        
+        <div class="loader">
+            <div class="loader-bar"></div>
+        </div>
+
+        <a href="{redirect_url}" class="btn">
+            <i class="material-icons">arrow_forward</i>
+            如果未自动跳转，请点击这里
+        </a>
+    </div>
+
+    <script>
+        setTimeout(function() {{
+            window.location.href = "{redirect_url}";
+        }}, 1500);
+    </script>
+</body>
+</html>
+"""
+
+
 @router.get("/magic-link")
 async def login_with_magic_link(token: str, request: Request, response: Response, redirect: Optional[str] = None):
     """QQ Magic Link 登录 - 通过UserAuthMethod查询或创建用户"""
@@ -577,10 +722,18 @@ async def login_with_magic_link(token: str, request: Request, response: Response
         if redirect and redirect.startswith("/"):
              target_url = f"{WEB_BASE_URL}{redirect}"
         
-        resp = RedirectResponse(url=target_url)
+        # Render Success Page
+        html = SUCCESS_HTML_TEMPLATE.format(
+            title="登录成功",
+            message=f"欢迎回来，{nickname}！",
+            icon="check_circle",
+            redirect_url=target_url
+        )
+        
+        resp = HTMLResponse(content=html)
         
         if session_id:
-            set_session_cookie(resp, session_id)
+            set_session_cookie(resp, session_id, request)
         
         return resp
         

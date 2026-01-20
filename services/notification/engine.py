@@ -323,7 +323,10 @@ class NotificationEngine:
                 .order_by(SendQueue.created_at)
                 .limit(limit)
             )
-            return list(db.exec(stmt).all())
+            results = list(db.exec(stmt).all())
+            for item in results:
+                db.expunge(item)
+            return results
     
     def _get_qq_number(self, user_id: str) -> Optional[str]:
         """通过UserAuthMethod查询用户的QQ号。
