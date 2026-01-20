@@ -30,7 +30,7 @@ def main():
     ncatbot_config.set_root("3022402752")     # TODO: Move rigid Admin ID to config
     ncatbot_config.set_ws_uri("ws://127.0.0.1:3001")
     
-    # Import and run (同步方式，ncatbot 内部处理 asyncio)
+    # Import components
     from ncatbot.core import BotClient, GroupMessage, PrivateMessage, RequestEvent
     from services.bot.handlers import BotHandler
     from services.hulaquan.service import HulaquanService
@@ -39,43 +39,41 @@ def main():
     bot = BotClient()
     hlq_service = HulaquanService()
     handler = BotHandler(hlq_service)
-    notification_engine = NotificationEngine(bot_api=None)  # Will set api after bot starts
+    notification_engine = NotificationEngine(bot_api=None)
     
     # Scheduled task state
     _scheduled_task_running = False
     
-    async def scheduled_sync_task():
-        """定时同步任务 - 每 5 分钟执行一次"""
+    async def scheduled_consume_task():
+        """通知分发任务 - 每 30 秒扫描一次发送队列"""
         nonlocal _scheduled_task_running
         if _scheduled_task_running:
             return
         _scheduled_task_running = True
         
-        # Set bot api for notification engine
-        notification_engine.bot_api = bot.api
+        log.info("⏰ [定时任务] 通知分发任务已启动 (轮询间隔: 30s)")
         
-        log.info("⏰ [定时任务] 定时同步任务已启动")
+        # Wait a bit for bot to be fully ready
+        await asyncio.sleep(5)
+        
         while True:
             try:
-                # 1. Sync data and detect updates
-                async with hlq_service as service:
-                    updates = await service.sync_all_data()
+                # Set/Update bot api
+                if not notification_engine.bot_api:
+                    notification_engine.bot_api = bot.api
                 
-                # 2. Process updates through notification engine
-                if updates:
-                    enqueued = await notification_engine.process_updates(updates)
-                    log.info(f"📬 [通知] 已入队 {enqueued} 条通知 (来自 {len(updates)} 条更新)")
-                
-                # 3. Consume send queue
-                sent = await notification_engine.consume_queue()
-                if sent > 0:
-                    log.info(f"✅ [通知] 已发送 {sent} 条通知")
+                # Consume send queue (Producer is now solely the Web service or independent crawler)
+                if notification_engine.bot_api:
+                    sent = await notification_engine.consume_queue(limit=100)
+                    if sent > 0:
+                        log.info(f"✅ [通知] 已成功下发 {sent} 条通知")
+                else:
+                    log.warning("⏳ [通知] 等待 Bot API 就绪...")
                     
             except Exception as e:
-                log.error(f"❌ [错误] 定时同步任务异常: {e}")
+                log.error(f"❌ [错误] 通知分发任务异常: {e}")
             
-            # Wait 5 minutes
-            await asyncio.sleep(300)
+            await asyncio.sleep(30)
     
     @bot.on_group_message()
     async def on_group_message(msg: GroupMessage):
@@ -96,10 +94,19 @@ def main():
                     await bot.api.post_private_msg(user_id=msg.user_id, text=r)
             else:
                 await bot.api.post_private_msg(user_id=msg.user_id, text=response)
-        
-        # Start scheduled task on first message (ensures bot.api is ready)
-        if not _scheduled_task_running:
-            asyncio.create_task(scheduled_sync_task())
+    
+    # --- Start Scheduled Tasks ---
+    # Wrap bot.run in an async context if needed, but ncatbot 4.x run() is blocking.
+    # We use a little trick: start task just before blocking call.
+    # Since ncatbot internally handles the loop, we can't easily use asyncio.create_task(main_coro()) 
+    # without changing the whole entry point.
+    # A cleaner way with ncatbot: use its internal loop if accessible, or just keep it 
+    # triggered by first message but actually we want it TO BE PROACTIVE.
+    
+    # NEW: Start the task immediately after bot starts running.
+    # We'll use the loop from bot.api if possible or just use get_event_loop.
+    loop = asyncio.get_event_loop()
+    loop.create_task(scheduled_consume_task())
     
     @bot.on_request()
     async def on_request(event: RequestEvent):
