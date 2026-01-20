@@ -243,7 +243,6 @@ async def friendly_rate_limit_handler(request: Request, exc: RateLimitExceeded):
             "tip": "每分钟最多可发起 5 次搜索请求"
         },
     )
-    )
 app.add_exception_handler(RateLimitExceeded, friendly_rate_limit_handler)
 
 # 404 Redirect Handler
