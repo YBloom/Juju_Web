@@ -326,37 +326,46 @@ async def get_logs(
     if not admin_session or not verify_admin_session(admin_session):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    # 定义允许访问的日志文件映射
-    # 尝试在 logs/ 目录和项目根目录下寻找
+    # 1. 项目内日志 logs/
     log_dir = Path(__file__).parent.parent.parent / "logs"
-    root_dir = Path(__file__).parent.parent.parent
     
-    # 安全检查：只允许特定的文件名（防止目录遍历）
-    allowed_files = [
-        "bot_err.log", "bot_out.log", 
-        "web_err.log", "web_out.log", 
-        "auto_update.log", "app.log"
-    ]
+    # 2. Supervisor 系统日志 /var/log/musicalbot/
+    sys_log_dir = Path("/var/log/musicalbot")
     
-    if file not in allowed_files:
+    # 允许访问的文件白名单 (对应的真实路径)
+    # file_map: { requested_filename: [possible_paths] }
+    file_map = {
+        "bot_err.log": [sys_log_dir / "bot_err.log"],
+        "bot_out.log": [sys_log_dir / "bot_out.log"],
+        "web_err.log": [sys_log_dir / "web_err.log"],
+        "web_out.log": [sys_log_dir / "web_out.log"],
+        "auto_update.log": [log_dir / "auto_update.log"], # 假设这个在项目 logs 下
+        "app.log": [log_dir / "app.log"],
+        "bot.log": [log_dir / "bot.log"],
+        "db.log": [log_dir / "db.log"],
+    }
+    
+    if file not in file_map:
         raise HTTPException(status_code=400, detail="Invalid log file name")
     
     # 尝试查找文件
-    target_file = log_dir / file
-    if not target_file.exists():
-        target_file = root_dir / file
-        
-    if not target_file.exists():
-        # 特殊处理 app.log -> logs/app.log (如果前端请求 app.log)
-        if file == "app.log":
-           target_file = log_dir / "app.log"
-    
-    if not target_file.exists():
-        return f"Log file '{file}' not found on server."
-        
+    target_file = None
+    for path in file_map[file]:
+        if path.exists():
+            target_file = path
+            break
+            
+    if not target_file:
+        # Fallback for local development or if config differs
+        # Try local logs dir with same name
+        local_fallback = log_dir / file
+        if local_fallback.exists():
+            target_file = local_fallback
+        else:
+             return f"Log file '{file}' not found. Searched in: {[str(p) for p in file_map[file]]}"
+
     try:
         # 读取最后 2000 行
-        import collections
         from collections import deque
         
         lines = deque(maxlen=2000)
@@ -366,5 +375,5 @@ async def get_logs(
         
         return "".join(lines)
     except Exception as e:
-        return f"Failed to read log file: {str(e)}"
+        return f"Failed to read log file ({target_file}): {str(e)}"
 
