@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from services.db.connection import session_scope
 from services.db.models import SubscriptionTarget, HulaquanEvent
 from services.db.models.base import SubscriptionTargetKind
-from sqlmodel import select
+from sqlmodel import select, col
 
 def fix_subscription_names():
     print("🚀 开始修复订阅数据...")
@@ -30,9 +30,15 @@ def fix_subscription_names():
     
     with session_scope() as session:
         # 1. 查找所有名字为空的剧目订阅
-        # 注意：Kind 可能是 PLAY (枚举值 'EVENT')
+        # 兼容各种历史数据格式: PLAY, play, EVENT, event
+        target_kinds = [
+            SubscriptionTargetKind.PLAY, 
+            "play", "PLAY", 
+            "event", "EVENT"
+        ]
+        
         stmt = select(SubscriptionTarget).where(
-            SubscriptionTarget.kind == SubscriptionTargetKind.PLAY,
+            col(SubscriptionTarget.kind).in_(target_kinds),
             (SubscriptionTarget.name == None) | (SubscriptionTarget.name == "")
         )
         targets = session.exec(stmt).all()
