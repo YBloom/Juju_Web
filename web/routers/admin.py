@@ -268,3 +268,45 @@ async def save_maintenance_lyrics(lyrics: List[Lyric], admin_session: str = Cook
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save lyrics file: {str(e)}")
+
+
+# --- 维护模式状态管理 ---
+
+@router.get("/maintenance/status")
+async def get_maintenance_status(admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """获取维护模式当前状态"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    from services.maintenance_config import get_maintenance_mode
+    enabled = get_maintenance_mode()
+    
+    return {
+        "enabled": enabled,
+        "status": "维护中" if enabled else "正常运行"
+    }
+
+
+@router.post("/maintenance/toggle")
+async def toggle_maintenance_mode(admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME)):
+    """切换维护模式状态"""
+    if not admin_session or not verify_admin_session(admin_session):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    from services.maintenance_config import get_maintenance_mode, set_maintenance_mode
+    
+    # 获取当前状态并切换
+    current_status = get_maintenance_mode()
+    new_status = not current_status
+    
+    # 设置新状态
+    success = set_maintenance_mode(new_status)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update maintenance mode")
+    
+    return {
+        "success": True,
+        "enabled": new_status,
+        "message": f"维护模式已{'开启' if new_status else '关闭'}"
+    }

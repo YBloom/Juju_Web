@@ -525,7 +525,7 @@
                 <div class="toolbar">
                     <h2
                         style="margin:0; font-size:1.2rem; color:var(--primary); display:flex; align-items:center; gap:8px;">
-                        <span>🎭 维护页显示管理</span>
+                        <span>🔧 维护模式管理</span>
                     </h2>
                     <div style="flex:1"></div>
                     <button class="btn btn-primary" onclick="addLyricRow()">
@@ -539,205 +539,234 @@
                     </button>
                 </div>
 
-                <div class="lyrics-editor"
-                    style="background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                        <thead style="background: #f8f9fa;">
-                            <tr>
-                                <th
-                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
-                                    歌词内容 (Content)</th>
-                                <th
-                                    style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666; width: 250px;">
-                                    所属剧目 (Source)</th>
-                                <th
-                                    style="text-align: center; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666; width: 100px;">
-                                    操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lyrics-list-body">
-                            <!-- JS will populate -->
-                        </tbody>
-                    </table>
+                <!-- Maintenance Mode Toggle Section -->
+                <div
+                    style="background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                        <div>
+                            <h3 style="margin: 0 0 5px 0; font-size: 1.1rem; color: #333;">🛡️ 维护模式控制</h3>
+                            <p style="margin: 0; font-size: 0.85rem; color: #666;">
+                                开启后,普通用户将看到维护页面。管理员依然可以正常访问。
+                            </p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div id="maintenance-status-badge"
+                                style="padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;">
+                                <!-- Will be populated by JS -->
+                            </div>
+                            <button id="maintenance-toggle-btn" class="btn btn-primary"
+                                onclick="toggleMaintenanceMode()" style="min-width: 120px;">
+                                <!-- Will be populated by JS -->
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">
-                    * 此处的歌词将随机显示在服务器维护页面中。支持双引号等特殊字符。
-                </p>
-            </div>
+
+                <!-- Lyrics Management Section -->
+                <div style="margin-top: 20px;">
+                    <h3 style="font-size: 1rem; color: #555; margin-bottom: 10px;">🎭 维护页显示内容</h3>
+
+                    <div class="lyrics-editor"
+                        style="background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead style="background: #f8f9fa;">
+                                <tr>
+                                    <th
+                                        style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666;">
+                                        歌词内容 (Content)</th>
+                                    <th
+                                        style="text-align: left; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666; width: 250px;">
+                                        所属剧目 (Source)</th>
+                                    <th
+                                        style="text-align: center; padding: 12px 16px; border-bottom: 2px solid #eee; color: #666; width: 100px;">
+                                        操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lyrics-list-body">
+                                <!-- JS will populate -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">
+                        * 此处的歌词将随机显示在服务器维护页面中。支持双引号等特殊字符。
+                    </p>
+                </div> <!-- End of Lyrics Management Section -->
+            </div> <!-- End of Maintenance Panel -->
         </div>
-    </div>
 
-    <style>
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-            display: flex;
-            flex-direction: column;
-            max-height: 500px;
-        }
-
-        .stat-card h3 {
-            margin: 0 0 5px 0;
-            color: #333;
-            font-size: 1rem;
-        }
-
-        .stat-card .subtitle {
-            margin: 0 0 15px 0;
-            color: #888;
-            font-size: 0.8rem;
-        }
-
-        .stat-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        .stat-table th {
-            text-align: left;
-            padding: 8px;
-            background: #f9f9f9;
-            color: #666;
-            font-weight: 500;
-            position: sticky;
-            top: 0;
-        }
-
-        .stat-table td {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .stat-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .stat-table-container {
-            overflow-y: auto;
-            flex: 1;
-        }
-    </style>
-
-    <script>
-        let refreshInterval = null;
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
-
-            // Find nav item by text content (fragile but works for now without IDs)
-            // Better: use proper IDs. But let's assume `event.currentTarget` works if called from onclick
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-            } else {
-                // Fallback for manual calls, find by tabId
-                const btn = Array.from(document.querySelectorAll('.nav-item')).find(el => el.onclick.toString().includes(tabId));
-                if (btn) btn.classList.add('active');
+        <style>
+            .stat-card {
+                background: white;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+                display: flex;
+                flex-direction: column;
+                max-height: 500px;
             }
 
-            document.getElementById('panel-' + tabId).classList.add('active');
-
-            if (tabId === 'search-stats') {
-                loadSearchStats();
+            .stat-card h3 {
+                margin: 0 0 5px 0;
+                color: #333;
+                font-size: 1rem;
             }
-            if (tabId === 'feedbacks') {
-                loadFeedbacks();
-            }
-            if (tabId === 'maintenance') {
-                loadLyrics();
-            }
-        }
 
-        function toggleAutoRefresh(checkbox) {
-            if (checkbox.checked) {
-                refreshInterval = setInterval(loadLogs, 5000);
-            } else {
-                clearInterval(refreshInterval);
+            .stat-card .subtitle {
+                margin: 0 0 15px 0;
+                color: #888;
+                font-size: 0.8rem;
             }
-        }
 
-        async function loadLogs() {
-            const file = document.getElementById('log-file-select').value;
-            const term = document.getElementById('terminal');
-            const autoScroll = document.getElementById('auto-scroll').checked;
+            .stat-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
 
-            try {
-                // Using a cache bust param to ensure fresh logs
-                const res = await fetch(`/api/admin/logs?file=${file}&t=${Date.now()}`);
-                if (res.status === 401) {
-                    location.reload(); // Force re-auth
-                    return;
+            .stat-table th {
+                text-align: left;
+                padding: 8px;
+                background: #f9f9f9;
+                color: #666;
+                font-weight: 500;
+                position: sticky;
+                top: 0;
+            }
+
+            .stat-table td {
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+
+            .stat-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .stat-table-container {
+                overflow-y: auto;
+                flex: 1;
+            }
+        </style>
+
+        <script>
+            let refreshInterval = null;
+
+            function switchTab(tabId) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+
+                // Find nav item by text content (fragile but works for now without IDs)
+                // Better: use proper IDs. But let's assume `event.currentTarget` works if called from onclick
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('active');
+                } else {
+                    // Fallback for manual calls, find by tabId
+                    const btn = Array.from(document.querySelectorAll('.nav-item')).find(el => el.onclick.toString().includes(tabId));
+                    if (btn) btn.classList.add('active');
                 }
-                if (!res.ok) throw new Error("Failed to load");
 
-                const text = await res.text();
+                document.getElementById('panel-' + tabId).classList.add('active');
 
-                // 改进的语法高亮,支持换行符渲染
-                const html = text.split('\n').map(line => {
-                    if (!line.trim()) return '<br>'; // 空行
+                if (tabId === 'search-stats') {
+                    loadSearchStats();
+                }
+                if (tabId === 'feedbacks') {
+                    loadFeedbacks();
+                }
+                if (tabId === 'maintenance') {
+                    loadMaintenanceStatus();
+                    loadLyrics();
+                }
+            }
 
-                    let processedLine = escapeHtml(line);
-                    let cls = 'log-line';
+            function toggleAutoRefresh(checkbox) {
+                if (checkbox.checked) {
+                    refreshInterval = setInterval(loadLogs, 5000);
+                } else {
+                    clearInterval(refreshInterval);
+                }
+            }
 
-                    // 检测缩进行(以空格开头)
-                    if (line.match(/^\s{4,}/)) {
-                        cls += ' log-indent';
+            async function loadLogs() {
+                const file = document.getElementById('log-file-select').value;
+                const term = document.getElementById('terminal');
+                const autoScroll = document.getElementById('auto-scroll').checked;
+
+                try {
+                    // Using a cache bust param to ensure fresh logs
+                    const res = await fetch(`/api/admin/logs?file=${file}&t=${Date.now()}`);
+                    if (res.status === 401) {
+                        location.reload(); // Force re-auth
+                        return;
                     }
+                    if (!res.ok) throw new Error("Failed to load");
 
-                    // 高亮时间戳 (匹配 YYYY-MM-DD HH:MM:SS 格式)
-                    processedLine = processedLine.replace(
-                        /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+CST)?)/g,
-                        '<span class="log-timestamp">$1</span>'
-                    );
+                    const text = await res.text();
 
-                    // 高亮日志级别
-                    processedLine = processedLine.replace(
-                        /\[(ERROR|ERRO)\]/gi,
-                        '<span class="log-level-error">[$1]</span>'
-                    );
-                    processedLine = processedLine.replace(
-                        /\[(WARNING|WARN)\]/gi,
-                        '<span class="log-level-warning">[$1]</span>'
-                    );
-                    processedLine = processedLine.replace(
-                        /\[(INFO)\]/gi,
-                        '<span class="log-level-info">[$1]</span>'
-                    );
+                    // 改进的语法高亮,支持换行符渲染
+                    const html = text.split('\n').map(line => {
+                        if (!line.trim()) return '<br>'; // 空行
 
-                    // 检测整行级别
-                    if (line.toLowerCase().includes('error')) {
-                        cls += ' log-error';
-                    } else if (line.toLowerCase().includes('warn')) {
-                        cls += ' log-warning';
-                    } else if (line.includes('INFO')) {
-                        cls += ' log-info';
+                        let processedLine = escapeHtml(line);
+                        let cls = 'log-line';
+
+                        // 检测缩进行(以空格开头)
+                        if (line.match(/^\s{4,}/)) {
+                            cls += ' log-indent';
+                        }
+
+                        // 高亮时间戳 (匹配 YYYY-MM-DD HH:MM:SS 格式)
+                        processedLine = processedLine.replace(
+                            /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+CST)?)/g,
+                            '<span class="log-timestamp">$1</span>'
+                        );
+
+                        // 高亮日志级别
+                        processedLine = processedLine.replace(
+                            /\[(ERROR|ERRO)\]/gi,
+                            '<span class="log-level-error">[$1]</span>'
+                        );
+                        processedLine = processedLine.replace(
+                            /\[(WARNING|WARN)\]/gi,
+                            '<span class="log-level-warning">[$1]</span>'
+                        );
+                        processedLine = processedLine.replace(
+                            /\[(INFO)\]/gi,
+                            '<span class="log-level-info">[$1]</span>'
+                        );
+
+                        // 检测整行级别
+                        if (line.toLowerCase().includes('error')) {
+                            cls += ' log-error';
+                        } else if (line.toLowerCase().includes('warn')) {
+                            cls += ' log-warning';
+                        } else if (line.includes('INFO')) {
+                            cls += ' log-info';
+                        }
+
+                        return `<span class="${cls}">${processedLine}</span>`;
+                    }).join('');
+
+                    term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
+
+                    if (autoScroll) {
+                        term.scrollTop = term.scrollHeight;
                     }
-
-                    return `<span class="${cls}">${processedLine}</span>`;
-                }).join('');
-
-                term.innerHTML = html || '<span style="color:#666">No content or empty log file.</span>';
-
-                if (autoScroll) {
-                    term.scrollTop = term.scrollHeight;
+                } catch (e) {
+                    term.innerHTML = `<span class="log-error">Error loading logs: ${e.message}</span>`;
                 }
-            } catch (e) {
-                term.innerHTML = `<span class="log-error">Error loading logs: ${e.message}</span>`;
             }
-        }
 
-        async function loadSearchStats() {
-            const setTable = (id, data, colName) => {
-                const tbody = document.querySelector(`#${id} tbody`);
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="2" style="color:#999; text-align:center;">暂无数据</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = data.map((row, i) => `
+            async function loadSearchStats() {
+                const setTable = (id, data, colName) => {
+                    const tbody = document.querySelector(`#${id} tbody`);
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="2" style="color:#999; text-align:center;">暂无数据</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = data.map((row, i) => `
                     <tr>
                         <td>
                             <div style="display:flex; align-items:center;">
@@ -748,81 +777,81 @@
                         <td style="color:#666;">${row.count}</td>
                     </tr>
                 `).join('');
-            };
+                };
 
-            try {
-                const res = await fetch('/api/admin/analytics/searches');
-                const data = await res.json();
+                try {
+                    const res = await fetch('/api/admin/analytics/searches');
+                    const data = await res.json();
 
-                setTable('table-artist', data.top_artists);
-                setTable('table-solo', data.top_solo);
-                setTable('table-combo', data.top_combos);
-                setTable('table-views', data.top_views);
-            } catch (e) {
-                console.error("Failed to load stats", e);
-            }
-        }
-
-        let currentFeedbackView = 'normal'; // 'normal' or 'ignored'
-
-        function switchFeedbackView(mode) {
-            currentFeedbackView = mode;
-
-            // Update buttons
-            const btnNormal = document.getElementById('btn-view-normal');
-            const btnIgnored = document.getElementById('btn-view-ignored');
-
-            if (mode === 'normal') {
-                btnNormal.classList.add('btn-primary');
-                btnIgnored.classList.remove('btn-primary');
-            } else {
-                btnNormal.classList.remove('btn-primary');
-                btnIgnored.classList.add('btn-primary');
+                    setTable('table-artist', data.top_artists);
+                    setTable('table-solo', data.top_solo);
+                    setTable('table-combo', data.top_combos);
+                    setTable('table-views', data.top_views);
+                } catch (e) {
+                    console.error("Failed to load stats", e);
+                }
             }
 
-            loadFeedbacks();
-        }
+            let currentFeedbackView = 'normal'; // 'normal' or 'ignored'
 
-        async function loadFeedbacks() {
-            try {
-                const endpoint = currentFeedbackView === 'ignored'
-                    ? '/api/admin/feedbacks/ignored'
-                    : '/api/admin/feedbacks';
+            function switchFeedbackView(mode) {
+                currentFeedbackView = mode;
 
-                const res = await fetch(`${endpoint}?limit=50`);
-                if (res.status === 401) {
-                    location.reload();
-                    return;
-                }
-                const data = await res.json();
+                // Update buttons
+                const btnNormal = document.getElementById('btn-view-normal');
+                const btnIgnored = document.getElementById('btn-view-ignored');
 
-                const tbody = document.getElementById('feedback-list-body');
-                tbody.innerHTML = '';
-
-                if (!data.results || data.results.length === 0) {
-                    const emptyMsg = currentFeedbackView === 'ignored' ? '没有已忽略的反馈' : '暂无反馈数据';
-                    tbody.innerHTML = `<tr><td colspan="5" style="padding: 30px; text-align: center; color: #888;">${emptyMsg}</td></tr>`;
-                    return;
+                if (mode === 'normal') {
+                    btnNormal.classList.add('btn-primary');
+                    btnIgnored.classList.remove('btn-primary');
+                } else {
+                    btnNormal.classList.remove('btn-primary');
+                    btnIgnored.classList.add('btn-primary');
                 }
 
-                data.results.forEach(item => {
-                    const row = document.createElement('tr');
-                    const isBug = item.type === 'bug';
-                    const isWish = item.type === 'wish';
+                loadFeedbacks();
+            }
 
-                    let typeLabel = '💡 建议';
-                    let bg = '#e8f5e9'; let color = '#2e7d32';
+            async function loadFeedbacks() {
+                try {
+                    const endpoint = currentFeedbackView === 'ignored'
+                        ? '/api/admin/feedbacks/ignored'
+                        : '/api/admin/feedbacks';
 
-                    if (isBug) { typeLabel = '🐞 Bug'; bg = '#ffebee'; color = '#c62828'; }
-                    if (isWish) { typeLabel = '✨ 许愿'; bg = '#e3f2fd'; color = '#1565c0'; }
+                    const res = await fetch(`${endpoint}?limit=50`);
+                    if (res.status === 401) {
+                        location.reload();
+                        return;
+                    }
+                    const data = await res.json();
 
-                    const publicBadge = item.is_public ? '<span style="font-size:0.75rem; background:#333; color:white; padding:2px 4px; border-radius:4px; margin-left:4px;">公开</span>' : '';
+                    const tbody = document.getElementById('feedback-list-body');
+                    tbody.innerHTML = '';
 
-                    // Button Logic
-                    let actionBtns = '';
-                    if (currentFeedbackView === 'ignored') {
-                        // Show Restore Button
-                        actionBtns = `
+                    if (!data.results || data.results.length === 0) {
+                        const emptyMsg = currentFeedbackView === 'ignored' ? '没有已忽略的反馈' : '暂无反馈数据';
+                        tbody.innerHTML = `<tr><td colspan="5" style="padding: 30px; text-align: center; color: #888;">${emptyMsg}</td></tr>`;
+                        return;
+                    }
+
+                    data.results.forEach(item => {
+                        const row = document.createElement('tr');
+                        const isBug = item.type === 'bug';
+                        const isWish = item.type === 'wish';
+
+                        let typeLabel = '💡 建议';
+                        let bg = '#e8f5e9'; let color = '#2e7d32';
+
+                        if (isBug) { typeLabel = '🐞 Bug'; bg = '#ffebee'; color = '#c62828'; }
+                        if (isWish) { typeLabel = '✨ 许愿'; bg = '#e3f2fd'; color = '#1565c0'; }
+
+                        const publicBadge = item.is_public ? '<span style="font-size:0.75rem; background:#333; color:white; padding:2px 4px; border-radius:4px; margin-left:4px;">公开</span>' : '';
+
+                        // Button Logic
+                        let actionBtns = '';
+                        if (currentFeedbackView === 'ignored') {
+                            // Show Restore Button
+                            actionBtns = `
                             <button onclick="unignoreFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:var(--primary); border-color:var(--primary);">
                                 ♻️ 恢复
                             </button>
@@ -830,14 +859,14 @@
                                 🗑️ 删除
                             </button>
                         `;
-                    } else {
-                        // Show Reply, Resolve, and Ignore Buttons
-                        const isResolved = item.status === 'closed';
-                        const resolveBtn = isResolved
-                            ? `<button onclick="reopenFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#2e7d32; border-color:#81c784;" title="重新打开">🔄 重开</button>`
-                            : `<button onclick="resolveFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#fff; background:#4caf50; border-color:#4caf50;" title="标记为已解决">✅</button>`;
+                        } else {
+                            // Show Reply, Resolve, and Ignore Buttons
+                            const isResolved = item.status === 'closed';
+                            const resolveBtn = isResolved
+                                ? `<button onclick="reopenFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#2e7d32; border-color:#81c784;" title="重新打开">🔄 重开</button>`
+                                : `<button onclick="resolveFeedback(${item.id})" class="btn" style="font-size:0.8rem; padding:4px 8px; color:#fff; background:#4caf50; border-color:#4caf50;" title="标记为已解决">✅</button>`;
 
-                        actionBtns = `
+                            actionBtns = `
                             <button onclick="openReplyModal(${item.id}, '${escapeHtml(item.content.replace(/'/g, "\\'"))}', ${item.is_public}, ${item.admin_reply ? `'` + escapeHtml(item.admin_reply.replace(/'/g, "\\'")) + `'` : 'null'})" class="btn" style="font-size:0.8rem; padding:4px 8px; margin-right:5px;">
                                 ${item.admin_reply ? '编辑回复' : '回复 / 公开'}
                             </button>
@@ -846,9 +875,9 @@
                                 🚫
                             </button>
                         `;
-                    }
+                        }
 
-                    row.innerHTML = `
+                        row.innerHTML = `
                         <td style="padding: 12px 16px; border-bottom: 1px solid #eee; white-space: nowrap; font-size: 0.85rem; color: #555;">${new Date(item.created_at).toLocaleString()}</td>
                         <td style="padding: 12px 16px; border-bottom: 1px solid #eee;">
                             <span style="background: ${bg}; color: ${color}; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
@@ -868,146 +897,146 @@
                             </div>
                         </td>
                     `;
-                    tbody.appendChild(row);
-                });
+                        tbody.appendChild(row);
+                    });
 
-            } catch (e) {
-                console.error("Failed to load feedbacks", e);
-                document.getElementById('feedback-list-body').innerHTML = `<tr><td colspan="5" style="color:red; padding:20px;">加载失败: ${e.message}</td></tr>`;
+                } catch (e) {
+                    console.error("Failed to load feedbacks", e);
+                    document.getElementById('feedback-list-body').innerHTML = `<tr><td colspan="5" style="color:red; padding:20px;">加载失败: ${e.message}</td></tr>`;
+                }
             }
-        }
 
-        async function ignoreFeedback(id) {
-            if (!confirm('确定要忽略这条反馈吗？它将移动到忽略清单。')) return;
-            try {
-                const res = await fetch(`/api/admin/feedback/${id}/ignore`, { method: 'POST' });
-                if (res.ok) {
-                    loadFeedbacks();
-                } else {
-                    alert('操作失败');
-                }
-            } catch (e) { alert('网络错误'); }
-        }
-
-        async function resolveFeedback(id) {
-            try {
-                const res = await fetch(`/api/admin/feedback/${id}/resolve`, { method: 'POST' });
-                if (res.ok) {
-                    loadFeedbacks();
-                } else {
-                    alert('操作失败');
-                }
-            } catch (e) { alert('网络错误'); }
-        }
-
-        async function reopenFeedback(id) {
-            try {
-                const res = await fetch(`/api/admin/feedback/${id}/reopen`, { method: 'POST' });
-                if (res.ok) {
-                    loadFeedbacks();
-                } else {
-                    alert('操作失败');
-                }
-            } catch (e) { alert('网络错误'); }
-        }
-
-        async function unignoreFeedback(id) {
-            try {
-                const res = await fetch(`/api/admin/feedback/${id}/unignore`, { method: 'POST' });
-                if (res.ok) {
-                    loadFeedbacks();
-                } else {
-                    alert('操作失败');
-                }
-            } catch (e) { alert('网络错误'); }
-        }
-
-        async function deleteFeedback(id) {
-            if (!confirm('确定要永久删除这条反馈吗？此操作不可撤销。')) return;
-            try {
-                const res = await fetch(`/api/admin/feedback/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    loadFeedbacks();
-                } else {
-                    alert('删除失败');
-                }
-            } catch (e) { alert('网络错误'); }
-        }
-
-        // Reply Modal Logic
-        let currentReplyId = null;
-
-        function openReplyModal(id, content, isPublic, existingReply) {
-            currentReplyId = id;
-            document.getElementById('reply-modal').style.display = 'flex';
-            document.getElementById('reply-verify-content').textContent = content;
-            document.getElementById('reply-input').value = existingReply || '';
-            document.getElementById('reply-public-check').checked = isPublic;
-        }
-
-        function closeReplyModal() {
-            document.getElementById('reply-modal').style.display = 'none';
-        }
-
-        async function submitReply() {
-            if (!currentReplyId) return;
-            const reply = document.getElementById('reply-input').value.trim();
-            const isPublic = document.getElementById('reply-public-check').checked;
-
-            try {
-                // Assuming fetchWithAuth is defined elsewhere or a standard fetch is used
-                // For this example, I'll use a standard fetch. If fetchWithAuth is custom, it needs to be defined.
-                const res = await fetch(`/api/admin/feedback/${currentReplyId}/reply`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reply, is_public: isPublic })
-                });
-
-                if (res.ok) {
-                    closeReplyModal();
-                    loadFeedbacks(); // Refresh list
-                } else {
-                    alert('Failed to update');
-                }
-            } catch (e) {
-                alert('Error: ' + e.message);
+            async function ignoreFeedback(id) {
+                if (!confirm('确定要忽略这条反馈吗？它将移动到忽略清单。')) return;
+                try {
+                    const res = await fetch(`/api/admin/feedback/${id}/ignore`, { method: 'POST' });
+                    if (res.ok) {
+                        loadFeedbacks();
+                    } else {
+                        alert('操作失败');
+                    }
+                } catch (e) { alert('网络错误'); }
             }
-        }
+
+            async function resolveFeedback(id) {
+                try {
+                    const res = await fetch(`/api/admin/feedback/${id}/resolve`, { method: 'POST' });
+                    if (res.ok) {
+                        loadFeedbacks();
+                    } else {
+                        alert('操作失败');
+                    }
+                } catch (e) { alert('网络错误'); }
+            }
+
+            async function reopenFeedback(id) {
+                try {
+                    const res = await fetch(`/api/admin/feedback/${id}/reopen`, { method: 'POST' });
+                    if (res.ok) {
+                        loadFeedbacks();
+                    } else {
+                        alert('操作失败');
+                    }
+                } catch (e) { alert('网络错误'); }
+            }
+
+            async function unignoreFeedback(id) {
+                try {
+                    const res = await fetch(`/api/admin/feedback/${id}/unignore`, { method: 'POST' });
+                    if (res.ok) {
+                        loadFeedbacks();
+                    } else {
+                        alert('操作失败');
+                    }
+                } catch (e) { alert('网络错误'); }
+            }
+
+            async function deleteFeedback(id) {
+                if (!confirm('确定要永久删除这条反馈吗？此操作不可撤销。')) return;
+                try {
+                    const res = await fetch(`/api/admin/feedback/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        loadFeedbacks();
+                    } else {
+                        alert('删除失败');
+                    }
+                } catch (e) { alert('网络错误'); }
+            }
+
+            // Reply Modal Logic
+            let currentReplyId = null;
+
+            function openReplyModal(id, content, isPublic, existingReply) {
+                currentReplyId = id;
+                document.getElementById('reply-modal').style.display = 'flex';
+                document.getElementById('reply-verify-content').textContent = content;
+                document.getElementById('reply-input').value = existingReply || '';
+                document.getElementById('reply-public-check').checked = isPublic;
+            }
+
+            function closeReplyModal() {
+                document.getElementById('reply-modal').style.display = 'none';
+            }
+
+            async function submitReply() {
+                if (!currentReplyId) return;
+                const reply = document.getElementById('reply-input').value.trim();
+                const isPublic = document.getElementById('reply-public-check').checked;
+
+                try {
+                    // Assuming fetchWithAuth is defined elsewhere or a standard fetch is used
+                    // For this example, I'll use a standard fetch. If fetchWithAuth is custom, it needs to be defined.
+                    const res = await fetch(`/api/admin/feedback/${currentReplyId}/reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reply, is_public: isPublic })
+                    });
+
+                    if (res.ok) {
+                        closeReplyModal();
+                        loadFeedbacks(); // Refresh list
+                    } else {
+                        alert('Failed to update');
+                    }
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                }
+            }
 
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
+            function escapeHtml(text) {
+                return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
 
-        // --- Maintenance Lyrics Management ---
-        let currentLyrics = [];
+            // --- Maintenance Lyrics Management ---
+            let currentLyrics = [];
 
-        async function loadLyrics() {
-            try {
-                const res = await fetch('/admin/lyrics');
-                if (res.status === 401) {
-                    location.reload();
+            async function loadLyrics() {
+                try {
+                    const res = await fetch('/admin/lyrics');
+                    if (res.status === 401) {
+                        location.reload();
+                        return;
+                    }
+                    currentLyrics = await res.json();
+                    renderLyrics();
+                } catch (e) {
+                    console.error("Failed to load lyrics", e);
+                }
+            }
+
+            function renderLyrics() {
+                const tbody = document.getElementById('lyrics-list-body');
+                tbody.innerHTML = '';
+
+                if (currentLyrics.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="padding: 30px; text-align: center; color: #888;">暂无歌词，请点击上方按钮添加</td></tr>';
                     return;
                 }
-                currentLyrics = await res.json();
-                renderLyrics();
-            } catch (e) {
-                console.error("Failed to load lyrics", e);
-            }
-        }
 
-        function renderLyrics() {
-            const tbody = document.getElementById('lyrics-list-body');
-            tbody.innerHTML = '';
-
-            if (currentLyrics.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="padding: 30px; text-align: center; color: #888;">暂无歌词，请点击上方按钮添加</td></tr>';
-                return;
-            }
-
-            currentLyrics.forEach((item, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+                currentLyrics.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                     <td style="padding: 8px 16px; border-bottom: 1px solid #eee;">
                         <textarea style="width:100%; padding:8px; border:1px solid #eee; border-radius:4px; font-family:inherit;" rows="2" onchange="updateLyric(${index}, 'content', this.value)">${escapeHtml(item.content)}</textarea>
                     </td>
@@ -1018,80 +1047,162 @@
                         <button onclick="removeLyric(${index})" class="btn" style="color:#c62828;">删除</button>
                     </td>
                 `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function updateLyric(index, field, value) {
-            currentLyrics[index][field] = value;
-        }
-
-        function addLyricRow() {
-            currentLyrics.unshift({ content: '', source: '' });
-            renderLyrics();
-        }
-
-        function removeLyric(index) {
-            if (!confirm('确定删除吗？')) return;
-            currentLyrics.splice(index, 1);
-            renderLyrics();
-        }
-
-        async function saveLyrics() {
-            try {
-                // Filter out empty ones
-                const toSave = currentLyrics.filter(l => l.content.trim());
-
-                const res = await fetch('/admin/lyrics', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(toSave)
+                    tbody.appendChild(row);
                 });
-
-                if (res.ok) {
-                    alert('保存成功！');
-                    loadLyrics();
-                } else {
-                    alert('保存失败');
-                }
-            } catch (e) {
-                alert('网络错误: ' + e.message);
             }
-        }
 
-        // Initial Load
-        loadLogs();
-    </script>
-    <!-- Admin Reply Modal -->
-    <div id="reply-modal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-        <div style="background:white; padding:20px; border-radius:8px; width:400px; max-width:90%;">
-            <h3 style="margin-top:0;">回复 / 管理反馈</h3>
-            <div
-                style="margin-bottom:10px; font-size:0.9rem; color:#666; background:#f9f9f9; padding:10px; border-radius:4px;">
-                用户内容: <span id="reply-verify-content" style="color:#333;"></span>
-            </div>
+            function updateLyric(index, field, value) {
+                currentLyrics[index][field] = value;
+            }
 
-            <div style="margin-bottom:10px;">
-                <label style="font-size:0.9rem; font-weight:bold; display:block; margin-bottom:5px;">您的回复</label>
-                <textarea id="reply-input"
-                    style="width:100%; height:100px; padding:8px; border:1px solid #ddd; border-radius:4px;"
-                    placeholder="感谢您的建议..."></textarea>
-            </div>
+            function addLyricRow() {
+                currentLyrics.unshift({ content: '', source: '' });
+                renderLyrics();
+            }
 
-            <div style="margin-bottom:20px;">
-                <label style="display:flex; align-items:center; cursor:pointer;">
-                    <input type="checkbox" id="reply-public-check" style="margin-right:8px;">
-                    <span style="font-size:0.9rem;">公开展示在反馈墙 (Show on Feedback Wall)</span>
-                </label>
-            </div>
+            function removeLyric(index) {
+                if (!confirm('确定删除吗？')) return;
+                currentLyrics.splice(index, 1);
+                renderLyrics();
+            }
 
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button class="btn" onclick="closeReplyModal()">取消</button>
-                <button class="btn btn-primary" onclick="submitReply()">保存</button>
+            async function saveLyrics() {
+                try {
+                    // Filter out empty ones
+                    const toSave = currentLyrics.filter(l => l.content.trim());
+
+                    const res = await fetch('/admin/lyrics', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(toSave)
+                    });
+
+                    if (res.ok) {
+                        alert('保存成功！');
+                        loadLyrics();
+                    } else {
+                        alert('保存失败');
+                    }
+                } catch (e) {
+                    alert('网络错误: ' + e.message);
+                }
+            }
+
+            // --- Maintenance Mode Management ---
+            async function loadMaintenanceStatus() {
+                try {
+                    const res = await fetch('/admin/maintenance/status');
+                    if (res.status === 401) {
+                        location.reload();
+                        return;
+                    }
+                    const data = await res.json();
+                    updateMaintenanceUI(data.enabled);
+                } catch (e) {
+                    console.error("Failed to load maintenance status:", e);
+                }
+            }
+
+            function updateMaintenanceUI(enabled) {
+                const badge = document.getElementById('maintenance-status-badge');
+                const btn = document.getElementById('maintenance-toggle-btn');
+
+                if (enabled) {
+                    // 维护模式已开启
+                    badge.style.background = '#ffebee';
+                    badge.style.color = '#c62828';
+                    badge.textContent = '🔴 维护中';
+
+                    btn.textContent = '✅ 关闭维护模式';
+                    btn.classList.remove('btn-primary');
+                    btn.style.background = '#1e7e34';
+                    btn.style.borderColor = '#1e7e34';
+                } else {
+                    // 维护模式已关闭
+                    badge.style.background = '#e6f4ea';
+                    badge.style.color = '#1e7e34';
+                    badge.textContent = '🟢 正常运行';
+
+                    btn.textContent = '🛑 开启维护模式';
+                    btn.classList.add('btn-primary');
+                    btn.style.background = '';
+                    btn.style.borderColor = '';
+                }
+            }
+
+            async function toggleMaintenanceMode() {
+                const btn = document.getElementById('maintenance-toggle-btn');
+                const originalText = btn.textContent;
+
+                btn.disabled = true;
+                btn.textContent = '处理中...';
+
+                try {
+                    const res = await fetch('/admin/maintenance/toggle', {
+                        method: 'POST'
+                    });
+
+                    if (res.status === 401) {
+                        location.reload();
+                        return;
+                    }
+
+                    const data = await res.json();
+
+                    if (data.success) {
+                        // 更新 UI
+                        updateMaintenanceUI(data.enabled);
+
+                        // 显示提示消息
+                        alert(data.message);
+                    } else {
+                        alert('操作失败');
+                    }
+                } catch (e) {
+                    alert('网络错误: ' + e.message);
+                    console.error(e);
+                } finally {
+                    btn.disabled = false;
+                    // 如果失败了,恢复原文本
+                    if (btn.textContent === '处理中...') {
+                        btn.textContent = originalText;
+                    }
+                }
+            }
+
+            // Initial Load
+            loadLogs();
+        </script>
+        <!-- Admin Reply Modal -->
+        <div id="reply-modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+            <div style="background:white; padding:20px; border-radius:8px; width:400px; max-width:90%;">
+                <h3 style="margin-top:0;">回复 / 管理反馈</h3>
+                <div
+                    style="margin-bottom:10px; font-size:0.9rem; color:#666; background:#f9f9f9; padding:10px; border-radius:4px;">
+                    用户内容: <span id="reply-verify-content" style="color:#333;"></span>
+                </div>
+
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:0.9rem; font-weight:bold; display:block; margin-bottom:5px;">您的回复</label>
+                    <textarea id="reply-input"
+                        style="width:100%; height:100px; padding:8px; border:1px solid #ddd; border-radius:4px;"
+                        placeholder="感谢您的建议..."></textarea>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:flex; align-items:center; cursor:pointer;">
+                        <input type="checkbox" id="reply-public-check" style="margin-right:8px;">
+                        <span style="font-size:0.9rem;">公开展示在反馈墙 (Show on Feedback Wall)</span>
+                    </label>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button class="btn" onclick="closeReplyModal()">取消</button>
+                    <button class="btn btn-primary" onclick="submitReply()">保存</button>
+                </div>
             </div>
         </div>
-    </div>
 </body>
 
 </html>

@@ -24,8 +24,8 @@ class MaintenanceMiddleware(BaseHTTPMiddleware):
     
     def _is_maintenance_mode(self) -> bool:
         """检查是否处于维护模式"""
-        mode = os.getenv("MAINTENANCE_MODE", "0").strip().lower()
-        return mode in {"1", "true", "yes", "on"}
+        from services.maintenance_config import get_maintenance_mode
+        return get_maintenance_mode()
     
     def _load_maintenance_page(self) -> str:
         """加载维护页面HTML"""
