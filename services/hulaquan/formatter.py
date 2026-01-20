@@ -131,9 +131,6 @@ class HulaquanFormatter:
             safe_title = urllib.parse.quote(event.title)
             lines.append(f"💡 使用 -all 查看全部，或访问网页: {WEB_BASE_URL}/?q={safe_title}")
         
-        # 数据更新时间
-        lines.append(f"\n数据更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
         return "\n".join(lines)
 
     @staticmethod
