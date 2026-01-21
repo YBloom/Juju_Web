@@ -1259,45 +1259,60 @@ class HulaquanService:
         return await loop.run_in_executor(None, self._get_recent_updates_sync, limit, change_types)
     
     def _get_recent_updates_sync(self, limit: int, change_types: Optional[List[str]]) -> List[TicketUpdate]:
-        # Cap limit to 100
+        # Cap limit to 100 for global safety, but we will use it per-type if types not specified
         limit = min(limit, 100)
         
         with session_scope() as session:
-            # Build query with JOIN to check real-time status
-            # 使用 JOIN 构建查询以检查实时状态
             now = timezone_now()
             
-            # Modify select to include Ticket for data fallback (esp. valid_from)
-            stmt = select(TicketUpdateLog, HulaquanTicket).join(HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id)
-            
-            # Filter 1: Real-time Status (Removed strict filter to show history)
-            # 过滤 1: 实时状态 (移除严格过滤以显示历史记录)
-            # We want to show updates even if ticket is now sold out or expired, 
-            # as long as the session hasn't passed (handled below).
-            
-            # Filter 2: Future Session Logic
-            # 过滤 2: 未来场次逻辑
-            stmt = stmt.where(
-                or_(
-                    HulaquanTicket.session_time >= now,
-                    HulaquanTicket.session_time == None
+            # Helper to fetch updates for a set of types
+            def fetch_type_updates(types_to_fetch, sub_limit):
+                # We use outerjoin to HulaquanTicket to keep logs even if the ticket record is deleted
+                # Using TicketUpdateLog.session_time for filtering to avoid dependency on the joined table
+                stmt = select(TicketUpdateLog, HulaquanTicket).outerjoin(
+                    HulaquanTicket, TicketUpdateLog.ticket_id == HulaquanTicket.id
+                ).where(
+                    or_(
+                        TicketUpdateLog.session_time >= now,
+                        TicketUpdateLog.session_time == None
+                    )
                 )
-            )
+                
+                if types_to_fetch:
+                    stmt = stmt.where(TicketUpdateLog.change_type.in_(types_to_fetch))
+                
+                stmt = stmt.order_by(col(TicketUpdateLog.created_at).desc()).limit(sub_limit)
+                return session.exec(stmt).all()
+
+            all_results = []
             
-            stmt = stmt.order_by(col(TicketUpdateLog.created_at).desc())
-            
-            # Apply type filter if specified
-            if change_types:
-                stmt = stmt.where(TicketUpdateLog.change_type.in_(change_types))
-            
-            # Apply limit
-            stmt = stmt.limit(limit)
-            
-            results = session.exec(stmt).all()
+            if not change_types:
+                # If no specific types requested by frontend (unlikely in current implementation)
+                # we group by our 4 core types and get 20 for each to build the 80-item buffer
+                core_types = ['new', 'pending', 'restock', 'back']
+                for ctype in core_types:
+                    all_results.extend(fetch_type_updates([ctype], 20))
+            else:
+                # If specific types requested (e.g. user toggled pills)
+                # We still fetch 20 for EACH requested type to ensure depth
+                for ctype in change_types:
+                    all_results.extend(fetch_type_updates([ctype], 20))
+
+            # Deduplicate by ID just in case (though log IDs should be unique)
+            seen_ids = set()
+            unique_results = []
+            for log_item, t_item in all_results:
+                if log_item.id not in seen_ids:
+                    unique_results.append((log_item, t_item))
+                    seen_ids.add(log_item.id)
+
+            # Sort the combined buffer by created_at DESC
+            unique_results.sort(key=lambda x: x[0].created_at, reverse=True)
             
             # Convert to TicketUpdate objects
             updates = []
-            for log, ticket in results:
+            # We don't slice yet, let frontend handle the 20-row limit for groups
+            for log, ticket in unique_results:
                 cast_names_list = None
                 if log.cast_names:
                     try:
@@ -1313,11 +1328,11 @@ class HulaquanService:
                     message=log.message,
                     session_time=log.session_time,
                     price=log.price,
-                    stock=log.stock, # Snapshot stock (Updated at log time)
+                    stock=log.stock, 
                     total_ticket=log.total_ticket,
                     cast_names=cast_names_list,
                     created_at=log.created_at,
-                    valid_from=log.valid_from or ticket.valid_from # Fallback to current ticket valid_from
+                    valid_from=log.valid_from or (ticket.valid_from if ticket else None) 
                 ))
             
             return updates

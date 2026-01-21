@@ -244,7 +244,7 @@ function groupUpdatesByEvent(updates) {
 
 function renderSummaryList(container, groups) {
     const now = new Date();
-    const html = groups.map(group => {
+    const html = groups.slice(0, 20).map(group => {
         const timeAgo = formatTimeAgo(group.latest_at);
 
         // Extract City and Clean Title
