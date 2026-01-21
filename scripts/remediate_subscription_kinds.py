@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.12
 """
 SubscriptionTarget Kind Normalization Script
-统一订阅目标的 kind 字段为小写枚举值
+统一订阅目标的 kind 字段为大写枚举值
 """
 
 import sys
@@ -44,7 +44,7 @@ def remediate_kinds():
             )
         
         session.commit()
-        print("\n[✓] 数据修复完成！所有 kind 字段已统一为小写。")
+        print("\n[✓] 数据修复完成！所有 kind 字段已统一为大写。")
 
 if __name__ == "__main__":
     remediate_kinds()
