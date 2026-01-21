@@ -130,7 +130,7 @@ def run_complex_demos():
     print("✨ 结论: V2 结构化模型通过 Listing 容器 + 独立 Item 颗粒度，完美支持以上三种极端场景。")
     print("   1. 捆绑关系由 listing_id 锁定。")
     print("   2. 多选一置换通过在同一 Listing 下挂载多个 WANT Item 实现。")
-    print("   3. 长列表通过全量结构化 Item 条目实现精准匹配。")
+    print("   3. 长列表通过全部结构化 Item 条目实现精准匹配。")
 
 
 if __name__ == "__main__":

@@ -8,14 +8,14 @@ log = logging.getLogger(__name__)
 # Mode 2: 上新+补票 (restock)
 # Mode 3: 上新+补票+回流 (back)
 # Mode 4: 上新+补票+回流+余票减 (stock_change 且 票数减少)
-# Mode 5: 全量 (stock_change 且 票数增加, sold_out)
+# Mode 5: 全部 (stock_change 且 票数增加, sold_out)
 
 EVENT_LEVEL_MAP = {
     "new": 1,
     "pending": 1,
     "restock": 2,
     "back": 3,
-    "sold_out": 5,      # 售罄属于全量变动
+    "sold_out": 5,      # 售罄属于全部变动
     "stock_change": 4,  # 默认余票变动为 4
 }
 

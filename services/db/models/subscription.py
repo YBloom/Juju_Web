@@ -17,7 +17,7 @@ class NotificationLevel(IntEnum):
     NEW_RESTOCK = 2  # 上新+补票
     WITH_BACK = 3    # 上新+补票+回流
     WITH_DECREASE = 4 # 上新+补票+回流+余票减
-    ALL = 5          # 全量
+    ALL = 5          # 全部
 
 
 class Subscription(TimeStamped, SQLModel, table=True):

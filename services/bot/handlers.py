@@ -44,6 +44,17 @@ def create_magic_link_token(qq_id: str, nickname: str = "") -> str:
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
+MODE_DESCRIPTIONS = {
+    0: "关闭",
+    1: "开票",
+    2: "开票+补票",
+    3: "开票+补票+回流",
+    4: "开票+补票+回流+票减",
+    5: "全部"
+}
+
+
+
 def extract_args(message: str) -> Dict:
     """
     解析命令参数（兼容旧版格式）
@@ -108,17 +119,19 @@ class BotHandler:
             return (
                 "🔔 呼啦圈通知设置\n\n"
                 "用法: /呼啦圈通知 [0-5]\n\n"
-                "级别说明:\n"
+                "模式说明:\n"
                 "0: 关闭通知\n"
-                "1: 仅上新\n"
-                "2: 上新+补票 (推荐)\n"
-                "3: 上新+补票+回流\n"
-                "4: 上新+补票+回流+票减\n"
-                "5: 全量 (上新+补票+回流+票增+票减)"
+                "1: 模式1（开票）\n"
+                "2: 模式2（开票+补票）(推荐)\n"
+                "3: 模式3（开票+补票+回流）\n"
+                "4: 模式4（开票+补票+回流+票减）\n"
+                "5: 模式5（全部: 开票+补票+回流+票增+票减）"
             )
+
         
         if not (0 <= level <= 5):
-            return "❌ 级别必须在 0-5 之间"
+            return "❌ 模式必须在 0-5 之间"
+
         
         with session_scope() as session:
             user = session.get(User, user_id)
@@ -130,8 +143,9 @@ class BotHandler:
                 session.add(user)
                 session.commit()
                 
-                level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
-                return f"✅ 全局通知级别已设置为: {level} ({level_names[level]})"
+                desc = MODE_DESCRIPTIONS.get(level, "未知")
+                return f"✅ 全局通知已设置为: 模式{level}（{desc}）"
+
             else:
                 return "❌ 用户不存在，请先尝试使用其他命令初始化。"
     
@@ -148,22 +162,25 @@ class BotHandler:
         if not text_args:
             return (
                 "💡 用法:\n"
-                "/关注学生票 -E [剧名] [级别]  # 关注剧目\n"
-                "/关注学生票 -A [演员] [级别]  # 关注演员\n"
+                "/关注学生票 -E [剧名] [模式]  # 关注剧目\n"
+                "/关注学生票 -A [演员] [模式]  # 关注演员\n"
                 "\n示例:\n"
                 "/关注学生票 -E 连璧 2"
             )
+
         
         # 解析参数
         kind = SubscriptionTargetKind.PLAY  # 默认剧目
-        level = 2  # 默认级别2
+        level = 2  # 默认模式2
+
         
         if "-A" in mode_args:
             kind = SubscriptionTargetKind.ACTOR
         elif "-E" in mode_args or not any(arg.startswith("-") for arg in mode_args):
             kind = SubscriptionTargetKind.PLAY
         
-        # 尝试解析级别 (支持 3 或 -3)
+        # 尝试解析模式 (支持 3 或 -3)
+
         extracted_level = level
         remaining_text_args = []
         for arg in text_args:
@@ -217,10 +234,12 @@ class BotHandler:
             existing = session.exec(stmt_target).first()
             
             if existing:
-                # 更新级别
+                # 更新模式
                 existing.flags = {"mode": level}
                 session.add(existing)
-                msg = f"✅ 已更新订阅: {target_name} (级别 {level})"
+                desc = MODE_DESCRIPTIONS.get(level, "未知")
+                msg = f"✅ 已更新订阅: {target_name} 模式{level}（{desc}）"
+
             else:
                 # 创建新订阅
                 target = SubscriptionTarget(
@@ -231,8 +250,11 @@ class BotHandler:
                     flags={"mode": level}
                 )
                 session.add(target)
+                session.add(target)
                 kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
-                msg = f"✅ 已成功关注{kind_name}: {target_name} (级别 {level})"
+                desc = MODE_DESCRIPTIONS.get(level, "未知")
+                msg = f"✅ 已成功关注{kind_name}: {target_name} 模式{level}（{desc}）"
+
             
             session.commit()
         
@@ -307,8 +329,9 @@ class BotHandler:
             lines = ["📋 我的订阅\n"]
             
             # 显示全局设置 (unified from User table)
-            level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
-            lines.append(f"🔔 全局通知级别: {user.global_notification_level} ({level_names[user.global_notification_level]})")
+            desc = MODE_DESCRIPTIONS.get(user.global_notification_level, "未知")
+            lines.append(f"🔔 全局通知: 模式{user.global_notification_level}（{desc}）")
+
             
             if user.silent_hours:
                 lines.append(f"🌙 静音时段: {user.silent_hours}")
@@ -343,13 +366,17 @@ class BotHandler:
                                 display_name = f"未知剧目 (ID: {t.target_id})"
                                 
                         mode = t.flags.get("mode", 2) if t.flags else 2
-                        lines.append(f"{i}. {display_name} (级别 {mode})")
+                        desc = MODE_DESCRIPTIONS.get(mode, "未知")
+                        lines.append(f"{i}. {display_name} 模式{mode}（{desc}）")
+
                 
                 if actors:
                     lines.append("\n【关注的演员】")
                     for i, t in enumerate(actors, 1):
                         mode = t.flags.get("mode", 2) if t.flags else 2
-                        lines.append(f"{i}. {t.name} (级别 {mode})")
+                        desc = MODE_DESCRIPTIONS.get(mode, "未知")
+                        lines.append(f"{i}. {t.name} 模式{mode}（{desc}）")
+
             
             return "\n".join(lines)
 
