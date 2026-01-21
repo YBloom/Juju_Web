@@ -49,9 +49,9 @@ class GroupType(str, Enum):
 
 
 class SubscriptionFrequency(str, Enum):
-    REALTIME = "realtime"
-    HOURLY = "hourly"
-    DAILY = "daily"
+    REALTIME = "REALTIME"
+    HOURLY = "HOURLY"
+    DAILY = "DAILY"
 
 
 class SubscriptionTargetKind(str, Enum):

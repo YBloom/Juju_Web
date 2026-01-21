@@ -36,7 +36,7 @@ class User(TimeStamped, SoftDelete, SQLModel, table=True):
     notification_freq: SubscriptionFrequency = Field(
         default=SubscriptionFrequency.REALTIME, 
         nullable=False,
-        sa_column_kwargs={"server_default": "realtime"}
+        sa_column_kwargs={"server_default": "REALTIME"}
     )
     is_muted: bool = Field(default=False, nullable=False)
     allow_broadcast: bool = Field(default=True, nullable=False)
