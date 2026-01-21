@@ -135,19 +135,30 @@ export const api = {
         return await res.json();
     },
 
+    return await res.json();
+},
+
     async deleteSubscription(id) {
+        // Legacy: Deletes entire subscription container
         const res = await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error("删除订阅失败");
         return await res.json();
     },
 
+        async deleteSubscriptionTarget(targetId) {
+    // New: Deletes specific target
+    const res = await fetch(`/api/subscriptions/targets/${targetId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error("删除订阅目标失败");
+    return await res.json();
+},
+
     async updateSubscriptionOptions(id, data) {
-        const res = await fetch(`/api/subscriptions/options/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (!res.ok) throw new Error("更新订阅选项失败");
-        return await res.json();
-    }
+    const res = await fetch(`/api/subscriptions/options/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("更新订阅选项失败");
+    return await res.json();
+}
 };

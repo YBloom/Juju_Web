@@ -312,6 +312,35 @@ async def delete_subscription(
     return {"status": "ok", "message": "订阅已删除"}
 
 
+@router.delete("/targets/{target_id}")
+async def delete_subscription_target(
+    target_id: int,
+    request: Request,
+    user: dict = Depends(require_auth),
+    session: Session = Depends(get_session)
+):
+    """
+    删除单个订阅目标 (不删除整个 Subscription 容器)
+    """
+    user_id = user.get("user_id") or user.get("qq_id")
+    
+    # 查找 Target
+    target = session.get(SubscriptionTarget, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="订阅目标不存在")
+    
+    # 验证所有权 (通过父级 Subscription)
+    subscription = session.get(Subscription, target.subscription_id)
+    if not subscription or subscription.user_id != user_id:
+        raise HTTPException(status_code=403, detail="无权删除此订阅目标")
+    
+    session.delete(target)
+    session.commit()
+    
+    return {"status": "ok", "message": "订阅目标已删除"}
+
+
+
 
 @router.patch("/options/{subscription_id}")
 async def update_subscription_options(

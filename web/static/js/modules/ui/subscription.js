@@ -52,13 +52,22 @@ export function switchSubTab(type) {
 
 function renderSubscriptionList() {
     const container = document.getElementById('subscriptions-container');
-    const subs = allSubscriptions.filter(sub => {
-        const target = sub.targets?.[0];
-        if (!target) return false;
-        return target.kind === currentSubTab;
+
+    // Flatten structure: Subscription -> Targets
+    // We want to list all targets, but keep reference to parent subscription options if needed
+    let allTargets = [];
+    allSubscriptions.forEach(sub => {
+        if (!sub.targets) return;
+        sub.targets.forEach(t => {
+            // Attach parent sub info for context if needed (e.g. options)
+            t._parentSub = sub;
+            allTargets.push(t);
+        });
     });
 
-    if (!subs || subs.length === 0) {
+    const visibleTargets = allTargets.filter(t => t.kind === currentSubTab);
+
+    if (!visibleTargets || visibleTargets.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">📭</div>
@@ -85,24 +94,23 @@ function renderSubscriptionList() {
                 <tbody>
     `;
 
-    subs.forEach(sub => {
-        const target = sub.targets?.[0];
-        if (!target) return;
-
+    visibleTargets.forEach(target => {
         const city = target.city_filter || '-';
         const name = escapeHtml(target.name);
-        const level = sub.options?.notification_level ?? 2;
+        // Use global options from User (Sub usually has options linked, but our API joins them)
+        // Note: The API response structures options under 'options' field of subscription
+        const level = target._parentSub.options?.notification_level ?? 2;
         const levelText = NOTIFICATION_LEVEL_MAP[level] || `Lv.${level}`;
-        const isSelected = selectedSubIds.has(sub.id);
+        const isSelected = selectedSubIds.has(target.id); // Use Target ID for selection
 
         html += `
             <tr class="sub-table-row ${isSelected ? 'selected' : ''}">
-                ${isEditMode ? `<td><input type="checkbox" class="sub-checkbox" data-id="${sub.id}" ${isSelected ? 'checked' : ''} onchange="subscription.toggleSubSelection('${sub.id}', this.checked)"></td>` : ''}
+                ${isEditMode ? `<td><input type="checkbox" class="sub-checkbox" data-id="${target.id}" ${isSelected ? 'checked' : ''} onchange="subscription.toggleSubSelection('${target.id}', this.checked)"></td>` : ''}
                 <td class="city-cell">${escapeHtml(city)}</td>
                 <td class="title-cell">${name}</td>
                 <td><span class="level-tag">${escapeHtml(levelText)}</span></td>
                 <td>
-                    ${!isEditMode ? `<button class="icon-btn" onclick="handleDeleteSubscription('${sub.id}')" title="删除"><i class="material-icons">delete_outline</i></button>` : ''}
+                    ${!isEditMode ? `<button class="icon-btn" onclick="handleDeleteSubscription('${target.id}')" title="删除"><i class="material-icons">delete_outline</i></button>` : ''}
                 </td>
             </tr>
         `;
@@ -153,14 +161,17 @@ export function toggleSubSelection(id, checked) {
 }
 
 export function toggleSelectAll(checked) {
-    const subs = allSubscriptions.filter(sub => {
-        const target = sub.targets?.[0];
-        if (!target) return false;
-        return target.kind === currentSubTab;
+    // Flatten targets similar to render
+    let allTargets = [];
+    allSubscriptions.forEach(sub => {
+        if (!sub.targets) return;
+        sub.targets.forEach(t => allTargets.push(t));
     });
 
+    const subs = allTargets.filter(t => t.kind === currentSubTab);
+
     if (checked) {
-        subs.forEach(sub => selectedSubIds.add(sub.id));
+        subs.forEach(target => selectedSubIds.add(target.id));
     } else {
         selectedSubIds.clear();
     }
@@ -179,7 +190,8 @@ export async function batchDeleteSubscriptions() {
 
     try {
         for (const id of selectedSubIds) {
-            await api.deleteSubscription(id);
+            // Updated to delete Target, not Subscription
+            await api.deleteSubscriptionTarget(id);
         }
 
         selectedSubIds.clear();
@@ -328,12 +340,15 @@ export async function doAddSubscription(e) {
     // Check for Duplicates
     const duplicates = targets.filter(t => {
         return allSubscriptions.some(sub => {
-            const existing = sub.targets?.[0];
-            if (!existing || existing.kind !== t.kind) return false;
-            // Check ID match or Name match (if ID is missing)
-            if (existing.target_id && t.target_id && existing.target_id === t.target_id) return true;
-            if (existing.name === t.name) return true;
-            return false;
+            // Need to check ALL targets in existing subs
+            if (!sub.targets) return false;
+            return sub.targets.some(existing => {
+                if (existing.kind !== t.kind) return false;
+                // Check ID match or Name match (if ID is missing)
+                if (existing.target_id && t.target_id && existing.target_id === t.target_id) return true;
+                if (existing.name === t.name) return true;
+                return false;
+            });
         });
     });
 
@@ -374,13 +389,15 @@ export async function doAddSubscription(e) {
 export async function handleDeleteSubscription(id) {
     if (!confirm('确定要取消此订阅吗？')) return;
     try {
-        await api.deleteSubscription(id);
+        // Updated to use granular delete
+        await api.deleteSubscriptionTarget(id);
         initSubscriptionManagement();
         UI.toast('订阅已取消');
     } catch (e) {
         UI.toast('取消失败: ' + e.message, 'error');
     }
 }
+
 
 export function showAddSubModal() {
     document.getElementById('add-sub-modal').classList.add('active');
