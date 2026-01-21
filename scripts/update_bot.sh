@@ -18,7 +18,7 @@ echo -e "${GREEN}=== MusicalBot Bot 服务更新 ===${NC}"
 cd $PROJECT_DIR || { echo -e "${RED}项目目录不存在${NC}"; exit 1; }
 
 echo -e "${YELLOW}[1/3] 拉取最新代码...${NC}"
-sudo git pull origin v1 || { echo -e "${RED}Git pull 失败${NC}"; exit 1; }
+sudo git pull origin main || { echo -e "${RED}Git pull 失败${NC}"; exit 1; }
 
 echo -e "${YELLOW}[2/3] 检查依赖...${NC}"
 if sudo git diff HEAD@{1} HEAD -- requirements.txt | grep -q '^[+-]'; then

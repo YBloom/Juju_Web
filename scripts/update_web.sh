@@ -18,7 +18,7 @@ cd $PROJECT_DIR || { echo -e "${RED}项目目录不存在${NC}"; exit 1; }
 
 # 2. 拉取最新代码
 echo -e "${YELLOW}拉取最新代码...${NC}"
-sudo git pull || { echo -e "${RED}Git pull 失败${NC}"; exit 1; }
+sudo git pull origin main || { echo -e "${RED}Git pull 失败${NC}"; exit 1; }
 
 # 3. 检查依赖是否有变化
 if sudo git diff HEAD@{1} HEAD -- requirements.txt | grep -q '^[+-]'; then
