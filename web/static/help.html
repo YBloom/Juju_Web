@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剧剧帮助文档 | 音乐剧票务工具使用指南</title>
+    <meta name="description" content="了解如何使用剧剧 (MusicalBot) 查询音乐剧学生票、设置实时监控、搜索演员同场信息。提供详细的指令指南与功能介绍。">
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <style>
+        :root {
+            --bg-color: #fdfaf5;
+            /* 柔和米色背景 */
+            --text-color: #3f3f3c;
+            /* 暖灰色文字 */
+            --code-bg: #f2efe9;
+            --code-text: #597c54;
+            /* 森林绿代码文字 */
+            --quote-border: #8ba888;
+            /* 柔和绿边框 */
+            --link-color: #597c54;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --callout-bg: #f5f2eb;
+            /*稍深的米色 */
+            --secondary-text: rgba(63, 63, 60, 0.7);
+            --accent-green: #6b8e68;
+            /* 主题绿 */
+        }
+
+        body {
+            font-family: var(--font-family);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+
+        /* Notion-style Typography */
+        h1 {
+            font-size: 40px;
+            font-weight: 700;
+            margin-top: 1.2em;
+            margin-bottom: 0.5em;
+            line-height: 1.2;
+            color: #2d3e2d;
+        }
+
+        h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-top: 1.6em;
+            margin-bottom: 0.6em;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(139, 168, 136, 0.2);
+            color: #3a4d3a;
+        }
+
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 1.4em;
+            margin-bottom: 0.4em;
+            color: #4a5d4a;
+        }
+
+        p {
+            margin: 0.8em 0;
+        }
+
+        b,
+        strong {
+            font-weight: 600;
+            color: #2d3e2d;
+        }
+
+        .page-icon {
+            font-size: 78px;
+            margin-bottom: 10px;
+            display: block;
+            opacity: 0.9;
+        }
+
+        .metadata {
+            color: var(--secondary-text);
+            font-size: 14px;
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        /* Notion Callout */
+        .callout {
+            display: flex;
+            padding: 20px;
+            background: var(--callout-bg);
+            border-radius: 8px;
+            margin: 20px 0;
+            align-items: flex-start;
+            border: 1px solid rgba(139, 168, 136, 0.1);
+        }
+
+        .callout.info {
+            background: #f5f2eb;
+            border-left: 4px solid #8ba888;
+        }
+
+        .callout.warning {
+            background: #f9f5f0;
+            border-left: 4px solid #d4a373;
+        }
+
+        .callout.blue {
+            background: #f0f4f0;
+            border-left: 4px solid #6b8e68;
+        }
+
+        .callout-icon {
+            font-size: 22px;
+            margin-right: 14px;
+        }
+
+        .callout-content {
+            flex: 1;
+            font-size: 15px;
+        }
+
+        /* Commands & Code */
+        code {
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            background: rgba(139, 168, 136, 0.12);
+            color: var(--code-text);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 90%;
+            word-wrap: break-word;
+        }
+
+        pre {
+            background: #f2efe9;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+            border: 1px solid rgba(139, 168, 136, 0.1);
+        }
+
+        pre code {
+            background: none;
+            color: #4a5c4a;
+            padding: 0;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .cmd-block {
+            margin-bottom: 40px;
+        }
+
+        .arg-group {
+            padding-left: 20px;
+            border-left: 2px solid rgba(139, 168, 136, 0.15);
+            margin: 15px 0;
+        }
+
+        /* Navigation */
+        hr {
+            border: none;
+            border-bottom: 1px solid rgba(139, 168, 136, 0.15);
+            margin: 40px 0;
+        }
+
+        a {
+            color: var(--accent-green);
+            text-decoration: underline;
+            text-decoration-color: rgba(107, 142, 104, 0.3);
+            font-weight: 500;
+        }
+
+        a:hover {
+            background: rgba(107, 142, 104, 0.08);
+            text-decoration-color: var(--accent-green);
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--accent-green);
+            color: white !important;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: transform 0.1s ease, background 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #5a7a58;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 24px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            h2 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <span class="page-icon">🤖</span>
+        <h1>MusicalBot 帮助文档</h1>
+
+        <div class="metadata">
+            <span>ℹ️ Bot 版本：V1.0</span>
+            <span>📅 更新时间：2026-01-19</span>
+        </div>
+
+        <div class="callout info">
+            <span class="callout-icon">💡</span>
+            <div class="callout-content">
+                此机器人面向所有需要呼啦圈票务信息咨询、更新推送的剧友们~<br>
+                目前已实现深度搜索、同场卡司及全新的订阅系统。
+            </div>
+        </div>
+
+        <p>
+            <strong>官方群号：</strong><br>
+            ①群：535486252 (已满) | ②群：780236450 (已满) |
+            <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=vNcM4W7uJRvATJdPhEmSnVr41MWALezEzZfEQ5HvQozngjQqsi61fD30W4caiQ%2Bx&busi_data=eyJncm91cENvZGUiOiI0NjAxNjc1ODYiLCJ0b2tlbiI6IjlGM3UwYWsxTENQSmxlUzBud1lwMGZHN0tHN0dEMVlHcUp2UE9DYXlzcE5KL1owdlc1cERuZmlERDNNMytzdUwiLCJ1aW4iOiIzMDIyNDAyNzUyIn0%3D&data=ZIqpzJ5ovqGgRPEMryEtQB2HGXB-iRFBKHZ8LbJStonkjBBUBUYNOZCClnUgb7xq1mqTGzG4JcFbn4XvMaMLzg&svctype=4&tempid=h5_group_info"
+                target="_blank" style="font-weight: bold; color: var(--accent-green);">③群：460167586 (点击加入)</a>
+        </p>
+
+        <div style="margin-top: 15px; padding: 15px; background: rgba(139, 168, 136, 0.1); border-radius: 8px;">
+            <p style="margin: 0 0 10px 0;"><strong>🤖 Bot 账号：</strong><span id="bot-uin-display">Loading...</span></p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a id="bot-link-mobile" href="#" class="btn" style="margin-top:0; font-size: 14px; padding: 8px 16px;">
+                    📱 点击添加 Bot (手机端)
+                </a>
+                <button id="bot-copy-btn" class="btn"
+                    style="margin-top:0; font-size: 14px; padding: 8px 16px; background: #fff; color: var(--accent-green) !important; border: 1px solid var(--accent-green);">
+                    📋 复制账号 (电脑端)
+                </button>
+            </div>
+            <script>
+                fetch('/api/meta/config')
+                    .then(r => r.json())
+                    .then(config => {
+                        const uin = config.bot_uin || '3044829389';
+                        document.getElementById('bot-uin-display').innerText = uin;
+                        document.getElementById('bot-link-mobile').href = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${uin}&card_type=person&source=qrcode`;
+                        document.getElementById('bot-copy-btn').onclick = () => {
+                            navigator.clipboard.writeText(uin).then(() => alert('Bot账号已复制'));
+                        };
+                    })
+                    .catch(e => {
+                        console.error(e);
+                        document.getElementById('bot-uin-display').innerText = '3044829389';
+                        document.getElementById('bot-link-mobile').href = `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=3044829389&card_type=person&source=qrcode`;
+                        document.getElementById('bot-copy-btn').onclick = () => {
+                            navigator.clipboard.writeText('3044829389').then(() => alert('Bot账号已复制'));
+                        };
+                    });
+            </script>
+        </div>
+
+        <hr>
+
+        <h2>🔍 核心查询功能</h2>
+
+        <div class="cmd-block">
+            <h3>1. 剧目与学生票查询 (`/hlq`)</h3>
+            <p>搜索剧目名称，查看具体的学生票场次、价格和卡司。</p>
+            <pre><code>/hlq [剧名] [模式参数]</code></pre>
+            <div class="arg-group">
+                <p><strong>常用场景：</strong></p>
+                <ul>
+                    <li>普通搜索：<code>/hlq 连璧</code></li>
+                    <li>精确筛选：<code>/hlq 时光代理人 上海</code> (支持城市/剧场名)</li>
+                    <li>显示所有场次 (含售罄)：<code>/hlq 连璧 -all</code></li>
+                    <li>按价格筛选：<code>/hlq 连璧 -219</code> (仅看219元的票)</li>
+                    <li>简写法：<code>查票 连璧</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="cmd-block">
+            <h3>2. 日期排期查询 (`/date`)</h3>
+            <p>查看特定日期及之后的所有学生票演出信息。</p>
+            <pre><code>/date [YYYY-MM-DD] [城市] [-all]</code></pre>
+            <div class="arg-group">
+                <p><strong>示例：</strong></p>
+                <ul>
+                    <li>查询今天：<code>/date</code></li>
+                    <li>查询特定日：<code>/date 2026-02-14</code></li>
+                    <li>查询特定城市：<code>/date 2026-01-20 上海</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="cmd-block">
+            <h3>3. 同场演员查询 (`/cast`)</h3>
+            <p>查询多位演员共同出演的音乐剧场次（聚合呼啦圈与扫剧系统数据）。</p>
+            <pre><code>/cast [演员1] [演员2] ... [模式参数]</code></pre>
+            <div class="arg-group">
+                <p><strong>模式参数：</strong></p>
+                <ul>
+                    <li><code>-o</code>: 显示同场其他演员 (扫剧系统)</li>
+                    <li><code>-h</code>: 仅检索呼啦圈系统数据</li>
+                </ul>
+                <p><strong>示例：</strong></p>
+                <ul>
+                    <li>普通查询：<code>/cast 丁辰西 陈玉婷</code></li>
+                    <li>查看完整阵容：<code>/cast 毛二 -o</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>🔔 智能订阅系统 (最新)</h2>
+        <p>实时监控学生票动向，第一时间通过私信推送通知。</p>
+
+        <div class="cmd-block">
+            <h3>1. 关注学生票 (`/关注学生票`)</h3>
+            <pre><code>/关注学生票 [关键词] [模式] [参数]</code></pre>
+            <div class="arg-group">
+                <p><strong>推送模式 (必填)：</strong></p>
+                <ul>
+                    <li><code>0</code>: <b>无通知</b></li>
+                    <li><code>1</code>: 仅通知 <b>上新</b></li>
+                    <li><code>2</code>: <b>上新 + 补票</b> <small>(推荐)</small></li>
+                    <li><code>3</code>: <b>上新 + 补票 + 回流</b></li>
+                    <li><code>4</code>: <b>上新 + 补票 + 回流 + 票减</b></li>
+                    <li><code>5</code>: <b>上新 + 补票 + 回流 + 票增 + 票减</b></li>
+                </ul>
+                <p><strong>关键词类型：</strong></p>
+                <ul>
+                    <li><code>-E [剧名]</code>: 关注特定剧目</li>
+                    <li><code>-A [演员]</code>: 关注该演员所有场次</li>
+                    <li><code>-T [Id]</code>: 关注特定场次 ID</li>
+                </ul>
+                <p><strong>高级筛选：</strong></p>
+                <ul>
+                    <li><code>-I [剧名]</code>: 白名单，仅推送这些剧</li>
+                    <li><code>-X [剧名]</code>: 黑名单，排除这些剧</li>
+                </ul>
+                <p><strong>混合示例：</strong></p>
+                <pre><code>/关注学生票 连璧 海雾 -E 3
+/关注学生票 张三 -A -I 幽灵,怪物 1 (关注张三的幽灵和怪物场次)
+/关注学生票 李四 -A -X 海雾 2 (关注李四除海雾外的所有场次)</code></pre>
+            </div>
+        </div>
+
+        <div class="cmd-block">
+            <h3>2. 管理订阅</h3>
+            <ul>
+                <li>查看当前关注：<code>/查看关注</code></li>
+                <li>取消关注：<code>/取消关注学生票 [剧名/演员名] [-E/-A]</code></li>
+                <li>全局设置：<code>/呼啦圈通知 [0-5]</code> (设置全局推送等级)</li>
+            </ul>
+        </div>
+
+        <hr>
+
+        <h2>🛠️ 辅助功能</h2>
+        <ul>
+            <li><strong>别名管理</strong>：<code>/alias 搜索名 别名</code> (例如：<code>/alias 末日迷途 mrmt</code>)</li>
+            <li><strong>查看所有别名</strong>：<code>/aliases</code></li>
+            <li><strong>Repo 系统</strong>：跳转 Web 控制台查看盲盒票评价。</li>
+        </ul>
+
+        <hr>
+
+        <h2>🔐 Web 控制台</h2>
+        <div class="callout blue">
+            <span class="callout-icon">🚀</span>
+            <div class="callout-content">
+                <b>体验更完整的 UI 界面！</b><br>
+                在网页端您可以直观地查看排期日历、管理头像以及可视化配置所有的订阅项。
+            </div>
+        </div>
+        <p>发送以下指令获取 5 分钟有效的免密登录链接：</p>
+        <pre><code>/web</code></pre>
+        <a href="/" class="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors">剧剧 | 演出&票务小站</a>
+
+        <hr>
+
+        <div class="callout warning">
+            <span class="callout-icon">💌</span>
+            <div class="callout-content">
+                <strong>反馈与建议</strong><br>
+                如果您有任何功能建议或遇到了 Bug，请直接在 QQ 群内 @管理员。您的每一条反馈都能让 MusicalBot 变得更好！
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+[program:musicalbot_web]
+directory=/opt/MusicalBot
+command=/opt/MusicalBot/.venv/bin/uvicorn web_app:app --host 127.0.0.1 --port 8002
+user=ubuntu
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/musicalbot/web_err.log
+stdout_logfile=/var/log/musicalbot/web_out.log
+# 添加日志轮转配置
+stdout_logfile_maxbytes=50MB
+stdout_logfile_backups=10
+stderr_logfile_maxbytes=50MB
+stderr_logfile_backups=10
+environment=PYTHONUNBUFFERED=1,ADMIN_USERNAME="Admin",ADMIN_PASSWORD="Yyb112424"
+
+[program:musical_qq_bot]
+directory=/opt/MusicalBot
+command=/opt/MusicalBot/.venv/bin/python main_bot_v2.py
+user=ubuntu
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/musicalbot/bot_err.log
+stdout_logfile=/var/log/musicalbot/bot_out.log
+stdout_logfile_maxbytes=50MB
+stdout_logfile_backups=5
+stderr_logfile_maxbytes=50MB
+stderr_logfile_backups=5
+environment=PYTHONUNBUFFERED=1
+
+# 如果你使用的是脚本版 NapCat，可以取消注释下面这行来让 Supervisor 管理它
+# [program:napcat]
+# directory=/home/ubuntu/Napcat
+# command=/home/ubuntu/Napcat/napcat.sh launch
+# user=ubuntu
+# autostart=true
+# autorestart=true

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 禁止缓存HTML,确保用户始终获取最新版本 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>剧剧 | 音乐剧演出票务、学生票监控与卡司排期查询小站</title>
+    <meta name="description"
+        content="剧剧 (MusicalBot) 是一款专为音乐剧爱好者设计的演出信息聚合工具。提供国内音乐剧演出信息查询、呼啦圈学生票实时监控、同场演员阵容搜索及演出数据动态分析。助您第一时间掌握补票、上新与回流动态。">
+    <meta name="keywords" content="音乐剧,学生票,呼啦圈,卡司查询,演出监控,补票提醒,票务动态,剧剧,MusicalBot">
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/icons.css?v=20260121">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260120_2246">
+    <link rel="stylesheet" href="/static/css/feedback.css?v=20260120_2246">
+    <link rel="stylesheet" href="/static/css/error.css">
+
+    <!-- Cropper.js for Avatar Upload -->
+    <link rel="stylesheet" href="/static/css/cropper.min.css">
+    <script src="/static/js/vendor/cropper.min.js"></script>
+
+    <!-- Import Map for ES Module dependencies -->
+    <script type="importmap">
+    {
+        "imports": {
+            "animal-avatar-generator": "https://esm.sh/animal-avatar-generator@1.2.0"
+        }
+    }
+    </script>
+
+    <!-- Pinyin Library for Autocomplete -->
+    <script src="/static/js/vendor/pinyin-pro.js"></script>
+
+    <!-- Main Module Entry -->
+
+    <!-- Umami Analytics -->
+    <!-- 登录 https://analytics.yaobii.com 创建网站后,替换 YOUR_WEBSITE_ID -->
+    <script defer src="https://analytics.yaobii.com/script.js"
+        data-website-id="65e0c212-9644-47e1-a5f4-9dc3b27cffd8"></script>
+</head>
+
+<body>
+    <div id="app"></div>
+
+
+    <!-- Mobile Header -->
+    <header class="mobile-header tool-minimal">
+        <div class="header-brand-row">
+            <div class="brand-section">
+                <div class="brand-name">剧剧</div>
+                <div class="brand-tagline">演出&票务小站</div>
+            </div>
+        </div>
+        <div class="header-search-container">
+            <i class="material-icons search-icon">search</i>
+            <input type="text" id="global-search" placeholder="搜索剧目、城市或场馆..." class="header-search-input">
+        </div>
+        <div class="domain-badge">yyj.yaobii.com</div>
+    </header>
+
+    <div class="nav-ribbon">
+        <button class="nav-btn" data-tab="tab-hlq" onclick="router.navigate('/')">
+            <i class="material-icons">list</i>
+            <span class="desktop-text">呼啦圈剧目</span>
+            <span class="mobile-text">呼啦圈<br>剧目</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-date" onclick="router.navigate('/date')">
+            <i class="material-icons">event</i>
+            <span class="desktop-text">学生票日历</span>
+            <span class="mobile-text">学生票<br>日历</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-cocast" onclick="router.navigate('/cocast')">
+            <i class="material-icons">people</i>
+            <span class="desktop-text">同场演员</span>
+            <span class="mobile-text">同场<br>演员</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-lab" onclick="router.navigate('/lab')">
+            <i class="material-icons">palette</i>
+            <span class="desktop-text">数据艺廊</span>
+            <span class="mobile-text">数据<br>艺廊</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-user" onclick="router.navigate('/user')">
+            <i class="material-icons">account_circle</i>
+            <span class="desktop-text">我的</span>
+            <span class="mobile-text">我的</span>
+        </button>
+    </div>
+
+    <main>
+        <!-- Hulaquan List Tab -->
+        <!-- 呼啦圈列表标签页 -->
+        <div id="tab-hlq" class="tab-content active">
+            <!-- Header Title Area -->
+            <div class="header-section text-center px-md pt-sm pb-md">
+                <h3 class="font-bold text-xl" style="margin: 0; color: var(--primary-color);">全部剧目</h3>
+                <p class="text-secondary text-sm" style="margin: 4px 0 0;">浏览呼啦圈所有在售演出信息</p>
+            </div>
+
+            <!-- Filter Pills -->
+            <div id="top-filter-container" class="filter-pills-scroll-wrapper sticky-filters" style="padding: 0 20px;">
+                <!-- JS Injected Pills -->
+            </div>
+
+            <!-- 票务动态卡片 (Ticket Updates Dashboard) -->
+            <div class="ticket-updates-card" id="ticket-updates-card">
+                <div class="updates-header">
+                    <h4>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            style="vertical-align: middle; margin-right: 4px;">
+                            <circle cx="12" cy="13" r="8"></circle>
+                            <path d="M12 9v4l2 2"></path>
+                            <path d="M5 3 2 6"></path>
+                            <path d="m22 6-3-3"></path>
+                        </svg>
+                        票务动态
+                    </h4>
+                    <i class="material-icons expand-icon">expand_more</i>
+                </div>
+                <div class="updates-body" id="updates-body">
+                    <!-- New Filter Pills (Horizontal Scroll) -->
+                    <div class="filter-pills-scroll-wrapper sticky-filters-secondary">
+                        <div class="filter-pills-container" id="filter-pills-container">
+                            <div class="filter-pill active" data-value="new">
+                                <i class="material-icons">add_circle_outline</i> 上新
+                            </div>
+                            <div class="filter-pill active" data-value="pending">
+                                <i class="material-icons">schedule</i> 待开票
+                            </div>
+                            <div class="filter-pill" data-value="back">
+                                <i class="material-icons">replay</i> 补票
+                            </div>
+                            <div class="filter-pill" data-value="restock">
+                                <i class="material-icons">sync</i> 回流
+                            </div>
+                            <!-- Separator -->
+                            <div style="width:1px; background:#eee; margin:2px 4px;"></div>
+
+                            <div class="filter-pill active" id="show-cast-pill">
+                                <i class="material-icons">people_outline</i> 显示卡司
+                            </div>
+                        </div>
+                    </div>
+                    <div class="updates-scroll" id="updates-list">
+                        <!-- Content will be loaded via JS -->
+                        <div style="text-align:center; padding:20px; color:#666;">正在获取最新动态...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="hlq-list-container">
+                <!-- Table will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Detail View (Hidden by default, overlays list) -->
+        <!-- 详情视图（默认隐藏，覆盖在列表上方） -->
+        <div id="detail-view" class="hidden">
+            <button class="back-btn" onclick="router.back()"><i class="material-icons">arrow_back</i> 返回</button>
+            <div id="detail-content"></div>
+        </div>
+
+        <!-- Date Tab -->
+        <div id="tab-date" class="tab-content">
+            <div class="date-search-header" style="text-align: center; padding: 40px 20px 20px;">
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">学生票日历</h3>
+                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">查看呼啦圈近期在售的学生票演出安排</p>
+            </div>
+            <div class="input-panel" style="padding: 20px 20px 20px; text-align: center;">
+                <div
+                    style="display: inline-flex; align-items: center; background: #fff; padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 15px;">
+                    <i class="material-icons"
+                        style="color: var(--primary-color); margin-right: 10px; font-size: 1.2rem;">calendar_today</i>
+                    <input type="date" id="date-input" onchange="doDateSearch()"
+                        style="border: none; outline: none; font-size: 1rem; color: var(--text-primary); cursor: pointer; background: transparent;">
+                </div>
+                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <button class="back-btn" style="margin-bottom: 0; padding: 6px 15px; font-size: 0.85rem;"
+                        onclick="setQuickDate('today')">今天</button>
+                    <button class="back-btn" style="margin-bottom: 0; padding: 6px 15px; font-size: 0.85rem;"
+                        onclick="setQuickDate('weekend')">本周末</button>
+                    <button class="back-btn" style="margin-bottom: 0; padding: 6px 15px; font-size: 0.85rem;"
+                        onclick="setQuickDate('next_weekend')">下周末</button>
+                </div>
+            </div>
+            <div id="date-results"></div>
+        </div>
+
+        <!-- Co-Cast Tab -->
+        <div id="tab-cocast" class="tab-content">
+            <div class="header-section cocast-header-styled">
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">同场演员查询</h3>
+                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem;">查询多位演员共同出演的场次</p>
+            </div>
+            <div class="cocast-panel" style="margin-top: 0;">
+                <div id="cocast-inputs">
+                    <div class="cocast-row">
+                        <div class="input-wrapper">
+                            <input type="text" class="cast-name-input" placeholder="输入演员A姓名" autocomplete="off">
+                        </div>
+                        <button class="circle-btn add" onclick="addCastInput()" title="增加演员">
+                            <i class="material-icons">add</i>
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    style="display: flex; justify-content: center; align-items: center; gap: 15px; background: rgba(99, 126, 96, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(99, 126, 96, 0.1); flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">查询范围：</span>
+                        <label
+                            style="display: flex; align-items: center; cursor: pointer; font-size: 0.9rem; color: var(--text-primary); font-weight: 500;">
+                            <input type="checkbox" id="student-only-toggle"
+                                style="margin-right: 6px; accent-color: var(--primary-color);"> 仅呼啦圈学生票
+                        </label>
+                    </div>
+                    <div style="width:1px; height:20px; background:var(--border-color); display: none;"></div>
+                    <div
+                        style="display: inline-flex; align-items: center; gap: 10px; background: #fff; padding: 4px 12px; border-radius: 50px; border: 1px solid var(--border-color);">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">从</span>
+                        <input type="date" id="cocast-start-date" min="2023-01-01"
+                            style="border: none; outline: none; font-size: 0.85rem; color: var(--text-primary); cursor: pointer; background: transparent;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">至</span>
+                        <input type="date" id="cocast-end-date" min="2023-01-01"
+                            style="border: none; outline: none; font-size: 0.85rem; color: var(--text-primary); cursor: pointer; background: transparent;">
+                    </div>
+                    <button class="back-btn"
+                        style="margin-bottom: 0; padding: 4px 12px; font-size: 0.75rem; border-style: dashed; opacity: 0.8;"
+                        onclick="setCoCastRange('earliest')">最早 (2023)</button>
+                    <button class="back-btn"
+                        style="margin-bottom: 0; padding: 4px 12px; font-size: 0.75rem; border-style: dashed; opacity: 0.8;"
+                        onclick="setCoCastRange('today')">今日</button>
+                </div>
+                <div class="cocast-actions" style="margin-top: 25px; text-align: center;">
+                    <button class="search-btn" onclick="doCoCastSearch()"
+                        style="width: 100%; max-width: 200px; padding: 12px 24px; font-size: 1.05rem; box-shadow: 0 4px 12px rgba(99, 126, 96, 0.2);"><i
+                            class="material-icons" style="margin-right: 8px; vertical-align: middle;">search</i>
+                        查询</button>
+                </div>
+            </div>
+            <div id="cast-results"></div>
+        </div>
+
+        <!-- Visualization Lab Tab -->
+        <div id="tab-lab" class="tab-content">
+            <!-- 顶部画廊介绍 -->
+            <div class="lab-header">
+                <h2 class="lab-welcome-title">数据艺廊</h2>
+                <p class="lab-welcome-text">用另一种视角，探索演出数据</p>
+            </div>
+            <!-- Bento Grid 布局 -->
+            <div class="lab-gallery-grid">
+                <!-- 主卡片：热力图 -->
+                <div class="gallery-card card-heatmap" onclick="router.navigate('/lab/heatmap')">
+                    <div class="card-content">
+                        <div class="card-label">2023-2026 年度收录</div>
+                        <h3 class="card-title">演出热力图</h3>
+                        <p class="card-desc">查看 <strong id="lab-total-shows">...</strong> 场中国音乐剧演出</p>
+                        <div class="card-visual-preview">
+                            <!-- CSS 绘制的抽象热力点阵装饰 -->
+                            <div class="heat-dots"></div>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <span>查看详情</span>
+                        <i class="material-icons">arrow_forward</i>
+                    </div>
+                </div>
+                <!-- 副卡片：关系网 (占位) -->
+                <div class="gallery-card card-galaxy coming-soon">
+                    <div class="card-content">
+                        <div class="card-label">人物联系</div>
+                        <h3 class="card-title">共演网络</h3>
+                        <p class="card-desc">探索演员的合作关系</p>
+                    </div>
+                    <div class="card-icon-bg">
+                        <i class="material-icons">hub</i>
+                    </div>
+                </div>
+                <!-- 小卡片：更多 (占位) -->
+                <div class="gallery-card card-more coming-soon">
+                    <div class="card-center">
+                        <i class="material-icons">more_horiz</i>
+                        <span>更多功能开发中</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmap Detail Tab (Hidden by default) -->
+        <div id="tab-lab-heatmap" class="tab-content">
+            <div class="heatmap-page">
+                <div class="heatmap-header-area">
+                    <button class="icon-back-btn" onclick="router.navigate('/lab')">
+                        <i class="material-icons">arrow_back</i>
+                    </button>
+                    <div class="heatmap-meta">
+                        <h2>2026 演出时间轴</h2>
+                        <div class="year-selector">
+                            <span class="active">2026</span>
+                            <span>2025</span>
+                            <span>2024</span>
+                            <span>2023</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 图表容器：白色画框风格 -->
+                <div class="chart-frame">
+                    <div class="chart-stats-row">
+                        <div class="stat-box">
+                            <span class="stat-label">演出总数</span>
+                            <span class="stat-num" id="hm_total">-</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">单日峰值</span>
+                            <span class="stat-num" id="hm_peak">-</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">无剧天数</span>
+                            <span class="stat-num" id="hm_zero">-</span>
+                        </div>
+                    </div>
+                    <div id="heatmap-chart"></div>
+                    <div class="heatmap-source-note">
+                        <i class="material-icons" style="font-size: 0.9rem; vertical-align: middle;">info_outline</i>
+                        数据来源：<a href="https://y.saoju.net/yyj" target="_blank">扫剧网</a>，<a
+                            href="https://clubz.cloudsation.com/" target="_blank">呼啦圈</a> ，仅包含中国音乐剧排期。若有遗漏，敬请谅解。
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- User Tab -->
+        <div id="tab-user" class="tab-content">
+            <div class="header-section" style="text-align: center; padding: 40px 20px 10px;">
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.5rem; font-weight: 700;">我的账户</h3>
+            </div>
+
+            <div id="user-profile-container" style="padding: 0 20px 20px;">
+                <!-- Loading state -->
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- Subscription Management Tab -->
+        <div id="tab-user-subscriptions" class="tab-content">
+            <div class="page-header"
+                style="padding: 20px 20px 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="icon-btn" onclick="router.navigate('/user')"
+                        style="background: none; border: none; cursor: pointer; padding: 5px;">
+                        <i class="material-icons">arrow_back</i>
+                    </button>
+                    <h1 style="margin: 0; font-size: 1.5rem;">订阅管理</h1>
+                </div>
+                <button class="primary-btn" onclick="showAddSubModal()"
+                    style="padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                    <i class="material-icons" style="font-size: 1.2rem;">add</i>
+                    添加订阅
+                </button>
+                <button id="batch-delete-btn" class="secondary-btn" onclick="subscription.handleBatchAction()"
+                    style="padding: 8px 16px; border-radius: 20px; font-size: 0.9rem;">
+                    多选删除
+                </button>
+            </div>
+
+            <div class="sub-tabs-wrapper" style="padding: 0 20px 15px;">
+                <div class="sub-tabs-list"
+                    style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                    <div class="sub-tab active" data-type="play" onclick="switchSubTab('play')"
+                        style="padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-weight: 500; color: var(--text-secondary);">
+                        剧目</div>
+                    <div class="sub-tab" data-type="actor" onclick="switchSubTab('actor')"
+                        style="padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-weight: 500; color: var(--text-secondary);">
+                        演员</div>
+                </div>
+            </div>
+
+            <div id="subscriptions-container" style="padding: 0 15px 100px;">
+                <!-- Content rendered by ui.js -->
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- Add Subscription Modal -->
+        <div id="add-sub-modal" class="modal-overlay">
+            <div class="modal-content subscription-modal" style="max-width: 500px; width: 90%; border-radius: 24px;">
+                <div class="modal-header"
+                    style="padding: 20px; border-bottom: 1px solid #f5f5f5; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin:0; font-size: 1.2rem;">添加新订阅</h2>
+                    <button class="close-btn" onclick="hideAddSubModal()"
+                        style="background:none; border:none; cursor:pointer;"><i
+                            class="material-icons">close</i></button>
+                </div>
+                <div class="modal-body" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #666;">订阅类型</label>
+                        <div class="type-selector"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <div class="type-option active" id="type-opt-play" data-type="play"
+                                onclick="selectSubType('play')"
+                                style="padding: 15px; border: 2px solid var(--primary-color); border-radius: 12px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                                <i class="material-icons" style="color: var(--primary-color);">theater_comedy</i>
+                                <span style="font-weight: 600;">剧目</span>
+                            </div>
+                            <div class="type-option" id="type-opt-actor" data-type="actor"
+                                onclick="selectSubType('actor')"
+                                style="padding: 15px; border: 2px solid #eee; border-radius: 12px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                                <i class="material-icons" style="color: #666;">person</i>
+                                <span style="font-weight: 600;">演员</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="sub-form-fields" style="margin-top: 20px;">
+                        <div id="sub-inputs-container" style="margin-top: 15px;">
+                            <label id="target-label"
+                                style="font-weight: 600; color: #666; display: block; margin-bottom: 8px;">剧目名称</label>
+                            <!-- Rows will be injected by JS -->
+                        </div>
+                        <input type="hidden" id="selected-sub-type" value="play">
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label style="font-weight: 600; color: #666;">推送级别</label>
+                            <select id="sub-level-select"
+                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; background: white; box-sizing: border-box;">
+                                <option value="1">仅上新</option>
+                                <option value="2" selected>上新/补票</option>
+                                <option value="3">上新/补票/回流</option>
+                                <option value="4">上新/补票/回流/票减</option>
+                                <option value="5">全部动态</option>
+                            </select>
+                        </div>
+
+
+                        <div id="actor-filters-group" style="display: none; margin-top: 15px; opacity: 0.6;">
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #666;">只看剧目 (白名单) <span class="badge"
+                                        style="font-size:0.8em; color:#fff; background:#999; padding:2px 6px; border-radius:4px; margin-left:5px;">即将上线</span></label>
+                                <input type="text" id="sub-include-input" placeholder="该功能即将上线" disabled
+                                    style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; box-sizing: border-box; background-color: #f5f5f5; cursor: not-allowed;">
+                            </div>
+                            <div class="form-group" style="margin-top: 10px;">
+                                <label style="font-weight: 600; color: #666;">排除剧目 (黑名单) <span class="badge"
+                                        style="font-size:0.8em; color:#fff; background:#999; padding:2px 6px; border-radius:4px; margin-left:5px;">即将上线</span></label>
+                                <input type="text" id="sub-exclude-input" placeholder="该功能即将上线" disabled
+                                    style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-top: 8px; box-sizing: border-box; background-color: #f5f5f5; cursor: not-allowed;">
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+                <div class="modal-footer"
+                    style="padding: 20px; border-top: 1px solid #f5f5f5; display: flex; gap: 10px;">
+                    <button class="secondary-btn" onclick="hideAddSubModal()"
+                        style="flex: 1; padding: 12px; border-color: #eee; border-radius: 12px;">取消</button>
+                    <button class="primary-btn" onclick="doAddSubscription()"
+                        style="flex: 1; padding: 12px; border-radius: 12px; background: var(--primary-color); color: white; border: none; font-weight: 600; cursor: pointer;">确认添加</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Feedback Footer Entry -->
+    <div class="feedback-footer-entry">
+        <div class="feedback-card" id="feedback-entry-card">
+            <div class="feedback-icon">
+                <i class="material-icons">rate_review</i>
+            </div>
+            <div class="feedback-text">
+                <div class="feedback-title">反馈与建议</div>
+                <div class="feedback-desc">发现Bug或有改进建议？告诉我们</div>
+            </div>
+            <i class="material-icons" style="color: var(--text-secondary);">chevron_right</i>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div class="feedback-modal-overlay" id="feedback-overlay">
+        <div class="feedback-modal">
+            <div class="feedback-hero-section">
+                <div class="feedback-header">
+                    <h3>意见反馈</h3>
+                    <button class="close-modal-btn" id="feedback-close-btn">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
+
+                <div class="feedback-tabs">
+                    <div class="feedback-tab active" id="fb-tab-submit">我要反馈</div>
+                    <div class="feedback-tab" id="fb-tab-wall">反馈动态</div>
+                </div>
+            </div>
+
+            <!-- Views Wrapper for Grid Transition -->
+            <div class="feedback-views-wrapper">
+                <!-- View: Submit Form -->
+                <div class="modal-content-area feedback-view-section active" id="fb-view-submit">
+                    <form id="feedback-form">
+                        <div class="feedback-form-group">
+                            <label class="feedback-label">反馈类型</label>
+                            <div class="feedback-type-options">
+                                <label class="type-option">
+                                    <input type="radio" name="feedback-type" value="bug">
+                                    <div class="type-card">
+                                        <i class="material-icons">bug_report</i>
+                                        <span>Bug反馈</span>
+                                    </div>
+                                </label>
+                                <label class="type-option">
+                                    <input type="radio" name="feedback-type" value="suggestion" checked>
+                                    <div class="type-card">
+                                        <i class="material-icons">lightbulb</i>
+                                        <span>优化建议</span>
+                                    </div>
+                                </label>
+                                <label class="type-option">
+                                    <input type="radio" name="feedback-type" value="wish">
+                                    <div class="type-card">
+                                        <i class="material-icons">auto_awesome</i>
+                                        <span>功能许愿</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="feedback-form-group">
+                            <label class="feedback-label">反馈内容</label>
+                            <textarea class="feedback-textarea" id="feedback-content"
+                                placeholder="请详细描述您遇到的问题或您的建议..."></textarea>
+                        </div>
+
+                        <div class="feedback-form-group">
+                            <label class="feedback-label">昵称（选填）</label>
+                            <input type="text" class="feedback-input-clean" id="feedback-contact"
+                                placeholder="怎么称呼您？/ 若收入精选反馈，将作为昵称">
+                        </div>
+
+                        <button type="submit" class="feedback-submit-btn" id="feedback-submit-btn">
+                            <span class="material-icons">send</span>
+                            <span class="btn-text">提交反馈</span>
+                        </button>
+
+                        <div class="feedback-footer-note">
+                            其它咨询或合作，请联系：<a href="mailto:contact@yaobii.com">contact@yaobii.com</a>
+                        </div>
+                    </form>
+
+                </div>
+
+                <!-- View: Feedback Wall -->
+                <div class="modal-content-area feedback-view-section slide-right" id="fb-view-wall">
+                    <div class="feedback-wall-list" id="feedback-wall-list">
+                        <!-- JS Populated -->
+                    </div>
+                </div>
+            </div> <!-- End Wrapper -->
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-row">数据来源：<a href="https://y.saoju.net/yyj" target="_blank">扫剧网</a> · <a
+                    href="https://clubz.cloudsation.com/" target="_blank">呼啦圈</a></div>
+            <div class="footer-row" id="update-status">正在加载更新状态...</div>
+        </div>
+    </footer>
+
+    <!-- Changelog Modal -->
+    <div class="changelog-modal-overlay" id="changelog-overlay">
+        <div class="changelog-modal">
+            <div class="changelog-header">
+                <h3><i class="material-icons">new_releases</i> 更新日志</h3>
+                <button class="close-modal-btn" id="changelog-close-btn">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="changelog-content">
+                <div class="changelog-version">
+                    <div class="version-tag">v1.3</div>
+                    <span class="version-date">2026-01-18</span>
+                </div>
+                <div class="changelog-section">
+                    <h4><i class="material-icons">add_circle</i> 新增功能</h4>
+                    <ul>
+                        <li><strong>全局错误处理系统</strong>：智能识别网络异常与服务故障，提供友好的错误提示与重试机制。</li>
+                        <li><strong>新增“我的”页面</strong>：即将支持可视化地管理QQ机器人订阅，以及未来更多的数据推送功能。</li>
+                    </ul>
+                </div>
+                <div class="changelog-section">
+                    <h4><i class="material-icons">build</i> build 优化</h4>
+                    <ul>
+                        <li>修复部分卡司显示截断问题。</li>
+                        <li>修复若干BUG。</li>
+                    </ul>
+                </div>
+
+                <hr style="border:0; border-top:1px dashed #eee; margin:20px 0;">
+
+                <div class="changelog-version">
+                    <div class="version-tag">v1.2</div>
+                    <span class="version-date">2026-01-06</span>
+                </div>
+                <div class="changelog-section">
+                    <h4><i class="material-icons">add_circle</i> 新增功能</h4>
+                    <ul>
+                        <li><strong>票务动态看板</strong>：首页新增实时票务变动展示</li>
+                        <li><strong>热力图多年份切换</strong>：支持查看 2023-2026 年度数据</li>
+                        <li><strong>版本更新日志</strong>：点击版本号可查看更新内容</li>
+                    </ul>
+                </div>
+                <div class="changelog-section">
+                    <h4><i class="material-icons">build</i> 问题修复</h4>
+                    <ul>
+                        <li>修复同场演员查询偶发失败的问题</li>
+                        <li>提升整体服务稳定性</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Celebration Content -->
+    <div id="celebration-overlay" class="celebration-overlay">
+        <div class="celebration-content">
+            <h1 class="celebration-title">感谢您的宝贵建议</h1>
+            <p class="celebration-subtitle">祝戏剧之神永在您身畔～</p>
+        </div>
+        <p id="close-hint" class="close-hint">(点击任意处关闭)</p>
+        <div id="confetti-container"></div>
+    </div>
+
+    <!-- Global Error Overlay -->
+    <div id="global-error-overlay" class="error-overlay">
+        <div class="error-card">
+            <div class="error-icon">
+                <i class="material-icons">wifi_off</i>
+            </div>
+            <h2 class="error-title">网络连接似乎断开了</h2>
+            <p class="error-message">请检查您的网络设置。</p>
+
+            <div class="error-detail"></div>
+
+            <button class="error-retry-btn" onclick="window.location.reload()">
+                <i class="material-icons">refresh</i>
+                刷新页面
+            </button>
+        </div>
+    </div>
+
+    <!-- Heatmap Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+    <script type="module" src="/static/js/main.js?v=20260120_2323"></script>
+    <script src="/static/js/feedback.js?v=20260120_2323"></script>
+
+</body>
+
+</html>
