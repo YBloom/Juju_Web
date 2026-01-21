@@ -111,26 +111,24 @@ class NotificationEngine:
                 if not subs:
                     continue
                 
-                # 获取第一个订阅的 options (已通过 joinedload 加载)
-                sub = subs[0]
-                option = sub.options[0] if sub.options else None
+                # 获取用户实例 (需确保在 Session 中)
+                user = session.get(User, user_id)
+                if not user:
+                    continue
                 
-                # 获取全局通知级别 (优先从 SubscriptionOption 获取，备选从 User 获取)
-                global_level = 0
-                if option:
-                    global_level = option.notification_level
-                else:
-                    # 如果没有 option，尝试加载 User 的 global_level
-                    user = session.get(User, user_id)
-                    if user:
-                        global_level = user.global_notification_level
+                # --- Unified Config Logic (from User) ---
                 
                 # 检查静音
-                if option and option.mute:
+                if user.is_muted:
+                    continue
+                
+                # 检查全局级别
+                global_level = user.global_notification_level
+                if global_level == 0:
                     continue
                 
                 # 检查静默时段
-                if option and option.silent_hours and self._is_silent_hour(option.silent_hours):
+                if user.silent_hours and self._is_silent_hour(user.silent_hours):
                     continue
                 
                 # 收集所有 targets (已通过 joinedload 加载)
@@ -176,10 +174,20 @@ class NotificationEngine:
             if effective_mode < required_mode:
                 continue
             
-            # 按类型匹配
+            # 按类型分组
             if target.kind == SubscriptionTargetKind.PLAY:
+                # 1. 精确 ID 匹配
                 if target.target_id == str(update.event_id):
                     return True
+                
+                # 2. 兜底逻辑：如果 ID 是非数字 (说明存的是名字)，尝试名称模糊匹配
+                # e.g. target_id="奥尔菲斯" vs update.event_title="惊悚推理悬疑音乐剧《奥尔菲斯》"
+                if not target.target_id.isdigit():
+                    # 这里直接用 target.target_id (即名字) 去匹配 title
+                    # 也可以用 target.name，通常两者一致
+                    search_term = target.target_id or target.name
+                    if search_term and update.event_title and search_term in update.event_title:
+                        return True
             elif target.kind == SubscriptionTargetKind.ACTOR:
                 if update.cast_names and target.name in update.cast_names:
                     return True

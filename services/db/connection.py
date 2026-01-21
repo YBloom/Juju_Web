@@ -27,9 +27,11 @@ def _create_engine(db_path: Path, *, echo: bool = False):
         echo=echo,
         connect_args={"check_same_thread": False, "timeout": 60},
     )
+    # 确保 WAL 模式和外键约束开启
     with engine.begin() as conn:
         conn.exec_driver_sql("PRAGMA journal_mode=WAL;")
         conn.exec_driver_sql("PRAGMA synchronous=NORMAL;")
+        conn.exec_driver_sql("PRAGMA foreign_keys = ON;")
     return engine
 
 

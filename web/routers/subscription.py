@@ -10,8 +10,8 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from services.db.connection import get_engine
-from services.db.models import Subscription, SubscriptionTarget, SubscriptionOption
-from services.db.models.base import SubscriptionTargetKind, SubscriptionFrequency
+from services.db.models import Subscription, SubscriptionTarget, SubscriptionOption, User
+from services.db.models.base import SubscriptionTargetKind, SubscriptionFrequency, SubscriptionFrequency
 from web.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -129,6 +129,23 @@ async def list_subscriptions(
     statement = select(Subscription).where(Subscription.user_id == user_id)
     subscriptions = session.exec(statement).all()
     
+    # 获取用户配置 (Unified from User)
+    db_user = session.get(User, user_id)
+    
+    # Construct unified options once
+    unified_options = None
+    if db_user:
+        unified_options = SubscriptionOptionResponse(
+            id=0, # Dummy ID
+            mute=db_user.is_muted,
+            freq=db_user.notification_freq,
+            allow_broadcast=db_user.allow_broadcast,
+            notification_level=db_user.global_notification_level,
+            last_notified_at=db_user.last_notified_at,
+            created_at=db_user.created_at, # Use user timestamps
+            updated_at=db_user.updated_at
+        )
+
     # 手动加载关系（eager loading）
     results = []
     for sub in subscriptions:
@@ -136,15 +153,12 @@ async def list_subscriptions(
         targets_stmt = select(SubscriptionTarget).where(SubscriptionTarget.subscription_id == sub.id)
         targets = session.exec(targets_stmt).all()
         
-        # 加载 options
-        options_stmt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
-        options = session.exec(options_stmt).first()
-        
+        # 使用统一配置作为 options
         results.append(SubscriptionResponse(
             id=sub.id,
             user_id=sub.user_id,
             targets=[SubscriptionTargetResponse.model_validate(t) for t in targets],
-            options=SubscriptionOptionResponse.model_validate(options) if options else None,
+            options=unified_options,
             created_at=sub.created_at,
             updated_at=sub.updated_at
         ))
@@ -190,41 +204,59 @@ async def create_subscription(
         )
         session.add(target)
     
-    # 创建 SubscriptionOption
-    if data.options:
-        option = SubscriptionOption(
-            subscription_id=subscription.id,
-            mute=data.options.mute,
-            freq=data.options.freq,
-            allow_broadcast=data.options.allow_broadcast
-        )
-        session.add(option)
-    else:
-        # 默认选项
-        option = SubscriptionOption(
-            subscription_id=subscription.id,
-            mute=False,
-            freq=SubscriptionFrequency.REALTIME,
-            allow_broadcast=True
-        )
-        session.add(option)
+    # 创建 SubscriptionOption (Migrated to User)
+    # Update User settings if provided
+    db_user = session.get(User, user_id)
     
+    if db_user and data.options:
+        db_user.is_muted = data.options.mute
+        db_user.notification_freq = data.options.freq
+        db_user.allow_broadcast = data.options.allow_broadcast
+        # Note: notification_level is passed in SubscriptionOptionCreate (default 2), 
+        # but in User model it's global_notification_level.
+        # We should probably respect what's passed if it's not default?
+        # SubscriptionOptionCreate default is 2. 
+        # If user explicitly sets it, we update global level.
+        db_user.global_notification_level = data.options.notification_level
+        session.add(db_user)
+    elif db_user and not data.options:
+        # Apply defaults if user config is not set? 
+        # Or just leave existing user config?
+        # Strategy: Leave existing user config. If this is first sub, they effectively get defaults (0, false, realtime).
+        # We might want to set notification level to 2 if it's currently 0 (off) to ensure they get notifs?
+        if db_user.global_notification_level == 0:
+             db_user.global_notification_level = 2
+             session.add(db_user)
+
     session.commit()
     session.refresh(subscription)
+    if db_user:
+        session.refresh(db_user)
     
     # 重新加载以包含关系
     targets = session.exec(
         select(SubscriptionTarget).where(SubscriptionTarget.subscription_id == subscription.id)
     ).all()
-    options = session.exec(
-        select(SubscriptionOption).where(SubscriptionOption.subscription_id == subscription.id)
-    ).first()
+    
+    # Construct unified options
+    unified_options = None
+    if db_user:
+        unified_options = SubscriptionOptionResponse(
+            id=0,
+            mute=db_user.is_muted,
+            freq=db_user.notification_freq,
+            allow_broadcast=db_user.allow_broadcast,
+            notification_level=db_user.global_notification_level,
+            last_notified_at=db_user.last_notified_at,
+            created_at=db_user.created_at, 
+            updated_at=db_user.updated_at
+        )
     
     return SubscriptionResponse(
         id=subscription.id,
         user_id=subscription.user_id,
         targets=[SubscriptionTargetResponse.model_validate(t) for t in targets],
-        options=SubscriptionOptionResponse.model_validate(options) if options else None,
+        options=unified_options,
         created_at=subscription.created_at,
         updated_at=subscription.updated_at
     )
@@ -260,11 +292,18 @@ async def delete_subscription(
     for target in targets:
         session.delete(target)
     
-    options = session.exec(
-        select(SubscriptionOption).where(SubscriptionOption.subscription_id == subscription_id)
-    ).first()
-    if options:
-        session.delete(options)
+    # SubscriptionOption 已废弃/统一到 User，无需删除。
+    # 仅仅删除 Subscription 及其 targets。
+    # 如果为了彻底清理，可以尝试删除残留的 SubscriptionOption (如果还没删表)
+    try:
+        options = session.exec(
+            select(SubscriptionOption).where(SubscriptionOption.subscription_id == subscription_id)
+        ).first()
+        if options:
+            session.delete(options)
+    except Exception:
+        # Ignore errors if table/model issues
+        pass
     
     # 删除订阅本身
     session.delete(subscription)
@@ -281,28 +320,42 @@ async def update_subscription_options(
     db: Session = Depends(get_session),
     user: dict = Depends(get_current_user)
 ):
-    """更新订阅选项"""
-    stmt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == subscription_id)
-    db_options = db.exec(stmt).first()
-    if not db_options:
-        raise HTTPException(status_code=404, detail="Options not found")
-        
-    for key, value in options.dict().items():
-        setattr(db_options, key, value)
-    
-    # 同步到 User.global_notification_level
+    """更新订阅选项 (实质更新用户全局设置)"""
+    # 找到该订阅所属的用户
     sub = db.get(Subscription, subscription_id)
-    if sub:
-        user_id = sub.user_id
-        from services.db.models import User
-        db_user = db.get(User, user_id)
-        if db_user:
-            db_user.global_notification_level = db_options.notification_level
-            db.add(db_user)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+        
+    db_user = db.get(User, sub.user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update fields on User
+    for key, value in options.dict(exclude_unset=True).items():
+        if key == 'mute':
+            db_user.is_muted = value
+        elif key == 'freq':
+            db_user.notification_freq = value
+        elif key == 'allow_broadcast':
+            db_user.allow_broadcast = value
+        elif key == 'notification_level':
+            db_user.global_notification_level = value
     
-    db.add(db_options)
+    db.add(db_user)
     db.commit()
-    return db_options
+    db.refresh(db_user)
+    
+    # Return fake SubscriptionOptionResponse
+    return SubscriptionOptionResponse(
+        id=0,
+        mute=db_user.is_muted,
+        freq=db_user.notification_freq,
+        allow_broadcast=db_user.allow_broadcast,
+        notification_level=db_user.global_notification_level,
+        last_notified_at=db_user.last_notified_at,
+        created_at=db_user.created_at,
+        updated_at=db_user.updated_at
+    )
 
 @router.patch("/global-level")
 async def update_global_level(
@@ -320,18 +373,7 @@ async def update_global_level(
     db_user.global_notification_level = level
     db.add(db_user)
     
-    # 同时同步到 SubscriptionOption
-    statement = select(Subscription).where(Subscription.user_id == user_id)
-    sub = db.exec(statement).first()
-    if sub:
-        opt_stmt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
-        opt = db.exec(opt_stmt).first()
-        if not opt:
-            opt = SubscriptionOption(subscription_id=sub.id, notification_level=level)
-            db.add(opt)
-        else:
-            opt.notification_level = level
-            db.add(opt)
+    # 移除同步 SubscriptionOption 的代码
     
     db.commit()
     return {"status": "ok", "level": level}

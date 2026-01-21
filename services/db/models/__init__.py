@@ -3,6 +3,7 @@
 from .base import (
     GroupType,
     HLQTicketStatus,
+    InternalMetadata,
     ItemDirection,
     PlaySource,
     SendQueueStatus,
@@ -46,6 +47,7 @@ __all__ = [
     "ItemType",
     "ListingItem",
     "MarketplaceListing",
+    "InternalMetadata",
     "Metric",
     "Membership",
     "Play",

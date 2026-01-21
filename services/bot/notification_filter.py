@@ -23,7 +23,7 @@ def should_notify(global_level: int, notification_level: int, update: dict, targ
     """
     判断是否应该推送通知
     :param global_level: 用户全局推送级别 (User.global_notification_level)
-    :param notification_level: 订阅特定的推送级别 (SubscriptionOption.notification_level)
+    :param notification_level: 订阅特定的推送级别 (User.global_notification_level)
     :param update: 包含 change_type, event_id, cast_names, old_stock, new_stock 等信息的字典
     :param targets: SubscriptionTarget 对象列表
     :return: bool

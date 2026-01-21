@@ -68,35 +68,33 @@ class UserService:
                         # For now, discard duplicate from source (delete later with source_sub)
                         self.session.delete(t)
                 
-                # Cleanup source options to allow deleting subscription
-                source_opt = self.session.exec(select(SubscriptionOption).where(SubscriptionOption.subscription_id == source_sub.id)).first()
-                if source_opt:
-                    # If target has no options, maybe we should move them?
-                    # But simpler to just keep target (or default) and delete source for now.
-                    # Or check if target has options
-                    target_opt = self.session.exec(select(SubscriptionOption).where(SubscriptionOption.subscription_id == target_sub.id)).first()
-                    if not target_opt:
-                         source_opt.subscription_id = target_sub.id
-                         self.session.add(source_opt)
-                    else:
-                         self.session.delete(source_opt)
-                
                 # Delete source subscription shell
                 self.session.delete(source_sub)
 
-        # 1.5 Synchronize global notification level
+        # 1.5 Synchronize Settings (Unified in User)
         target_user = self.session.get(User, target_user_id)
         if source_user and target_user:
-            # Sync level if source is set (not 0)
-            if source_user.global_notification_level != 0:
+            # Merging strategy: Prefer non-default values from source if target is default
+            
+            # Global Level (0=default)
+            if target_user.global_notification_level == 0 and source_user.global_notification_level != 0:
                 target_user.global_notification_level = source_user.global_notification_level
-                self.session.add(target_user)
+            
+            # Mute (False=default)
+            if not target_user.is_muted and source_user.is_muted:
+                target_user.is_muted = True
                 
-            # Also sync to SubscriptionOption if exists
-            target_opt = self.session.exec(select(SubscriptionOption).join(Subscription).where(Subscription.user_id == target_user_id)).first()
-            if target_opt and target_user.global_notification_level != 0:
-                target_opt.notification_level = target_user.global_notification_level
-                self.session.add(target_opt)
+            # Allow Broadcast (True=default)
+            # If target is True (default) and source is False (custom), take source?
+            # Or if user explicitly set it. Assuming False is the custom "Opt-out".
+            if target_user.allow_broadcast and not source_user.allow_broadcast:
+                target_user.allow_broadcast = False
+                
+            # Silent Hours (None=default)
+            if not target_user.silent_hours and source_user.silent_hours:
+                target_user.silent_hours = source_user.silent_hours
+                
+            self.session.add(target_user)
 
         # 2. Merge Auth Methods
         auths = self.session.exec(select(UserAuthMethod).where(UserAuthMethod.user_id == source_user_id)).all()

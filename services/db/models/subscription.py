@@ -22,7 +22,7 @@ class NotificationLevel(IntEnum):
 
 class Subscription(TimeStamped, SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: str = Field(foreign_key="user.user_id", index=True)
+    user_id: str = Field(foreign_key="user.user_id", ondelete="CASCADE", index=True)
 
     user: Mapped["User"] = Relationship(
         back_populates="subscriptions",
@@ -30,17 +30,27 @@ class Subscription(TimeStamped, SQLModel, table=True):
     )
     targets: Mapped[List["SubscriptionTarget"]] = Relationship(
         back_populates="subscription",
-        sa_relationship=relationship("SubscriptionTarget", back_populates="subscription"),
+        sa_relationship=relationship(
+            "SubscriptionTarget", 
+            back_populates="subscription",
+            cascade="all, delete-orphan",
+            passive_deletes=True
+        ),
     )
     options: Mapped[List["SubscriptionOption"]] = Relationship(
         back_populates="subscription",
-        sa_relationship=relationship("SubscriptionOption", back_populates="subscription"),
+        sa_relationship=relationship(
+            "SubscriptionOption", 
+            back_populates="subscription",
+            cascade="all, delete-orphan",
+            passive_deletes=True
+        ),
     )
 
 
 class SubscriptionTarget(TimeStamped, SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    subscription_id: int = Field(foreign_key="subscription.id", nullable=False)
+    subscription_id: int = Field(foreign_key="subscription.id", ondelete="CASCADE", nullable=False)
     kind: SubscriptionTargetKind = Field(nullable=False, index=True)
     target_id: Optional[str] = Field(default=None, index=True, max_length=128)
     name: Optional[str] = Field(default=None, max_length=256)
@@ -70,7 +80,7 @@ class SubscriptionTarget(TimeStamped, SQLModel, table=True):
 
 class SubscriptionOption(TimeStamped, SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    subscription_id: int = Field(foreign_key="subscription.id", nullable=False, unique=True)
+    subscription_id: int = Field(foreign_key="subscription.id", ondelete="CASCADE", nullable=False, unique=True)
     mute: bool = Field(default=False, nullable=False)
     freq: SubscriptionFrequency = Field(default=SubscriptionFrequency.REALTIME, nullable=False)
     notification_level: int = Field(default=2, nullable=False, description="1=new, 2=new+restock, 3=+back, 4=+decrease, 5=all")

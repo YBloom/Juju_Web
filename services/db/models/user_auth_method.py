@@ -22,7 +22,7 @@ class UserAuthMethod(TimeStamped, SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     
     # 关联用户
-    user_id: str = Field(foreign_key="user.user_id", index=True, max_length=32)
+    user_id: str = Field(foreign_key="user.user_id", ondelete="CASCADE", index=True, max_length=32)
     
     # 认证方式
     provider: str = Field(max_length=32, index=True, description="认证提供商: qq, email, wechat, etc")

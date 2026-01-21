@@ -33,6 +33,14 @@ class SoftDelete(SQLModel, table=False):
     deleted_at: Optional[datetime] = Field(default=None, nullable=True)
 
 
+class InternalMetadata(TimeStamped, SQLModel, table=True):
+    """存储系统内部元数据,如跨进程安全的计数器。"""
+    __tablename__ = "internal_metadata"
+    
+    key: str = Field(primary_key=True, max_length=64)
+    value: str = Field(max_length=255)
+
+
 class GroupType(str, Enum):
     BROADCAST = "broadcast"
     FILTERED = "filtered"

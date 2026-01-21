@@ -22,7 +22,12 @@ def update_schema():
             "auth_id": "VARCHAR(128)",
             "email": "VARCHAR(255)",
             "avatar_url": "VARCHAR(512)",
-            "bot_interaction_mode": "VARCHAR(20) DEFAULT 'hybrid'"
+            "bot_interaction_mode": "VARCHAR(20) DEFAULT 'hybrid'",
+            "notification_freq": "VARCHAR(20) DEFAULT 'realtime'",
+            "is_muted": "BOOLEAN DEFAULT 0 NOT NULL",
+            "allow_broadcast": "BOOLEAN DEFAULT 1 NOT NULL",
+            "silent_hours": "VARCHAR(32)",
+            "last_notified_at": "DATETIME"
         }
         
         for col, definition in new_columns.items():

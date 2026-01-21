@@ -102,8 +102,7 @@ class BotHandler:
     async def _handle_set_notify_level(self, user_id: str, level: Optional[int] = None) -> str:
         """处理 /呼啦圈通知 [0-5] 命令"""
         from services.db.connection import session_scope
-        from services.db.models import Subscription, SubscriptionOption
-        from sqlmodel import select
+        from services.db.models import User
         
         if level is None:
             return (
@@ -122,39 +121,19 @@ class BotHandler:
             return "❌ 级别必须在 0-5 之间"
         
         with session_scope() as session:
-            # 查找或创建订阅
-            stmt = select(Subscription).where(Subscription.user_id == user_id)
-            sub = session.exec(stmt).first()
-            
-            if not sub:
-                sub = Subscription(user_id=user_id)
-                session.add(sub)
-                session.flush()
-            
-            # 更新或创建SubscriptionOption
-            stmt_opt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
-            opt = session.exec(stmt_opt).first()
-            
-            if opt:
-                opt.notification_level = level
-            else:
-                opt = SubscriptionOption(
-                    subscription_id=sub.id,
-                    notification_level=level
-                )
-                session.add(opt)
-            
-            # 同时同步到 User 模型
-            from services.db.models import User
             user = session.get(User, user_id)
             if user:
                 user.global_notification_level = level
+                # Ensure we also initialize subscription if not exists, though now settings are on User
+                # For compatibility, we might still want to ensure a Subscription record exists if logic elsewhere depends on it
+                # But strict setting logic depends only on User now.
                 session.add(user)
+                session.commit()
                 
-            session.commit()
-        
-        level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
-        return f"✅ 全局通知级别已设置为: {level} ({level_names[level]})"
+                level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
+                return f"✅ 全局通知级别已设置为: {level} ({level_names[level]})"
+            else:
+                return "❌ 用户不存在，请先尝试使用其他命令初始化。"
     
     async def _handle_subscribe(self, user_id: str, args: dict) -> str:
         """处理 /关注学生票 命令"""
@@ -309,7 +288,7 @@ class BotHandler:
     async def _handle_list_subscriptions(self, user_id: str) -> str:
         """处理 /查看关注 命令"""
         from services.db.connection import session_scope
-        from services.db.models import Subscription, SubscriptionOption, SubscriptionTarget, HulaquanEvent
+        from services.db.models import Subscription, SubscriptionTarget, HulaquanEvent
         from services.db.models.base import SubscriptionTargetKind
         from sqlmodel import select
         
@@ -320,19 +299,22 @@ class BotHandler:
             if not sub:
                 return "您目前没有任何订阅。\n\n使用 /呼啦圈通知 2 开启全局通知"
             
+            # 加载用户信息用于读取配置
+            user = session.get(User, user_id)
+            if not user:
+                 return "❌ 用户数据异常"
+
             lines = ["📋 我的订阅\n"]
             
-            # 显示全局设置
-            stmt_opt = select(SubscriptionOption).where(SubscriptionOption.subscription_id == sub.id)
-            opt = session.exec(stmt_opt).first()
+            # 显示全局设置 (unified from User table)
+            level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
+            lines.append(f"🔔 全局通知级别: {user.global_notification_level} ({level_names[user.global_notification_level]})")
             
-            if opt:
-                level_names = ["关闭", "上新", "上新+补票", "上新+补票+回流", "上新+补票+回流+票减", "全量"]
-                lines.append(f"🔔 全局通知级别: {opt.notification_level} ({level_names[opt.notification_level]})")
-                if opt.silent_hours:
-                    lines.append(f"🌙 静音时段: {opt.silent_hours}")
-            else:
-                lines.append("🔔 全局通知: 未设置")
+            if user.silent_hours:
+                lines.append(f"🌙 静音时段: {user.silent_hours}")
+            
+            if user.is_muted:
+                lines.append(f"🔇 已全局静音")
             
             # 获取所有订阅目标
             stmt_targets = select(SubscriptionTarget).where(SubscriptionTarget.subscription_id == sub.id)
