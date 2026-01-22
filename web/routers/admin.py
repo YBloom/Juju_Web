@@ -34,42 +34,17 @@ api_router.include_router(commands_router) # Note: admin_commands router prefix 
 # Let's add explicit include in web/routers/admin.py is easier if we want to keep it consolidated under admin module.
 
 
+from .admin_utils import (
+    verify_admin_credentials, 
+    create_admin_session, 
+    verify_admin_session, 
+    ADMIN_COOKIE_NAME
+)
+
 # Admin 页面路径
 ADMIN_PAGE = Path(__file__).parent.parent / "admin.html"
 
-# Admin session 管理（简单的内存存储）
-# key: session_token, value: True
-_admin_sessions = {}
-
-# Admin cookie 名称
-ADMIN_COOKIE_NAME = "admin_session"
-
-
-def verify_admin_credentials(username: str, password: str) -> bool:
-    """验证 admin 账号密码（从环境变量读取）"""
-    admin_username = os.getenv("ADMIN_USERNAME", "admin")
-    admin_password = os.getenv("ADMIN_PASSWORD", "")
-    
-    if not admin_password:
-        # 如果没有设置密码，出于安全考虑，拒绝登录
-        return False
-    
-    return username == admin_username and password == admin_password
-
-
-def create_admin_session() -> str:
-    """创建一个新的 admin session token"""
-    token = secrets.token_urlsafe(32)
-    _admin_sessions[token] = True
-    return token
-
-
-def verify_admin_session(token: str) -> bool:
-    """验证 admin session token 是否有效"""
-    return token in _admin_sessions
-
-
-# Admin 登录页面 HTML
+# Admin Login HTML (kept here as it's view related)
 ADMIN_LOGIN_HTML = """
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -250,11 +225,7 @@ async def admin_page(admin_session: str = Cookie(None, alias=ADMIN_COOKIE_NAME))
     return HTMLResponse(content=content)
 
 
-# 导出验证函数供中间件使用
-def has_admin_session(request: Request) -> bool:
-    """检查请求是否有有效的 admin session（供中间件调用）"""
-    admin_session = request.cookies.get(ADMIN_COOKIE_NAME)
-    return admin_session and verify_admin_session(admin_session)
+
 
 
 # --- 维护页面歌词管理 ---

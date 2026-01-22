@@ -2,7 +2,7 @@ from fastapi import APIRouter, Cookie, HTTPException, Body
 from services.db.connection import session_scope
 from services.db.models import BotAlias
 from services.bot.commands import COMMAND_REGISTRY, refresh_alias_cache
-from web.routers.admin import verify_admin_session, ADMIN_COOKIE_NAME
+from web.routers.admin_utils import verify_admin_session, ADMIN_COOKIE_NAME
 from sqlmodel import select
 from pydantic import BaseModel
 from typing import List
