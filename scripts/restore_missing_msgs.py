@@ -15,6 +15,8 @@ from services.db.models import SendQueue, SendQueueStatus
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+import re
+
 # 从本地提取的积压消息数据 (Hardcoded from local DB)
 PENDING_MESSAGES_DATA = [
     {"user_id":"000162","channel":"qq_private","scope":"ticket_update","payload":{"updates": [{"event_id": "3928", "event_title": "惊悚推理悬疑音乐剧《奥尔菲斯》", "change_type": "restock", "message": "♻️回流: 《奥尔菲斯》2026 02-07 19:30￥180（原价￥280) 学生票 余票1/20", "ticket_id": "36300"}]},"ref_id":"batch_36300_2026012213"},
@@ -29,6 +31,46 @@ PENDING_MESSAGES_DATA = [
     {"user_id":"000184","channel":"qq_private","scope":"ticket_update","payload":{"updates": [{"event_id": "3928", "event_title": "惊悚推理悬疑音乐剧《奥尔菲斯》", "change_type": "back", "message": "➕票增: 《奥尔菲斯》2026 02-04 19:30￥180（原价￥280) 学生票 余票20/20", "ticket_id": "36582"}]},"ref_id":"batch_36582_2026012218"}
 ]
 
+def enrich_payload(payload):
+    """
+    解析 message 文本，补充 price, stock, session_time 等字段，
+    以适应服务器旧版 Formatter 的需求。
+    """
+    updates = payload.get("updates", [])
+    for u in updates:
+        msg = u.get("message", "")
+        # Parse Price (matches ￥180 or ￥ 199)
+        price_match = re.search(r'￥\s*(\d+)', msg)
+        if price_match:
+            u["price"] = int(price_match.group(1))
+        
+        # Parse Stock (matches 余票1/20)
+        stock_match = re.search(r'余票(\d+)/(\?|\d+)', msg)
+        if stock_match:
+            u["stock"] = int(stock_match.group(1))
+            u["total_ticket"] = stock_match.group(2)
+            
+        # Parse Time
+        # Pattern 1: YYYY mm-dd HH:MM (e.g. 2026 02-07 19:30)
+        time_match_long = re.search(r'(\d{4})\s+(\d{2}-\d{2}\s+\d{2}:\d{2})', msg)
+        if time_match_long:
+            date_str = f"{time_match_long.group(1)}-{time_match_long.group(2)}"
+            try:
+                dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+                u["session_time"] = dt.isoformat()
+            except: pass
+        else:
+            # Pattern 2: mm-dd HH:MM (e.g. 02-01 19:30) -> Assume 2026 for now
+            time_match_short = re.search(r'(\d{2}-\d{2}\s+\d{2}:\d{2})', msg)
+            if time_match_short:
+                dt_str = f"2026-{time_match_short.group(1)}"
+                try:
+                    dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                    u["session_time"] = dt.isoformat()
+                except: pass
+                
+    return payload
+
 def restore_messages():
     """
     将提取的积压消息插入数据库，并生成新的 ref_id 以避免被系统去重拦截。
@@ -40,14 +82,17 @@ def restore_messages():
         for data in PENDING_MESSAGES_DATA:
             # 修改 ref_id 防止被去重 (增加 _restored 后缀)
             original_ref = data["ref_id"]
-            new_ref = f"{original_ref}_restored_{datetime.now().strftime('%M%S')}"
+            new_ref = f"{original_ref}_restored_{datetime.now().strftime('%M%S%f')}"
             
+            # Enrich Payload
+            enriched_payload = enrich_payload(data["payload"])
+
             # 创建新对象
             new_item = SendQueue(
                 user_id=data["user_id"],
                 channel=data["channel"],
                 scope=data["scope"],
-                payload=data["payload"], # SQLModel 应该会自动处理 JSON
+                payload=enriched_payload,
                 status=SendQueueStatus.PENDING,
                 ref_id=new_ref,
                 retry_count=0,
