@@ -232,6 +232,13 @@ class NotificationEngine:
                 "change_type": u.change_type,
                 "message": u.message,
                 "ticket_id": u.ticket_id,
+                # Additional fields for rich formatting
+                "session_time": u.session_time.isoformat() if u.session_time else None,
+                "price": u.price,
+                "stock": u.stock,
+                "total_ticket": u.total_ticket,
+                "cast_names": u.cast_names,
+                "valid_from": u.valid_from,
             })
         
         # 检查是否已存在相同 ref_id (防重复)
@@ -310,14 +317,15 @@ class NotificationEngine:
                     await loop.run_in_executor(None, self._mark_sent, item.id)
                     continue
                 
-                # 生成消息文本
-                lines = [f"📢 票务动态 ({len(updates_data)} 条)"]
-                for u in updates_data[:5]:  # 最多显示 5 条
-                    lines.append(f"• {u.get('message', '')}")
-                if len(updates_data) > 5:
-                    lines.append(f"... 还有 {len(updates_data) - 5} 条")
+                # 生成消息文本 (使用旧版富文本格式)
+                text = self.formatter.format_send_queue_payload(updates_data)
                 
-                text = "\n".join(lines)
+                # 如果格式化失败或为空（理论上不应发生），回退到简单格式
+                if not text:
+                    lines = [f"📢 票务动态 ({len(updates_data)} 条)"]
+                    for u in updates_data[:5]:
+                        lines.append(f"• {u.get('message', '')}")
+                    text = "\n".join(lines)
                 
                 # 发送
                 if is_group:

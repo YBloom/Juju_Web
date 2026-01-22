@@ -264,3 +264,152 @@ class HulaquanFormatter:
             lines.append(f"\n🔗 网页快速筛选: {show_link}")
         
         return "\n".join(lines)
+
+    @staticmethod
+    def format_send_queue_payload(updates: List[Dict]) -> str:
+        """
+        从 SendQueue payload (List[Dict]) 重建旧版格式通知消息。
+        
+        格式参考:
+        🆕上新提醒|🟢补票提醒：
+        剧名: 《剧名》
+        购票链接: ...
+        
+        🆕上新提醒：
+        ✨01-17 19:30 ￥199 ...
+        ...
+        """
+        if not updates:
+            return ""
+            
+        # 1. Group by Event ID
+        events = {} # event_id -> {title: str, updates: [dict]}
+        for u in updates:
+            eid = u.get("event_id", "unknown")
+            if eid not in events:
+                events[eid] = {
+                    "title": u.get("event_title", "未知剧目"), 
+                    "updates": []
+                }
+            events[eid]["updates"].append(u)
+            
+        final_messages = []
+        
+        type_prefix_map = {
+            "new": "🆕上新",
+            "restock": "🟢补票",
+            "back": "🔄回流",
+            "sold_out": "❗售罄",
+            "stock_decrease": "➖票减",
+            "stock_increase": "➕票增",
+            "pending": "⏲️待开票",
+        }
+        
+        for eid, event_data in events.items():
+            event_title = event_data["title"]
+            event_updates = event_data["updates"]
+            
+            # 2. Group by Change Type
+            by_type = {}
+            for u in event_updates:
+                ctype = u.get("change_type", "other")
+                if ctype not in by_type:
+                    by_type[ctype] = []
+                by_type[ctype].append(u)
+            
+            # 3. Build Header (Combined Prefixes)
+            prefixes = []
+            # Sort types by priority/logic? Just consistent order
+            sorted_types = sorted(by_type.keys(), key=lambda k: ["new", "restock", "back", "pending"].index(k) if k in ["new", "restock", "back", "pending"] else 99)
+            
+            for ctype in sorted_types:
+                p = type_prefix_map.get(ctype, "📢动态")
+                prefixes.append(f"{p}提醒")
+            
+            header_line = f"{'|'.join(prefixes)}："
+            
+            # 4. Build Event Info
+            lines = [header_line]
+            # Ensure title has brackets
+            clean_title = event_title.strip()
+            display_title = clean_title if clean_title.startswith("《") else f"《{clean_title}》"
+            lines.append(f"剧名: {display_title}")
+            
+            if eid and eid != "unknown":
+                url = HLQ_EVENT_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=eid)
+                lines.append(f"购票链接: {url}")
+            
+            lines.append(f"更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            lines.append("")
+            
+            # 5. Build Ticket Lines for each type
+            for ctype in sorted_types:
+                p = type_prefix_map.get(ctype, "📢动态")
+                sub_header = f"{p}提醒："
+                lines.append(sub_header)
+                
+                # Sort tickets by time
+                u_list = by_type[ctype]
+                # Helper to parse time safely
+                def get_time(x):
+                    ts = x.get("session_time")
+                    if ts:
+                        try:
+                            return datetime.fromisoformat(ts) 
+                        except: pass
+                    return datetime.max
+                
+                u_list.sort(key=get_time)
+                
+                for u in u_list:
+                    # Reconstruct TicketInfo-like line
+                    # Format: DATE TIME PRICE TYPE STOCK CAST
+                    parts = []
+                    
+                    # session time
+                    st_str = ""
+                    st_obj = None
+                    if u.get("session_time"):
+                        try:
+                            st_obj = datetime.fromisoformat(u.get("session_time"))
+                            st_str = st_obj.strftime("%m-%d %H:%M")
+                        except: pass
+                    
+                    parts.append(st_str)
+                    
+                    # price
+                    price = u.get("price", 0)
+                    parts.append(f"￥{int(price)}")
+                    
+                    # type (always Student Ticket implies?)
+                    # Legacy added "学生票" unless in title. We can just add it.
+                    parts.append("学生票")
+                    
+                    # stock
+                    stock = u.get("stock", 0)
+                    total = u.get("total_ticket", "?")
+                    parts.append(f"余票{stock}/{total}")
+                    
+                    # cast
+                    casts = u.get("cast_names")
+                    if casts:
+                         if isinstance(casts, list):
+                             parts.append(" ".join(casts))
+                         else:
+                             parts.append(str(casts))
+                    
+                    # Join
+                    line_content = " ".join([p for p in parts if p])
+                    
+                    # Add icon based on stock/status
+                    icon = "✨"
+                    if ctype == "pending": icon = "⏲️"
+                    elif stock == 0: icon = "❌"
+                    
+                    lines.append(f"{icon} {line_content}")
+                
+                lines.append("") # Empty line after each block
+            
+            final_messages.append("\n".join(lines).strip())
+            
+        return "\n\n".join(final_messages)
