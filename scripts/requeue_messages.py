@@ -1,5 +1,10 @@
 import logging
 import os
+import sys
+
+# Add project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from datetime import datetime
 from sqlmodel import Session, select, col
 from services.db.connection import session_scope
