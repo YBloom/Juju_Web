@@ -185,6 +185,10 @@ class HulaquanService:
                 # Logged in wrapper, but just in case
                 pass
         
+        # [Bot Fix] Add detailed logging for updates
+        for u in updates:
+            log.info(f"📣 [更新] 类型: {u.change_type} | 标题: {u.event_title} | 消息: {u.message}")
+
         log.info(f"Synchronization complete. Detected {len(updates)} updates.")
         return updates
 
