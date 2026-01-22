@@ -257,3 +257,4 @@ web/static/error_test.html
 keys/
 config/napcat_test
 scripts/sync_prod_db.sh
+inspect*.py
