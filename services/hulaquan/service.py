@@ -675,6 +675,19 @@ class HulaquanService:
                 
                 result.append(self._format_event_info(event, tickets))
             return result
+            
+    async def search_actors(self, query: str) -> List[CastInfo]:
+        """Search actors by name (case-insensitive)."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._search_actors_sync, query)
+    
+    def _search_actors_sync(self, query: str) -> List[CastInfo]:
+        from sqlmodel import col
+        with session_scope() as session:
+            # Simple contains search
+            stmt = select(HulaquanCast).where(col(HulaquanCast.name).contains(query))
+            artists = session.exec(stmt).all()
+            return [CastInfo(name=a.name, role="") for a in artists]
 
     async def get_event(self, event_id: str) -> Optional[EventInfo]:
         """Get single event details by ID.

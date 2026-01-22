@@ -22,6 +22,18 @@ from services.db.connection import session_scope
 router = APIRouter(prefix="/admin", tags=["Admin"])
 api_router = APIRouter(prefix="/api/admin", tags=["Admin API"])
 
+# Include sub-routers
+from .admin_commands import router as commands_router
+api_router.include_router(commands_router) # Note: admin_commands router prefix is already /api/admin
+# So we should actually adjust admin_commands.py prefix to be empty if we include it here, 
+# OR we just mount it in the main web app. 
+# Better: Let's follow the pattern. api_router here handles /api/admin/*
+# admin_commands define /api/admin/* too.
+# Let's import it in web_app.py or here. 
+# Checking admin.py usage: it defines `api_router`.
+# Let's add explicit include in web/routers/admin.py is easier if we want to keep it consolidated under admin module.
+
+
 # Admin 页面路径
 ADMIN_PAGE = Path(__file__).parent.parent / "admin.html"
 

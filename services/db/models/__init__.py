@@ -25,6 +25,7 @@ from .subscription import Subscription, SubscriptionOption, SubscriptionTarget
 from .session import UserSession, EmailVerification
 from .user import User
 from .user_auth_method import UserAuthMethod, AccountMergeLog
+from .bot_alias import BotAlias
 
 # Import SaojuCache for database initialization
 from services.hulaquan.tables import (
@@ -81,5 +82,6 @@ __all__ = [
     "UserInventory",
     "UserSession",
     "EmailVerification",
+    "BotAlias",
     "utcnow",
 ]

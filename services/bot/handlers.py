@@ -55,6 +55,8 @@ MODE_DESCRIPTIONS = {
 
 
 
+from services.bot.commands import resolve_command
+
 def extract_args(message: str) -> Dict:
     """
     解析命令参数（兼容旧版格式）
@@ -64,7 +66,11 @@ def extract_args(message: str) -> Dict:
     if not parts:
         return {"command": "", "text_args": [], "mode_args": []}
     
-    command = parts[0]
+    raw_trigger = parts[0]
+    # 尝试解析别名到标准指令
+    canonical = resolve_command(raw_trigger)
+    command = canonical if canonical else raw_trigger
+    
     # 模式参数：以 - 开头且后面不是纯数字的 (如 -E, -A, -all)
     # 文本参数：不以 - 开头，或者是类似 -3 这样的负数形式（用于指定级别）
     mode_args = [p.lower() for p in parts[1:] if p.startswith("-") and not p[1:].isdigit()]
@@ -149,6 +155,71 @@ class BotHandler:
             else:
                 return "❌ 用户不存在，请先尝试使用其他命令初始化。"
     
+    async def _resolve_target(self, kind: str, query: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """
+        智能解析订阅目标 (剧目或演员)
+        Returns: (target_id, target_name, error_message)
+        """
+        from services.db.models.base import SubscriptionTargetKind
+        
+        results = []
+        if kind == SubscriptionTargetKind.ACTOR:
+            # 演员搜索
+            try:
+                actors = await self.service.search_actors(query)
+                # 去重
+                seen = set()
+                results = []
+                for a in actors:
+                    if a.name not in seen:
+                        results.append({"id": a.name, "name": a.name, "desc": "演员"}) # Actor ID is name for now
+                        seen.add(a.name)
+            except Exception as e:
+                log.warning(f"⚠️ [Bot] Actor search failed: {e}")
+                return None, None, "查询演员失败，请稍后重试。"
+                
+        else:
+            # 剧目搜索
+            try:
+                events = await self.service.search_events(query)
+                results = []
+                for e in events:
+                    city_str = f"[{e.city}]" if e.city else ""
+                    results.append({
+                        "id": str(e.id), 
+                        "name": e.title, 
+                        "desc": f"{city_str}{e.schedule_range} @ {e.location}"
+                    })
+            except Exception as e:
+                log.warning(f"⚠️ [Bot] Event search failed: {e}")
+                return None, None, "查询剧目失败，请稍后重试。"
+
+        if not results:
+            kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
+            return None, None, f"❌ 未找到包含 '{query}' 的{kind_name}。"
+        
+        # 精确匹配（如果只有一个结果，或者有完全重名的）
+        exact_matches = [r for r in results if r["name"] == query or query in r["name"]] # 宽松一点的"包含"也算命中若只有一个
+        
+        if len(results) == 1:
+            return results[0]["id"], results[0]["name"], None
+        
+        # 尝试寻找完全一致的
+        perfect_matches = [r for r in results if r["name"] == query]
+        if len(perfect_matches) == 1:
+            return perfect_matches[0]["id"], perfect_matches[0]["name"], None
+            
+        # 结果过多
+        msg = [f"🔍 找到 {len(results)} 个相关目标，请指定更精确的关键词：\n"]
+        limit = 10
+        for i, r in enumerate(results[:limit], 1):
+             msg.append(f"{i}. {r['name']} ({r['desc']})")
+        
+        if len(results) > limit:
+            msg.append(f"...等 {len(results)} 个")
+            
+        return None, None, "\n".join(msg)
+
     async def _handle_subscribe(self, user_id: str, args: dict) -> str:
         """处理 /关注学生票 命令"""
         from services.db.connection import session_scope
@@ -174,9 +245,9 @@ class BotHandler:
         level = 2  # 默认模式2
 
         
-        if "-A" in mode_args:
+        if "-a" in mode_args:
             kind = SubscriptionTargetKind.ACTOR
-        elif "-E" in mode_args or not any(arg.startswith("-") for arg in mode_args):
+        elif "-e" in mode_args or not any(arg.startswith("-") for arg in mode_args):
             kind = SubscriptionTargetKind.PLAY
         
         # 尝试解析模式 (支持 3 或 -3)
@@ -197,23 +268,18 @@ class BotHandler:
         text_args = remaining_text_args
         level = extracted_level
         
-        target_name = " ".join(text_args) if text_args else ""
-        if not target_name:
+        raw_query = " ".join(text_args) if text_args else ""
+        if not raw_query:
             return "❌ 请提供剧目或演员名称"
         
-        # 尝试解析真实 ID (针对剧目)
-        target_id = target_name
-        if kind == SubscriptionTargetKind.PLAY:
-            try:
-                results = await self.service.search_events(target_name)
-                if results:
-                    # 获取最匹配的结果
-                    event = results[0]
-                    target_id = str(event.id)
-                    target_name = event.title  # 使用清洗后的官方标题
-                    log.info(f"🔍 [订阅] 已将 '{target_name}' 解析为 ID: {target_id}")
-            except Exception as e:
-                log.warning(f"⚠️ [订阅] 解析剧目 ID 失败: {e}")
+        # --- 智能解析 ---
+        target_id, target_name, error = await self._resolve_target(kind, raw_query)
+        if error:
+            return error
+        
+        # 对于演员，target_id 暂时也就是名字
+        if kind == SubscriptionTargetKind.ACTOR:
+             target_id = target_name
         
         with session_scope() as session:
             # 查找或创建订阅
@@ -226,16 +292,29 @@ class BotHandler:
                 session.flush()
             
             # 检查是否已存在
+            # 注意：这里我们使用解析后的 target_name 来查找，避免重复
+            # 对于剧目，我们更应该用 target_id (event_id) 来匹配吗？
+            # 现在的 SubscriptionTarget 表结构：target_id 存的是 event_id (如果是剧目)，name 是标题
+            # 但之前的代码里，subscription target_id 经常存的是 name (历史遗留问题)
+            # 必须保持一致性。
+            # 新逻辑：
+            # Play: target_id = event_id, name = event_title
+            # Actor: target_id = actor_name, name = actor_name
+            
             stmt_target = select(SubscriptionTarget).where(
                 SubscriptionTarget.subscription_id == sub.id,
                 SubscriptionTarget.kind == kind,
-               SubscriptionTarget.name == target_name
+                # 优先匹配 target_id，如果不行匹配 name
+                (SubscriptionTarget.target_id == target_id) | (SubscriptionTarget.name == target_name)
             )
             existing = session.exec(stmt_target).first()
             
             if existing:
                 # 更新模式
                 existing.flags = {"mode": level}
+                # 确保 ID 和 Name 是最新的标准值
+                existing.target_id = target_id
+                existing.name = target_name
                 session.add(existing)
                 desc = MODE_DESCRIPTIONS.get(level, "未知")
                 msg = f"✅ 已更新订阅: {target_name} 模式{level}（{desc}）"
@@ -245,7 +324,7 @@ class BotHandler:
                 target = SubscriptionTarget(
                     subscription_id=sub.id,
                     kind=kind,
-                    target_id=target_name,  # 简化版,实际应查询ID
+                    target_id=target_id, 
                     name=target_name,
                     flags={"mode": level}
                 )
@@ -265,7 +344,7 @@ class BotHandler:
         from services.db.connection import session_scope
         from services.db.models import Subscription, SubscriptionTarget
         from services.db.models.base import SubscriptionTargetKind
-        from sqlmodel import select
+        from sqlmodel import select, or_
         
         mode_args = args.get("mode_args", [])
         text_args = args.get("text_args", [])
@@ -278,11 +357,30 @@ class BotHandler:
             )
         
         kind = SubscriptionTargetKind.PLAY
-        if "-A" in mode_args:
+        if "-a" in mode_args:
             kind = SubscriptionTargetKind.ACTOR
         
-        target_name = " ".join(text_args)
+        raw_query = " ".join(text_args)
         
+        # --- 智能解析 ---
+        # 即使是取消关注，也先尝试解析出标准名称/ID，这样能匹配到当初订阅的标准记录
+        target_id, target_name, error_msg = await self._resolve_target(kind, raw_query)
+        
+        # 如果解析失败（比如数据库里没这个剧了，或者模糊匹配不到），
+        # 此时是否应该 fallback 到 raw_query？
+        # 用户可能订阅了一个现在已经搜不到的剧（例如已下架/过期），这时候想取消关注。
+        # 如果 _resolve_target 返回 error，我们尝试降级使用 raw_query 去数据库碰碰运气。
+        
+        fallback_query = False
+        if error_msg:
+             # 如果是“未找到”，则降级；如果是“找到多个”，则直接返回错误让用户重选
+             if "未找到" in error_msg:
+                 fallback_query = True
+                 target_id = raw_query # 假定
+                 target_name = raw_query
+             else:
+                 return error_msg
+
         with session_scope() as session:
             stmt = select(Subscription).where(Subscription.user_id == user_id)
             sub = session.exec(stmt).first()
@@ -290,22 +388,44 @@ class BotHandler:
             if not sub:
                 return "❌ 您还没有任何订阅"
             
-            stmt_target = select(SubscriptionTarget).where(
+            # 构建查询条件
+            conditions = [
                 SubscriptionTarget.subscription_id == sub.id,
-                SubscriptionTarget.kind == kind,
-                SubscriptionTarget.name == target_name
-            )
+                SubscriptionTarget.kind == kind
+            ]
+            
+            if not fallback_query:
+                # 使用解析出的 ID 和 Name 匹配
+                conditions.append(
+                    or_(
+                        SubscriptionTarget.target_id == target_id,
+                        SubscriptionTarget.name == target_name
+                    )
+                )
+            else:
+                # 使用原始查询模糊匹配 (Name like query)
+                # 因为用户可能输入 "魅影" 但数据库只有 "剧院魅影" 且 _resolve_target 没搜到（假设）
+                # 但一般来说 _resolve_target 应该能搜到。
+                # 如果 _resolve_target 没搜到，说明库里确实没有这个剧/演员。
+                # 那剩下的可能性是：用户订阅了一个不存在于当前 Hulaquan 库的词条（历史数据）。
+                # 这种情况下，直接用 name == raw_query 匹配
+                conditions.append(SubscriptionTarget.name == raw_query)
+
+            stmt_target = select(SubscriptionTarget).where(*conditions)
             target = session.exec(stmt_target).first()
             
             if not target:
                 kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
-                return f"❌ 未找到对{kind_name} {target_name} 的订阅"
+                search_term = target_name if not fallback_query else raw_query
+                return f"❌ 未找到对{kind_name} '{search_term}' 的订阅记录。"
             
+            # 记录删除的名字用于反馈
+            deleted_name = target.name or target.target_id
             session.delete(target)
             session.commit()
         
         kind_name = "演员" if kind == SubscriptionTargetKind.ACTOR else "剧目"
-        return f"✅ 已取消关注{kind_name}: {target_name}"
+        return f"✅ 已取消关注{kind_name}: {deleted_name}"
     
     async def _handle_list_subscriptions(self, user_id: str) -> str:
         """处理 /查看关注 命令"""
@@ -450,12 +570,14 @@ class BotHandler:
         mode_args = args["mode_args"]
         text_args = args["text_args"]
         
+        command = args["command"]
+        
         # --- Help Command ---
-        if msg.lower() in ["/help", "help", "帮助", "菜单", "/帮助"]:
+        if command == "/help":
             return self._get_help_text()
         
         # --- Auth / Login ---
-        if msg in ["/web", "/登录", "/login"]:
+        if command == "/web":
             # For login token, we act on the raw QQ ID to let them link it
             token = create_magic_link_token(uid_str, nickname)
             link = f"{WEB_BASE_URL}/auth/magic-link?token={token}"
@@ -484,7 +606,7 @@ class BotHandler:
 
         # --- 订阅管理命令 ---
         # /呼啦圈通知 [0-5]
-        if msg.startswith("/呼啦圈通知"):
+        if command == "/呼啦圈通知":
             level = None
             if text_args:
                 try:
@@ -497,21 +619,21 @@ class BotHandler:
             return response
         
         # /关注学生票
-        if msg.startswith("/关注学生票"):
+        if command == "/关注学生票":
             response = await self._handle_subscribe(effective_uid, args)
             if effective_uid.startswith("group_"):
                 response = response.replace("✅ ", f"✅ [群订阅] ")
             return response
         
         # /取消关注学生票
-        if msg.startswith("/取消关注学生票"):
+        if command == "/取消关注学生票":
             response = await self._handle_unsubscribe(effective_uid, args)
             if effective_uid.startswith("group_"):
                 response = response.replace("✅ ", f"✅ [群订阅] ")
             return response
         
         # /查看关注
-        if msg in ["/查看关注", "/我的订阅", "/订阅列表"]:
+        if command == "/查看关注":
             return await self._handle_list_subscriptions(effective_uid)
 
         # --- 其他查询命令 ---
@@ -528,20 +650,20 @@ class BotHandler:
                 continue
         
         # --- /date Command ---
-        if msg.startswith("/date"):
+        if command == "/date":
             date_str = text_args[0] if text_args else datetime.now().strftime("%Y-%m-%d")
             city = text_args[1] if len(text_args) > 1 else None
             return await self._handle_date(date_str, city, show_all)
 
         # --- /hlq Command ---
-        if msg.startswith("/hlq ") or msg.startswith("查票 "):
+        if command == "/hlq":
             query = " ".join(text_args)
             if not query:
                 return "请指定剧目名称，例如: /hlq 连璧"
             return await self._handle_hlq(query, show_all, price_filters)
 
         # --- /同场演员 Command ---
-        if msg.startswith("/同场演员 ") or msg.startswith("/cast "):
+        if command == "/同场演员":
             actors = text_args
             if not actors:
                 return "请指定演员，用空格分隔，例如: /同场演员 张三 李四"

@@ -10,7 +10,8 @@ import os
 import os
 import urllib.parse
 WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
-HLQ_EVENT_URL_TEMPLATE = "https://clubz.cloudsation.com/event/{event_id}.html"
+# Use Hash Router format
+HLQ_EVENT_URL_TEMPLATE = "{base_url}/#/detail/{event_id}"
 
 
 class HulaquanFormatter:
@@ -108,7 +109,8 @@ class HulaquanFormatter:
         
         # 购票链接
         if event.id:
-            lines.append(f"购票链接：{HLQ_EVENT_URL_TEMPLATE.format(event_id=event.id)}")
+            url = HLQ_EVENT_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=event.id)
+            lines.append(f"购票链接：{url}")
         
         # 更新时间
         if event.update_time:
@@ -128,8 +130,9 @@ class HulaquanFormatter:
         
         if not show_all and len(active_tickets) > 20:
             lines.append(f"\n...等 {len(active_tickets)} 个场次")
-            safe_title = urllib.parse.quote(event.title)
-            lines.append(f"💡 使用 -all 查看全部，或访问网页: {WEB_BASE_URL}/?q={safe_title}")
+            if event.id:
+                url = HLQ_EVENT_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=event.id)
+                lines.append(f"💡 使用 -all 查看全部，或访问网页: {url}")
         
         return "\n".join(lines)
 
@@ -173,7 +176,8 @@ class HulaquanFormatter:
         lines.append(f"\n数据更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
         if not show_all:
-            lines.append(f"💡 使用 -all 查看全部或访问: {WEB_BASE_URL}/?tab=calendar&date={date_str}")
+            url = f"{WEB_BASE_URL}/#/date?d={date_str}"
+            lines.append(f"💡 使用 -all 查看全部或访问: {url}")
         
         return "\n".join(lines)
 
