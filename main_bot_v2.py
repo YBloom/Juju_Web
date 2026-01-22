@@ -14,7 +14,9 @@ load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='[%(asctime)s] %(levelname)-8s %(name)s \'%(filename)s:%(lineno)d\' | %(message)s',
+    datefmt='%m/%d %H:%M:%S',
+    force=True
 )
 
 log = logging.getLogger(__name__)
@@ -35,6 +37,9 @@ def main():
     from services.bot.handlers import BotHandler
     from services.hulaquan.service import HulaquanService
     from services.notification import NotificationEngine
+    import traceback
+
+    ADMIN_QQ = "3022402752"
     
     bot = BotClient()
     hlq_service = HulaquanService()
@@ -72,41 +77,52 @@ def main():
                     
             except Exception as e:
                 log.error(f"❌ [错误] 通知分发任务异常: {e}")
+                try:
+                    msg_text = f"❌ [Bot Task Error] {e}\n{traceback.format_exc()}"[:500]
+                    await bot.api.post_private_msg(user_id=ADMIN_QQ, text=msg_text)
+                except: pass
             
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
     
     @bot.on_group_message()
     async def on_group_message(msg: GroupMessage):
-        response = await handler.handle_group_message(msg.group_id, int(msg.user_id), msg.raw_message, nickname=getattr(msg.sender, 'nickname', ''))
-        if response:
-            if isinstance(response, list):
-                for r in response:
-                    await bot.api.post_group_msg(group_id=msg.group_id, text=r)
-            else:
-                await bot.api.post_group_msg(group_id=msg.group_id, text=response)
-    
+        try:
+            response = await handler.handle_group_message(msg.group_id, int(msg.user_id), msg.raw_message, nickname=getattr(msg.sender, 'nickname', ''))
+            if response:
+                if isinstance(response, list):
+                    for r in response:
+                        await bot.api.post_group_msg(group_id=msg.group_id, text=r)
+                else:
+                    await bot.api.post_group_msg(group_id=msg.group_id, text=response)
+        except Exception as e:
+            log.error(f"❌ [错误] 处理群消息失败: {e} | Msg: {msg.raw_message}")
+            try:
+                msg_text = f"❌ [Bot Group Error] {e}\n{traceback.format_exc()}"[:500]
+                await bot.api.post_private_msg(user_id=ADMIN_QQ, text=msg_text)
+            except: pass
+
     @bot.on_private_message()
     async def on_private_message(msg: PrivateMessage):
-        response = await handler.handle_message(msg.raw_message, str(msg.user_id), nickname=getattr(msg.sender, 'nickname', ''))
-        if response:
-            if isinstance(response, list):
-                for r in response:
-                    await bot.api.post_private_msg(user_id=msg.user_id, text=r)
-            else:
-                await bot.api.post_private_msg(user_id=msg.user_id, text=response)
+        try:
+            response = await handler.handle_message(msg.raw_message, str(msg.user_id), nickname=getattr(msg.sender, 'nickname', ''))
+            if response:
+                if isinstance(response, list):
+                    for r in response:
+                        await bot.api.post_private_msg(user_id=msg.user_id, text=r)
+                else:
+                    await bot.api.post_private_msg(user_id=msg.user_id, text=response)
+        except Exception as e:
+            log.error(f"❌ [错误] 处理私聊消息失败: {e} | Msg: {msg.raw_message}")
+            try:
+                msg_text = f"❌ [Bot Private Error] {e}\n{traceback.format_exc()}"[:500]
+                await bot.api.post_private_msg(user_id=ADMIN_QQ, text=msg_text)
+            except: pass
     
-    # --- Start Scheduled Tasks ---
-    # Wrap bot.run in an async context if needed, but ncatbot 4.x run() is blocking.
-    # We use a little trick: start task just before blocking call.
-    # Since ncatbot internally handles the loop, we can't easily use asyncio.create_task(main_coro()) 
-    # without changing the whole entry point.
-    # A cleaner way with ncatbot: use its internal loop if accessible, or just keep it 
-    # triggered by first message but actually we want it TO BE PROACTIVE.
-    
-    # NEW: Start the task immediately after bot starts running.
-    # We'll use the loop from bot.api if possible or just use get_event_loop.
-    loop = asyncio.get_event_loop()
-    loop.create_task(scheduled_consume_task())
+    # NEW: Start the task using ncatbot's startup hook
+    @bot.on_startup
+    async def startup_handler():
+        log.info("🚀 [Startup] Bot started, launching background tasks...")
+        asyncio.create_task(scheduled_consume_task())
     
     @bot.on_request()
     async def on_request(event: RequestEvent):

@@ -82,7 +82,7 @@ def extract_args(message: str) -> Dict:
 class BotHandler:
     def __init__(self, service: HulaquanService):
         self.service = service
-        self.saoju_service = SaojuService()
+
 
     async def _ensure_user_exists(self, user_id: str, nickname: str = ""):
         """确保用户在数据库中存在 (由于外键约束)"""
@@ -783,7 +783,7 @@ class BotHandler:
         else:
             # 使用扫剧系统
             try:
-                results = await self.saoju_service.match_co_casts(
+                results = await self.service.saoju.match_co_casts(
                     actors, show_others=show_others, start_date=start_date
                 )
                 

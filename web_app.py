@@ -204,8 +204,11 @@ async def lifespan(app: FastAPI):
                          last_saoju_distant = time.time()
                 except Exception as e:
                     logger.error(f"Scheduler Error: {e}", exc_info=True)
+                    # Report to Admin
+                    error_msg = f"{e}\n{traceback.format_exc()}"[:800]
+                    await asyncio.to_thread(report_error_to_admin, error_msg, "Scheduler")
                 
-                await asyncio.sleep(300)
+                await asyncio.sleep(120)
 
         scheduler_task = asyncio.create_task(_run_scheduler())
     else:
@@ -300,6 +303,64 @@ app.include_router(tasks.router)
 app.include_router(avatar.router)
 app.include_router(admin.router)
 app.include_router(admin.api_router)
+# --- Admin Error Reporting ---
+from services.db.models import SendQueue, SendQueueStatus
+from services.db.connection import session_scope
+import traceback
+
+ADMIN_QQ = "3022402752"
+
+def report_error_to_admin(error_msg: str, context: str = "Web"):
+    """
+    将错误报告写入 SendQueue，由 Bot 进程发送给管理员。
+    """
+    try:
+        with session_scope() as session:
+            # 构造简单的纯文本消息作为 update
+            full_msg = f"🚨 [{context} Error] {error_msg}"
+            
+            # 由于 Bot 的 NotificationEngine 处理的是 updates 列表
+            # 我们伪造一个 "updates" payload
+            payload = {
+                "updates": [{
+                    "message": full_msg, 
+                    "event_title": "系统报警", 
+                    "change_type": "error"
+                }]
+            }
+            
+            # 使用 ref_id 防止短时间内大量重复报错 (e.g. per minute)
+            # 但严重的错误我们希望都能看到，所以这里用 uuid 或 timestamp
+            ref_id = f"error_{int(time.time())}_{os.urandom(4).hex()}"
+            
+            queue_item = SendQueue(
+                user_id=ADMIN_QQ,
+                channel="qq_private",
+                scope="admin_alert",
+                payload=payload,
+                status=SendQueueStatus.PENDING,
+                ref_id=ref_id,
+            )
+            session.add(queue_item)
+            session.commit()
+            logger.info(f"Reported error to admin via SendQueue: {ref_id}")
+    except Exception as e:
+        logger.error(f"Failed to report error to admin: {e}")
+
+# Global Exception Handler for 500 Errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_detail = f"{exc}\nPath: {request.url}\n{traceback.format_exc()}"[:800]
+    logger.error(f"Global Exception: {error_detail}")
+    
+    # Run in thread pool to avoid blocking async loop with DB ops
+    await asyncio.to_thread(report_error_to_admin, error_detail, "Web API")
+    
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error", "detail": "管理员已收到报警。"},
+    )
+
 app.include_router(analytics.router)
 app.include_router(feedback.router)
 

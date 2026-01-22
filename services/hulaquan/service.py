@@ -48,6 +48,10 @@ class HulaquanService:
         self._saoju = SaojuService()
         self._city_resolver = CityResolver()
         
+    @property
+    def saoju(self) -> SaojuService:
+        return self._saoju
+        
         # Load venue rules
         self.venue_rules = {}
         try:
