@@ -119,11 +119,11 @@ def main():
             except: pass
     
     # NEW: Start the task using ncatbot's startup hook
-    @bot.on_startup
-    async def startup_handler():
+    @bot.on_startup()
+    async def startup_handler(event=None):
         log.info("🚀 [Startup] Bot started, launching background tasks...")
         asyncio.create_task(scheduled_consume_task())
-    
+
     @bot.on_request()
     async def on_request(event: RequestEvent):
         """自动批准所有 好友/加群 请求"""
