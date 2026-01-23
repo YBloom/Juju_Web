@@ -109,7 +109,8 @@ export function initErrorHandler() {
     });
 
     window.addEventListener('offline', () => {
-        showGlobalError(ERROR_TYPES.NETWORK_OFFLINE, 'Navigator reported offline.');
+        // [抑制误报] 不再弹出全屏离线报错，仅记录日志
+        console.warn('[ErrorHandler] Navigator reported offline, ignoring as per user request.');
     });
 
     // 2. Client-Side JS Errors
@@ -188,14 +189,9 @@ export function initErrorHandler() {
             // Network Error (Fetch failed completely)
             console.error('[ErrorHandler] Fetch Failed:', error);
 
-            // Put it under Network Issue
-            if (!navigator.onLine) {
-                showGlobalError(ERROR_TYPES.NETWORK_OFFLINE, error.message);
-            } else {
-                // Could be DNS error, timeout, CORS.
-                // Treat as Server Fault or Network Issue?
-                showGlobalError(ERROR_TYPES.SERVER_FAULT, `Network Request Failed: ${error.message}`);
-            }
+            // [抑制误报] 哪怕 navigator.onLine 为 false，也不再弹出 NETWORK_OFFLINE 报错
+            console.warn('[ErrorHandler] Fetch Failed, possibly network issue:', error.message);
+            // 除非是为了排查方便，否则不在此处弹出全屏报错，除非是明确的 5xx（已在 try 块处理）
 
             throw error;
         }
