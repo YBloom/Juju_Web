@@ -13,10 +13,20 @@ log = logging.getLogger(__name__)
 EVENT_LEVEL_MAP = {
     "new": 1,
     "pending": 1,
-    "restock": 2,
-    "back": 3,
+    "add": 2,      # 补票级别
+    "restock": 2,  # 回流级别 (0->正)
+    "back": 3,     # 票增级别
     "sold_out": 5,      # 售罄属于全部变动
     "stock_change": 4,  # 默认余票变动为 4
+}
+
+MODE_DESCRIPTIONS = {
+    0: "关闭",
+    1: "开票",
+    2: "开票+补票/回流",
+    3: "开票+补票/回流+票增",
+    4: "开票+补票/回流+票增+票减",
+    5: "全部"
 }
 
 def should_notify(global_level: int, notification_level: int, update: dict, targets: list) -> bool:

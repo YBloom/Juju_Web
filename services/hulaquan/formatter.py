@@ -209,8 +209,9 @@ class HulaquanFormatter:
             # 类型前缀映射
             type_prefix = {
                 "new": "🆕上新提醒",
-                "restock": "🟢补票提醒",
-                "back": "🔄回流提醒",
+                "add": "🟢补票提醒",
+                "restock": "♻️回流提醒",
+                "back": "➕票增提醒",
                 "sold_out": "❗售罄提醒",
                 "stock_decrease": "➖票减提醒",
                 "stock_increase": "➕票增提醒",
@@ -297,8 +298,9 @@ class HulaquanFormatter:
         
         type_prefix_map = {
             "new": "🆕上新",
-            "restock": "🟢补票",
-            "back": "🔄回流",
+            "add": "🟢补票",
+            "restock": "♻️回流",
+            "back": "➕票增",
             "sold_out": "❗售罄",
             "stock_decrease": "➖票减",
             "stock_increase": "➕票增",
