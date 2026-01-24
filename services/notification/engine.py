@@ -28,13 +28,14 @@ log = logging.getLogger(__name__)
 MAX_RETRY_COUNT = 3
 BACKFILL_HOURS = 24  #补发时限
 
-# MODE 映射 (复用旧版逻辑)
+# MODE 映射 (修正并完善等级定义)
 MODE_MAP = {
     "new": 1,
-    "pending": 1,    # 待开票，随上新通知
-    "back": 2,       # 补票 (等级2及以上可见)
-    "restock": 3,    # 回流 (等级3及以上可见)
-    "decrease": 4,   # 票减 (等级4及以上可见)
+    "pending": 1,    # 待开票
+    "back": 2,       # 补票
+    "restock": 3,    # 回流
+    "decrease": 4,   # 票减
+    "increase": 5,   # 票增 (最高等级)
     "sold_out": 99,  # 暂不推送售罄
 }
 
@@ -77,76 +78,60 @@ class NotificationEngine:
         enqueued = 0
         
         with session_scope() as session:
-            # 1. 收集涉及的 event_ids 和 actor 名
+            # 1. 收集涉及的 event_ids 和 actor 名 (暂保留逻辑用于可能的扩展，但不再传给 match)
             event_ids: Set[str] = set()
             actor_names: Set[str] = set()
-            
             for u in updates:
                 if u.event_id:
                     event_ids.add(str(u.event_id))
                 if u.cast_names:
                     actor_names.update(u.cast_names)
             
-            #  2. 查询所有有订阅的用户 (使用 joinedload 一次性加载关联数据)
+            # 2. 获取所有“活跃”推送用户
+            # 定义：global_notification_level > 0 OR 拥有至少一个订阅
             from sqlalchemy.orm import joinedload
+            from services.db.models import Subscription, User
             
             stmt = (
-                select(Subscription)
+                select(User)
                 .options(
-                    joinedload(Subscription.targets),
-                    joinedload(Subscription.options)
+                    joinedload(User.subscriptions).joinedload(Subscription.targets),
+                )
+                .where(
+                    (User.global_notification_level > 0) | (User.subscriptions.any())
                 )
                 .distinct()
             )
-            subscriptions = session.exec(stmt).unique().all()
+            users = session.exec(stmt).unique().all()
             
-            # 按用户分组
-            user_subs = {}
-            for sub in subscriptions:
-                if sub.user_id not in user_subs:
-                    user_subs[sub.user_id] = []
-                user_subs[sub.user_id].append(sub)
-            
-            for user_id, subs in user_subs.items():
-                if not subs:
-                    continue
-                
-                # 获取用户实例 (需确保在 Session 中)
-                user = session.get(User, user_id)
-                if not user:
-                    continue
-                
-                # --- Unified Config Logic (from User) ---
+            for user in users:
+                # --- 用户级全局过滤 ---
                 
                 # 检查静音
                 if user.is_muted:
-                    continue
-                
-                # 检查全局级别
-                global_level = user.global_notification_level
-                if global_level == 0:
                     continue
                 
                 # 检查静默时段
                 if user.silent_hours and self._is_silent_hour(user.silent_hours):
                     continue
                 
-                # 收集所有 targets (已通过 joinedload 加载)
+                # 收集该用户所有订阅 targets
                 all_targets = []
-                for s in subs:
+                for s in user.subscriptions:
                     all_targets.extend(s.targets)
                 
                 # 匹配更新
                 user_updates = []
                 for u in updates:
-                    if self._match_update(u, all_targets, event_ids, actor_names, global_level=global_level):
+                    if self._match_update(u, all_targets, global_level=user.global_notification_level):
                         user_updates.append(u)
                 
                 if user_updates:
                     # 入队
-                    enqueued += self._enqueue_notification(session, user_id, user_updates)
+                    enqueued += self._enqueue_notification(session, user.user_id, user_updates)
             
             session.commit()
+
         
         log.info(f"NotificationEngine: enqueued {enqueued} notifications for {len(updates)} updates")
         return enqueued
@@ -155,39 +140,30 @@ class NotificationEngine:
         self, 
         update: TicketUpdate, 
         targets: List[SubscriptionTarget],
-        event_ids: Set[str],
-        actor_names: Set[str],
         global_level: int = 0
     ) -> bool:
-        """检查 update 是否匹配用户的任一订阅 target。"""
+        """检查 update 是否匹配。逻辑：(全局达标) OR (特定关注匹配且关注等级达标)。"""
         required_mode = MODE_MAP.get(update.change_type, 99)
         
-        # 如果全局级别允许推送 (required_mode <= global_level)，我们只需要检查 target 匹配
-        # 如果全局级别不足，我们检查单个 target 的 flags 是否有更高的 override
-        
-        for target in targets:
-            # 确定当前 target 的最终有效 mode
-            # 逻辑：取 global_level 和 target.flags["mode"] 的最大值
-            target_mode = target.flags.get("mode", 1) if target.flags else 1
-            effective_mode = max(global_level, target_mode)
+        # 1. 检查全局基准 (Global Baseline)
+        if global_level >= required_mode:
+            return True
             
-            if effective_mode < required_mode:
+        # 2. 如果全局不达标，检查是否有特定的“高等级订阅”覆盖
+        for target in targets:
+            # 确定当前 target 的有效等级覆盖 (Override)
+            target_mode = target.flags.get("mode", 1) if target.flags else 1
+            if target_mode < required_mode:
                 continue
             
-            # 按类型分组
+            # 按类型匹配
             if target.kind == SubscriptionTargetKind.PLAY:
-                # 1. 精确 ID 匹配
+                # ID 匹配或名称匹配
                 if target.target_id == str(update.event_id):
                     return True
-                
-                # 2. 兜底逻辑：如果 ID 是非数字 (说明存的是名字)，尝试名称模糊匹配
-                # e.g. target_id="奥尔菲斯" vs update.event_title="惊悚推理悬疑音乐剧《奥尔菲斯》"
-                if not target.target_id.isdigit():
-                    # 这里直接用 target.target_id (即名字) 去匹配 title
-                    # 也可以用 target.name，通常两者一致
-                    search_term = target.target_id or target.name
-                    if search_term and update.event_title and search_term in update.event_title:
-                        return True
+                search_term = target.target_id or target.name
+                if search_term and update.event_title and search_term in update.event_title:
+                    return True
             elif target.kind == SubscriptionTargetKind.ACTOR:
                 if update.cast_names and target.name in update.cast_names:
                     return True
@@ -241,8 +217,10 @@ class NotificationEngine:
                 "valid_from": u.valid_from,
             })
         
-        # 检查是否已存在相同 ref_id (防重复)
-        ref_id = f"batch_{updates[0].ticket_id}_{datetime.now().strftime('%Y%m%d%H')}"
+        # 检查是否已存在相同 ref_id (防瞬时故障刷屏)
+        # 修正：去重因子加入 change_type，且不再使用小时级限制，改为分钟级
+        # 如果是极高频变动，允许消息下发
+        ref_id = f"{user_id}_{updates[0].ticket_id}_{updates[0].change_type}_{datetime.now().strftime('%Y%m%d%H%M')}"
         
         stmt = select(SendQueue).where(
             SendQueue.user_id == user_id,
@@ -250,7 +228,7 @@ class NotificationEngine:
             SendQueue.status.in_([SendQueueStatus.PENDING, SendQueueStatus.SENT])
         )
         if session.exec(stmt).first():
-            log.debug(f"Skipping duplicate notification for user {user_id}, ref {ref_id}")
+            log.debug(f"Skipping redundant notification for user {user_id}, ref {ref_id}")
             return 0
         
         # Determine channel
