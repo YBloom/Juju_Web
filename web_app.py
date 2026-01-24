@@ -95,6 +95,8 @@ class AccessLogFilter(logging.Filter):
             return False
         if "GET /api/meta/status" in msg and " 200" in msg:
             return False
+        if "GET /api/admin/logs" in msg and " 200" in msg:
+            return False
         if "HEAD /" in msg and " 200" in msg:
             return False
         return True

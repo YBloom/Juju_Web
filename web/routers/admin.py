@@ -547,8 +547,19 @@ async def get_logs(
         from collections import deque
         
         lines = deque(maxlen=2000)
+        # 定义需要过滤的关键词（UI显示时隐藏，但保留在磁盘文件中）
+        filter_keywords = [
+            "/api/admin/logs",
+            "Starting Hulaquan data sync...",
+            "Starting full Hulaquan data synchronization...",
+            "Synchronization complete. Detected 0 updates."
+        ]
+        
         with open(target_file, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
+                # 如果行中包含任何过滤关键词，且不是严重错误（保留ERROR级别以防万一过滤过度）
+                if any(kw in line for kw in filter_keywords) and "[ERROR]" not in line:
+                    continue
                 lines.append(line)
         
         return "".join(lines)
