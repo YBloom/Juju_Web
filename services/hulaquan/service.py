@@ -654,6 +654,37 @@ class HulaquanService:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._search_events_sync, query)
 
+    async def search_events_smart(self, query: str) -> List[EventInfo]:
+        """
+        智能搜索剧目：支持“标题 城市”或“标题 关键词”格式。
+        """
+        # 1. 尝试直接搜索
+        results = await self.search_events(query)
+        
+        # 2. 如果没找到，尝试拆分搜索 (标题 + 城市/关键词)
+        filter_keyword = ""
+        if not results and " " in query:
+            parts = query.split(" ", 1)
+            title_query = parts[0]
+            filter_keyword = parts[1]
+            if title_query:
+                results = await self.search_events(title_query)
+        
+        # 3. 如果有筛选词，进行辅助过滤
+        if results and filter_keyword:
+            filtered = []
+            kw = filter_keyword.lower()
+            for event in results:
+                # 检查 城市、地点、标题
+                search_text = f"{event.city or ''} {event.location or ''} {event.title or ''}".lower()
+                if kw in search_text:
+                    filtered.append(event)
+            
+            if filtered:
+                results = filtered
+        
+        return results
+
     def _search_events_sync(self, query: str) -> List[EventInfo]:
         with session_scope() as session:
             statement = select(HulaquanEvent).where(HulaquanEvent.title.contains(query))

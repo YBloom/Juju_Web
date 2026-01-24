@@ -190,16 +190,24 @@ class BotHandler:
                 return None, None, "查询演员失败，请稍后重试。"
                 
         else:
-            # 剧目搜索
+            # 剧目搜索 - 使用智能搜索逻辑
             try:
-                events = await self.service.search_events(query)
+                events = await self.service.search_events_smart(query)
                 results = []
                 for e in events:
-                    city_str = f"[{e.city}]" if e.city else ""
+                    city_str = f"【{e.city}】" if e.city else ""
+                    # 避免重复前缀：如果标题已经以该城市开头
+                    title_display = e.title
+                    if e.city and (f"【{e.city}】" in e.title or f"[{e.city}]" in e.title):
+                         desc = e.title
+                    else:
+                         desc = f"{city_str}{e.title}"
+                         
                     results.append({
                         "id": str(e.id), 
                         "name": e.title, 
-                        "desc": f"{city_str}{e.schedule_range} @ {e.location}"
+                        "city": e.city,
+                        "desc": desc
                     })
             except Exception as e:
                 log.warning(f"⚠️ [Bot] Event search failed: {e}")
@@ -210,8 +218,6 @@ class BotHandler:
             return None, None, f"❌ 未找到包含 '{query}' 的{kind_name}。"
         
         # 精确匹配（如果只有一个结果，或者有完全重名的）
-        exact_matches = [r for r in results if r["name"] == query or query in r["name"]] # 宽松一点的"包含"也算命中若只有一个
-        
         if len(results) == 1:
             return results[0]["id"], results[0]["name"], None
         
@@ -220,11 +226,11 @@ class BotHandler:
         if len(perfect_matches) == 1:
             return perfect_matches[0]["id"], perfect_matches[0]["name"], None
             
-        # 结果过多
+        # 结果过多，返回歧义消除提示
         msg = [f"🔍 找到 {len(results)} 个相关目标，请指定更精确的关键词：\n"]
         limit = 10
         for i, r in enumerate(results[:limit], 1):
-             msg.append(f"{i}. {r['name']} ({r['desc']})")
+             msg.append(f"{i}. {r['desc']}")
         
         if len(results) > limit:
             msg.append(f"...等 {len(results)} 个")
@@ -286,6 +292,25 @@ class BotHandler:
         # --- 智能解析 ---
         target_id, target_name, error = await self._resolve_target(kind, raw_query)
         if error:
+            # 针对存在歧义的情况，改写提示示例
+            if "找到" in error and "目标" in error:
+                # 尝试从原始消息中复现指令和参数，引导用户添加城市
+                # 提取原始指令 (CMD_SUBSCRIBE 的触发词)
+                triggered_cmd = args.get("command", "/关注学生票")
+                # 拼接原有参数（除了查询词本身）
+                flag_str = f" {' '.join(mode_args)}" if mode_args else ""
+                level_str = ""
+                # 如果 level 发生了变化（非默认2），或者原始 text_args 中包含数字，尝试保留它
+                # 但更简单的是：直接在提示末尾加上当前的 level
+                level_str = f" {level}"
+
+                # 寻找第一个结果城市作为推荐（在 resolve_target 内部已经按顺序排好了）
+                # 这里我们假设 error 中包含了列表。我们直接在 error 末尾添加示例提示。
+                prompt = "\n\n💡 示例："
+                # 尝试构建：/关注学生票 [剧名] [城市] [等级]
+                # 这里的 raw_query 可能是 "阿波罗尼亚"
+                example = f"{triggered_cmd} {raw_query} 上海{level_str}{flag_str}"
+                return f"{error}{prompt}`{example}`"
             return error
         
         # 对于演员，target_id 暂时也就是名字
@@ -716,52 +741,31 @@ class BotHandler:
 
     async def _handle_hlq(self, query: str, show_all: bool, price_filters: List[float] = None) -> str:
         """处理 /hlq 命令"""
-        # 1. 尝试直接搜索
-        results = await self.service.search_events(query)
+        # 1. 采用统一的智能搜索
+        results = await self.service.search_events_smart(query)
         
-        # 2. 如果没找到，尝试拆分搜索 (标题 + 城市/关键词)
-        # 例如: "时光代理人 上海" -> title="时光代理人", filter="上海"
-        filter_keyword = ""
-        if not results and " " in query:
-            parts = query.split(" ", 1)
-            title_query = parts[0]
-            filter_keyword = parts[1]
-            if title_query:
-                results = await self.service.search_events(title_query)
-        
-        # 3. 如果有筛选词，进行过滤
-        if results and filter_keyword:
-            filtered = []
-            kw = filter_keyword.lower()
-            for ignored_event in results:
-                # 检查 城市、地点、标题
-                search_text = f"{ignored_event.city} {ignored_event.location} {ignored_event.title}".lower()
-                if kw in search_text:
-                    filtered.append(ignored_event)
-            
-            if filtered:
-                results = filtered
-            else:
-                # 筛选后无结果，提示用户
-                return f"🔍 找到相关剧目，但未匹配到底点/关键词 '{filter_keyword}'，请尝试只搜索标题。"
-
         if not results:
             return f"❌ 未找到包含 '{query}' 的剧目。"
         
-        # 4. 如果结果仍多于1个，且没有足够精确，提示用户
+        # 2. 如果结果仍多于1个，且没有足够精确，提示用户（保持交互一致性）
         if len(results) > 1:
-            # 构建选择列表
-            msg = [f"🔍 找到 {len(results)} 个相关剧目，请指定城市/地点：\n"]
+            # 如果存在完全一致的剧名，直接展示第一个详情（或者提示用户选择？）
+            # 为了一致性，我们也返回选择列表
+            msg = [f"🔍 找到 {len(results)} 个相关剧目，请通过城市进一步筛选：\n"]
             for i, event in enumerate(results, 1):
-                city_str = f"[{event.city}] " if event.city else ""
-                schedule = event.schedule_range or "待定"
-                msg.append(f"{i}. {city_str}{event.title}")
-                msg.append(f"   📅 {schedule} @ {event.location}")
+                city_str = f"【{event.city}】" if event.city else ""
+                if event.city and (f"【{event.city}】" in event.title or f"[{event.city}]" in event.title):
+                    display = event.title
+                else:
+                    display = f"{city_str}{event.title}"
+                msg.append(f"{i}. {display}")
             
-            msg.append(f"\n💡 请重新输入带城市的指令，例如: /hlq {results[0].title.split()[0]} {results[0].city or '北京'}")
+            # 提供示例引导
+            first_city = results[0].city or "上海"
+            msg.append(f"\n💡 示例：`/hlq {query} {first_city}`")
             return "\n".join(msg)
         
-        # 5. 只有一个结果，返回详情
+        # 3. 只有一个结果，返回详情
         event = results[0]
         
         # 应用价格筛选
