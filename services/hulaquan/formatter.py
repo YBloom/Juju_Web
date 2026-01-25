@@ -4,6 +4,7 @@ HulaquanFormatter - 呼啦圈数据格式化（匹配旧版输出格式）
 from typing import List, Dict, Optional
 from datetime import datetime
 from .models import TicketInfo, EventInfo, TicketUpdate
+from .utils import extract_text_in_brackets
 
 # Web 链接配置
 import os
@@ -34,10 +35,10 @@ class HulaquanFormatter:
         # 识别冗余信息：如果 title 已经包含了日期、时间或价格，则不再重复显示
         title_val = ticket.title
         
-        # 处理书名号：如果已以《开头，则不再包裹（避免《《剧名》...》）
+        # 处理书名号：强制提取《》内部内容，去除营销文案
         clean_title = title_val.strip()
         if show_title:
-            title_str = clean_title if clean_title.startswith("《") else f"《{clean_title}》"
+            title_str = extract_text_in_brackets(clean_title, keep_brackets=True)
         else:
             title_str = ""
 
@@ -334,9 +335,9 @@ class HulaquanFormatter:
             
             # 4. Build Event Info
             lines = [header_line]
-            # Ensure title has brackets
+            # Ensure title has brackets (prevent double brackets) and remove marketing text
             clean_title = event_title.strip()
-            display_title = clean_title if clean_title.startswith("《") else f"《{clean_title}》"
+            display_title = extract_text_in_brackets(clean_title, keep_brackets=True)
             lines.append(f"剧名: {display_title}")
             
             if eid and eid != "unknown":
