@@ -13,9 +13,7 @@ class Feedback(SQLModel, table=True):
     created_at: datetime = Field(default_factory=timezone_now, index=True)
     
     # 基础信息
-    user_id: Optional[str] = Field(default=None, index=True)
-    nickname: Optional[str] = Field(default=None)
-    contact: Optional[str] = Field(default=None) # 邮箱或联系方式
+    contact: Optional[str] = Field(default=None) # 邮箱、联系方式或 Bot 提交者昵称
     
     # 类型: "bug", "suggestion", "wish"
     type: str = Field(index=True)

@@ -1012,8 +1012,8 @@
                 currentReplyId = id;
                 document.getElementById('reply-modal').style.display = 'flex';
                 document.getElementById('reply-verify-content').textContent = content;
-                document.getElementById('reply-input').value = existingReply || '';
-                document.getElementById('reply-public-check').checked = isPublic;
+                document.getElementById('reply-content').value = existingReply || '';
+                document.getElementById('reply-public').checked = isPublic;
             }
 
             function closeReplyModal() {
@@ -1022,8 +1022,8 @@
 
             async function submitReply() {
                 if (!currentReplyId) return;
-                const reply = document.getElementById('reply-input').value.trim();
-                const isPublic = document.getElementById('reply-public-check').checked;
+                const reply = document.getElementById('reply-content').value.trim();
+                const isPublic = document.getElementById('reply-public').checked;
 
                 try {
                     // Assuming fetchWithAuth is defined elsewhere or a standard fetch is used

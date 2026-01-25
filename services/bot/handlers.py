@@ -801,8 +801,7 @@ class BotHandler:
         try:
             with session_scope() as session:
                 feedback = Feedback(
-                    user_id=str(user_id),
-                    nickname=nickname,
+                    contact=f"QQ:{user_id} ({nickname})",
                     type="bug",
                     content=content
                 )
@@ -826,8 +825,7 @@ class BotHandler:
         try:
             with session_scope() as session:
                 feedback = Feedback(
-                    user_id=str(user_id),
-                    nickname=nickname,
+                    contact=f"QQ:{user_id} ({nickname})",
                     type="suggestion",
                     content=content
                 )
