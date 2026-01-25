@@ -46,7 +46,7 @@ class HulaquanFormatter:
             title_str = ""
 
         # 检查价格冗余
-        price_in_title = f"{int(ticket.price)}" in title_val or f"{ticket.price:.1f}" in title_val or f"￥{int(ticket.price)}" in title_val
+        price_in_title = f"{int(ticket.price)}" in title_str or f"{ticket.price:.1f}" in title_str or f"￥{int(ticket.price)}" in title_str
         if price_in_title:
             price_str = ""
         else:
@@ -61,7 +61,7 @@ class HulaquanFormatter:
         if ticket.session_time and show_title:
             short_date = ticket.session_time.strftime("%m-%d")
             short_time = ticket.session_time.strftime("%H:%M")
-            if short_date in title_val and short_time in title_val:
+            if short_date in title_str and short_time in title_str:
                 date_in_title = True
         
         if date_in_title:
@@ -83,7 +83,7 @@ class HulaquanFormatter:
             cast_str = "无卡司信息"
 
         # 检查是否已包含“学生票”
-        type_str = "" if "学生票" in title_val else " 学生票"
+        type_str = "" if "学生票" in title_str else " 学生票"
 
         # 拼接行，注意处理空格
         parts = [icon, title_str]
