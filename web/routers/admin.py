@@ -16,7 +16,8 @@ from sqlmodel import select, col
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from services.hulaquan.tables import Feedback, HulaquanSearchLog
+from services.hulaquan.tables import HulaquanSearchLog
+from services.db.models import Feedback
 from services.db.connection import session_scope
 
 router = APIRouter(prefix="/admin", tags=["Admin"])

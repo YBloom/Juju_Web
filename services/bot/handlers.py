@@ -791,7 +791,7 @@ class BotHandler:
                 feedback = Feedback(
                     user_id=str(user_id),
                     nickname=nickname,
-                    feedback_type="bug",
+                    type="bug",
                     content=content
                 )
                 session.add(feedback)
@@ -816,7 +816,7 @@ class BotHandler:
                 feedback = Feedback(
                     user_id=str(user_id),
                     nickname=nickname,
-                    feedback_type="suggestion",
+                    type="suggestion",
                     content=content
                 )
                 session.add(feedback)

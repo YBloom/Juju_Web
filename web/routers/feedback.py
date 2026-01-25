@@ -4,7 +4,7 @@ import asyncio
 import logging
 from sqlmodel import select, col
 
-from services.hulaquan.tables import Feedback
+from services.db.models import Feedback
 from services.db.connection import session_scope
 from services.email import notify_feedback_received
 from web.dependencies import limiter, get_remote_address

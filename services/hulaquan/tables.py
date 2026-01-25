@@ -111,22 +111,7 @@ class HulaquanSearchLog(SQLModel, table=True):
 
 
 
-class Feedback(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=timezone_now)
-    type: str # "bug", "suggestion", "wish"
-    content: str
-    contact: Optional[str] = None
-    status: str = "open" # "open", "closed"
-    
-    # Roadmap / Feedback Wall Columns
-    is_public: bool = Field(default=False)
-    admin_reply: Optional[str] = None
-    reply_at: Optional[datetime] = None
-    
-    # Ignore Management
-    is_ignored: bool = Field(default=False)
-    ignored_at: Optional[datetime] = None
+
 
 
 class TicketUpdateLog(SQLModel, table=True):
