@@ -206,17 +206,82 @@
             transform: translateY(-1px);
         }
 
-        @media (max-width: 600px) {
-            .container {
-                padding: 40px 24px;
+        /* New Sidebar Layout */
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #fcfcfc;
+            border-right: 1px solid rgba(139, 168, 136, 0.15);
+            padding: 40px 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            top: 0;
+            left: 0;
+            display: none;
+            /* Hidden on mobile by default */
+        }
+
+        .sidebar h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: var(--secondary-text);
+            margin-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 8px;
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-size: 15px;
+            display: block;
+            padding: 5px 0;
+            transition: color 0.2s;
+        }
+
+        .sidebar a:hover {
+            color: var(--accent-green);
+            background: none;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 80px 40px;
+            max-width: 800px;
+            margin-left: 250px;
+            /* Offset for sidebar */
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
             }
 
-            h1 {
-                font-size: 32px;
+            .main-content {
+                margin-left: 0;
+                padding: 40px 20px;
+                max-width: 100%;
             }
+        }
 
-            h2 {
-                font-size: 24px;
+        @media (min-width: 901px) {
+            .sidebar {
+                display: block;
             }
         }
     </style>
@@ -224,13 +289,32 @@
 
 <body>
 
-    <div class="container">
+    <aside class="sidebar">
+        <div style="font-weight: bold; font-size: 20px; margin-bottom: 30px; color: var(--accent-green);">
+            🤖 剧剧 Bot
+        </div>
+
+        <h3>使用指南</h3>
+        <ul>
+            <li><a href="#intro">简介 & 入群</a></li>
+            <li><a href="#search">🔍 核心查询</a></li>
+            <li><a href="#subscribe">🔔 智能订阅</a></li>
+            <li><a href="#feedback">💌 反馈工具</a></li>
+        </ul>
+
+        <h3>常见问题 (QA)</h3>
+        <ul>
+            <li><a href="#qa-city">多城市重名剧怎么办？</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
         <span class="page-icon">🤖</span>
-        <h1>MusicalBot 帮助文档</h1>
+        <h1 id="intro">MusicalBot 帮助文档</h1>
 
         <div class="metadata">
             <span>ℹ️ Bot 版本：V1.0</span>
-            <span>📅 更新时间：2026-01-19</span>
+            <span>📅 更新时间：2026-01-26</span>
         </div>
 
         <div class="callout info">
@@ -248,6 +332,7 @@
                 target="_blank" style="font-weight: bold; color: var(--accent-green);">③群：460167586 (点击加入)</a>
         </p>
 
+        <!-- Bot Account Info Section (Kept as is) -->
         <div style="margin-top: 15px; padding: 15px; background: rgba(139, 168, 136, 0.1); border-radius: 8px;">
             <p style="margin: 0 0 10px 0;"><strong>🤖 Bot 账号：</strong><span id="bot-uin-display">Loading...</span></p>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -283,7 +368,7 @@
 
         <hr>
 
-        <h2>🔍 核心查询功能</h2>
+        <h2 id="search">🔍 核心查询功能</h2>
 
         <div class="cmd-block">
             <h3>1. 剧目余票查询</h3>
@@ -329,7 +414,7 @@
 
         <hr>
 
-        <h2>🔔 智能订阅系统</h2>
+        <h2 id="subscribe">🔔 智能订阅系统</h2>
         <p>实时监控呼啦圈学生票的上新、补票、回流动向。</p>
 
         <div class="callout info" style="margin-top: 10px; margin-bottom: 20px;">
@@ -340,8 +425,8 @@
                     <li><code>1</code>: 仅通知 <b>上新</b></li>
                     <li><code>2</code>: <b>上新 + 补票</b> <small>★推荐</small></li>
                     <li><code>3</code>: <b>上新 + 补票 + 回流</b></li>
-                    <li><code>4</code>: <b>上新 + 补票 + 回流 + 票减</b></li>
-                    <li><code>5</code>: <b>上新 + 补票 + 回流 + 票增 + 票减</b> (全部变动)</li>
+                    <li><code>4</code>: 3 + <b>票减</b></li>
+                    <li><code>5</code>: 3 + <b>票增/票减</b> (全部变动)</li>
                 </ul>
             </div>
         </div>
@@ -365,9 +450,9 @@
             <p>订阅特定剧目或演员。</p>
             <div class="arg-group">
                 <ul>
-                    <li>关注剧目(默认模式2)：<code>/关注学生票 时光代理人</code></li>
-                    <li>关注剧目(指定模式3)：<code>/关注学生票 时光代理人 3</code></li>
-                    <li>防歧义匹配：<code>/关注学生票 -E 剧院魅影</code></li>
+                    <li>关注剧目(默认模式2)：<code>/关注学生票 时光代理人 上海</code></li>
+                    <li>关注剧目(指定模式3)：<code>/关注学生票 时光代理人 广州 3</code></li>
+                    <li>防歧义匹配：<code>/关注学生票 -E 时光代理人 上海</code></li>
                     <li>关注演员：<code>/关注学生票 -A 陈玉婷</code></li>
                     <li>关注演员(指定模式1)：<code>/关注学生票 -A 陈玉婷 1</code></li>
                 </ul>
@@ -382,19 +467,35 @@
                 <ul>
                     <li>查看列表：<code>/查看关注</code></li>
                     <li>取消剧目：<code>/取消关注学生票 连璧</code></li>
-                    <li>取消演员：<code>/取消关注学生票 -A 张三</code></li>
+                    <li>取消演员：<code>/取消关注学生票 -A XXX</code></li>
                 </ul>
             </div>
         </div>
 
         <hr>
 
-        <h2>💌 反馈与工具</h2>
+        <h2 id="qa">❓ 常见问题 (QA)</h2>
+
+        <div class="cmd-block">
+            <h3 id="qa-city">Q: 怎么表示“广州的阿波罗尼亚”，或者类似多城市都有的重名剧？</h3>
+            <p><strong>A:</strong> 在输入关键词时，使用 <code>"剧名 城市名"</code> 的格式即可精确筛选。</p>
+            <div class="arg-group">
+                <p><strong>示例：</strong></p>
+                <ul>
+                    <li>查询：<code>/hlq 阿波罗尼亚 广州</code></li>
+                    <li>订阅：<code>/关注学生票 阿波罗尼亚 广州</code> (仅推送广州场的变动)</li>
+                </ul>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2 id="feedback">💌 反馈与工具</h2>
 
         <div class="cmd-block">
             <h3>1. 故障反馈</h3>
             <pre><code>/bug [描述]</code></pre>
-            <p>示例：<code>/bug 查排期一直没反应，显示超时</code></p>
+            <p>示例：<code>/bug 查排期一直没反应</code></p>
         </div>
 
         <div class="cmd-block">
@@ -407,9 +508,10 @@
             <h3>3. Web / 其他</h3>
             <ul>
                 <li><strong>Web控制台</strong>: <code>/web</code> (获取免密登录链接)</li>
-                <li><strong>别名查询</strong>: <code>/aliases</code></li>
             </ul>
         </div>
+
+    </main>
 
 </body>
 
