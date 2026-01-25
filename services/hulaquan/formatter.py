@@ -8,8 +8,8 @@ from .utils import extract_text_in_brackets
 
 # Web 链接配置
 import os
-import os
 import urllib.parse
+WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
 # Official Ticket Link
 HLQ_OFFICIAL_URL_TEMPLATE = "https://clubz.cloudsation.com/event/{event_id}.html"
 # Web App Link
