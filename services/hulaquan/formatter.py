@@ -212,6 +212,7 @@ class HulaquanFormatter:
                 "add": "🟢补票提醒",
                 "restock": "♻️回流提醒",
                 "back": "➕票增提醒",
+                "decrease": "➖票减提醒",
                 "sold_out": "❗售罄提醒",
                 "stock_decrease": "➖票减提醒",
                 "stock_increase": "➕票增提醒",
@@ -301,6 +302,7 @@ class HulaquanFormatter:
             "add": "🟢补票",
             "restock": "♻️回流",
             "back": "➕票增",
+            "decrease": "➖票减",
             "sold_out": "❗售罄",
             "stock_decrease": "➖票减",
             "stock_increase": "➕票增",
@@ -322,7 +324,7 @@ class HulaquanFormatter:
             # 3. Build Header (Combined Prefixes)
             prefixes = []
             # Sort types by priority/logic? Just consistent order
-            sorted_types = sorted(by_type.keys(), key=lambda k: ["new", "restock", "back", "pending"].index(k) if k in ["new", "restock", "back", "pending"] else 99)
+            sorted_types = sorted(by_type.keys(), key=lambda k: ["new", "restock", "back", "decrease", "pending"].index(k) if k in ["new", "restock", "back", "decrease", "pending"] else 99)
             
             for ctype in sorted_types:
                 p = type_prefix_map.get(ctype, "📢动态")

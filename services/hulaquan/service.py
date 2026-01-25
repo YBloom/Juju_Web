@@ -441,7 +441,7 @@ class HulaquanService:
                             total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
                     elif ticket.stock == 0 and left_ticket > 0:
-                        # 判定为 restock (♻️回流) - 余票从0变为正
+                        # 判定为 restock (♻️回流) - 余票从0变为正 (Level 2)
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="restock", message=f"♻️回流: {title} 余票{left_ticket}/{total_ticket}",
@@ -449,10 +449,18 @@ class HulaquanService:
                             total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))
                     elif left_ticket > ticket.stock:
-                        # 判定为 back (➕票增) - 余票在正数基础上增加
+                        # 判定为 back (➕票增) - 余票在正数基础上增加 (Level 3)
                         updates.append(TicketUpdate(
                             ticket_id=tid, event_id=event_id, event_title=event.title, 
                             change_type="back", message=f"➕票增: {title} 余票{left_ticket}/{total_ticket}",
+                            session_time=session_time, price=price, stock=left_ticket, 
+                            total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
+                        ))
+                    elif left_ticket < ticket.stock:
+                        # 判定为 decrease (➖票减) - 余票减少 (Level 4)
+                        updates.append(TicketUpdate(
+                            ticket_id=tid, event_id=event_id, event_title=event.title, 
+                            change_type="decrease", message=f"➖票减: {title} 余票{left_ticket}/{total_ticket}",
                             session_time=session_time, price=price, stock=left_ticket, 
                             total_ticket=total_ticket, cast_names=cast_names_list, valid_from=valid_from
                         ))

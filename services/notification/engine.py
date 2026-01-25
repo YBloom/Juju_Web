@@ -28,14 +28,13 @@ log = logging.getLogger(__name__)
 MAX_RETRY_COUNT = 3
 BACKFILL_HOURS = 24  #补发时限
 
-# MODE 映射 (修正并完善等级定义)
 MODE_MAP = {
     "new": 1,
     "pending": 1,    # 待开票
-    "back": 2,       # 补票
-    "restock": 3,    # 回流
-    "decrease": 4,   # 票减
-    "increase": 5,   # 票增 (最高等级)
+    "restock": 2,    # 回流 (0->正) [重要]
+    "back": 3,       # 票增 (正->更多) [次要]
+    "decrease": 4,   # 票减 (正->减少) [详细]
+    "increase": 5,   # 票增 (同 back)
     "sold_out": 99,  # 暂不推送售罄
 }
 

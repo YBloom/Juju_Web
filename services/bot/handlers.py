@@ -152,14 +152,10 @@ class BotHandler:
                 desc = MODE_DESCRIPTIONS.get(level, "未知")
                 msg = f"✅ 全局通知已设置为: 模式{level}（{desc}）"
                 
-                # Check if user has any active targets
-                if level > 0 and sub:
-                    # We need to refresh sub to get relations if needed, but simple check is enough
-                    # joinedload logic is in matching engine, here we can simple query
-                    from services.db.models import SubscriptionTarget
-                    target_count = session.exec(select(SubscriptionTarget).where(SubscriptionTarget.subscription_id == sub.id)).all()
-                    if not target_count:
-                        msg += "\n\n⚠️ 提示: 您目前尚未关注任何剧目或演员。\n请使用 `/关注学生票 [剧名]` 添加关注，否则您将收不到通知。"
+                if level > 0:
+                    msg += "\n\n📢 提示: 您已开启全局推送，将收到全平台该等级及以上的变动通知。\n如仅需接收已关注剧目的通知，请回复 `/呼啦圈通知 0` 关闭全局推送。"
+                else:
+                    msg += "\n\n💡 提示: 全局推送已关闭。您现在仅会收到已关注剧目/演员的通知。"
                 
                 return msg
 
