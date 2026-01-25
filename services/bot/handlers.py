@@ -703,6 +703,16 @@ class BotHandler:
             use_hulaquan = "-h" in mode_args
             return await self._handle_cocast(actors, show_others, use_hulaquan)
 
+        # --- /bug Command ---
+        if command == "/bug":
+            content = " ".join(text_args)
+            return await self._handle_bug(user_id, nickname, content)
+
+        # --- /suggest Command ---
+        if command == "/suggest":
+            content = " ".join(text_args)
+            return await self._handle_suggest(user_id, nickname, content)
+
         return None
 
     def _get_help_text(self) -> str:
@@ -716,10 +726,61 @@ class BotHandler:
             f"• 查排期: /date [日期]\n"
             f"• 查剧目: /hlq [剧名]\n"
             f"• 查同场: /cast [演员1] [演员2]\n"
+            f"• 反馈Bug: /bug [问题描述]\n"
+            f"• 提建议: /suggest [建议内容]\n"
             f"• 登录Web: /web"
         )
 
     # --- Command Implementations ---
+
+    async def _handle_bug(self, user_id: int, nickname: str, content: str) -> str:
+        """处理 /bug 命令"""
+        if not content:
+            return "❌ 请提供 Bug 描述，例如: /bug 查询排期时报错"
+            
+        from services.db.connection import session_scope
+        from services.db.models import Feedback
+        
+        try:
+            with session_scope() as session:
+                feedback = Feedback(
+                    user_id=str(user_id),
+                    nickname=nickname,
+                    feedback_type="bug",
+                    content=content
+                )
+                session.add(feedback)
+                session.commit()
+                # 刷新以获取 ID
+                session.refresh(feedback)
+                return f"🐛 已收到您的 Bug 反馈。编号: #{feedback.id}\n我们会尽快排查，感谢您的支持！"
+        except Exception as e:
+            log.error(f"❌ Failed to save bug report: {e}")
+            return "❌ 提交失败，请稍后重试。"
+
+    async def _handle_suggest(self, user_id: int, nickname: str, content: str) -> str:
+        """处理 /suggest 命令"""
+        if not content:
+            return "❌ 请提供建议内容，例如: /suggest 希望增加夜间模式"
+            
+        from services.db.connection import session_scope
+        from services.db.models import Feedback
+        
+        try:
+            with session_scope() as session:
+                feedback = Feedback(
+                    user_id=str(user_id),
+                    nickname=nickname,
+                    feedback_type="suggestion",
+                    content=content
+                )
+                session.add(feedback)
+                session.commit()
+                session.refresh(feedback)
+                return f"💡 已收到您的建议。编号: #{feedback.id}\n感谢您帮助我们改进！"
+        except Exception as e:
+            log.error(f"❌ Failed to save suggestion: {e}")
+            return "❌ 提交失败，请稍后重试。"
 
     async def _handle_date(self, date_str: str, city: Optional[str], show_all: bool) -> str:
         """处理 /date 命令"""

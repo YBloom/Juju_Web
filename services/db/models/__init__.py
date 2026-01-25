@@ -25,6 +25,7 @@ from .subscription import Subscription, SubscriptionOption, SubscriptionTarget
 from .session import UserSession, EmailVerification
 from .user import User
 from .user_auth_method import UserAuthMethod, AccountMergeLog
+from .feedback import Feedback
 from .bot_alias import BotAlias
 
 # Import SaojuCache for database initialization
@@ -83,5 +84,6 @@ __all__ = [
     "UserSession",
     "EmailVerification",
     "BotAlias",
+    "Feedback",
     "utcnow",
 ]
