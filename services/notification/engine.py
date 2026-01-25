@@ -31,9 +31,10 @@ BACKFILL_HOURS = 24  #补发时限
 MODE_MAP = {
     "new": 1,
     "pending": 1,    # 待开票
-    "restock": 2,    # 回流 (0->正) [重要]
-    "back": 3,       # 票增 (正->更多) [次要]
+    "add": 2,        # 补票 (总票数增加) [推荐]
+    "restock": 3,    # 回流 (0->正) [重要]
     "decrease": 4,   # 票减 (正->减少) [详细]
+    "back": 5,       # 票增 (正->更多) [次要]
     "increase": 5,   # 票增 (同 back)
     "sold_out": 99,  # 暂不推送售罄
 }

@@ -522,13 +522,13 @@ class BotHandler:
             stmt = select(Subscription).where(Subscription.user_id == user_id)
             sub = session.exec(stmt).first()
             
-            if not sub:
-                return "您目前没有任何订阅。\n\n使用 /呼啦圈通知 2 开启全局通知"
-            
             # 加载用户信息用于读取配置
             user = session.get(User, user_id)
             if not user:
                  return "❌ 用户数据异常"
+
+            if not sub and user.global_notification_level == 0:
+                return "您目前没有任何订阅。\n\n使用 /呼啦圈通知 2 开启全局通知"
 
             lines = ["📋 我的订阅\n"]
             
