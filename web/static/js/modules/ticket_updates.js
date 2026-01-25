@@ -55,13 +55,13 @@ export function initTicketUpdates() {
     if (listContainer) {
         listContainer.addEventListener('click', (e) => {
             // Handle Detail Row Click (Navigation)
-            const detailRow = e.target.closest('.detail-row-compact');
+            const detailRow = e.target.closest('.update-session-row');
             if (detailRow) {
                 e.stopPropagation();
                 // Detail rows in ticket updates usually don't have session-specific nav unless intended.
                 // The old code navigated to /detail/:id. 
                 // Assuming eventId is on the row or parent.
-                // In render, .detail-row-compact has data-event-id.
+                // In render, .update-session-row has data-event-id.
                 if (detailRow.dataset.eventId) {
                     router.navigate(`/detail/${detailRow.dataset.eventId}`);
                 }

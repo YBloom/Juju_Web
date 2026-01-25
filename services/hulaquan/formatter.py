@@ -10,9 +10,12 @@ from .utils import extract_text_in_brackets
 import os
 import os
 import urllib.parse
-WEB_BASE_URL = os.getenv("WEB_BASE_URL", "https://yyj.yaobii.com")
-# Use Hash Router format
-HLQ_EVENT_URL_TEMPLATE = "{base_url}/#/detail/{event_id}"
+# Official Ticket Link
+HLQ_OFFICIAL_URL_TEMPLATE = "https://clubz.cloudsation.com/event/{event_id}.html"
+# Web App Link
+WEB_DETAIL_URL_TEMPLATE = "{base_url}/#/detail/{event_id}"
+WEB_DATE_URL_TEMPLATE = "{base_url}/#/date?d={date_str}"
+WEB_CAST_URL_TEMPLATE = "{base_url}/?tab=cocast&actors={actors}"
 
 
 class HulaquanFormatter:
@@ -110,8 +113,10 @@ class HulaquanFormatter:
         
         # 购票链接
         if event.id:
-            url = HLQ_EVENT_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=event.id)
-            lines.append(f"购票链接：{url}")
+            official_url = HLQ_OFFICIAL_URL_TEMPLATE.format(event_id=event.id)
+            web_url = WEB_DETAIL_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=event.id)
+            lines.append(f"购票链接：{official_url}")
+            lines.append(f"网页详情：{web_url}")
         
         # 更新时间
         if event.update_time:
@@ -132,8 +137,8 @@ class HulaquanFormatter:
         if not show_all and len(active_tickets) > 20:
             lines.append(f"\n...等 {len(active_tickets)} 个场次")
             if event.id:
-                url = HLQ_EVENT_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=event.id)
-                lines.append(f"💡 使用 -all 查看全部，或访问网页: {url}")
+                official_url = HLQ_OFFICIAL_URL_TEMPLATE.format(event_id=event.id)
+                lines.append(f"💡 使用 -all 查看全部，或直接购票：{official_url}")
         
         return "\n".join(lines)
 
@@ -177,7 +182,7 @@ class HulaquanFormatter:
         lines.append(f"\n数据更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
         if not show_all:
-            url = f"{WEB_BASE_URL}/#/date?d={date_str}"
+            url = WEB_DATE_URL_TEMPLATE.format(base_url=WEB_BASE_URL, date_str=date_str)
             lines.append(f"💡 使用 -all 查看全部或访问: {url}")
         
         return "\n".join(lines)
@@ -227,7 +232,10 @@ class HulaquanFormatter:
                 
                 # 购票链接
                 if eid:
-                    lines.append(f"购票链接: {HLQ_EVENT_URL_TEMPLATE.format(event_id=eid)}")
+                    official_url = HLQ_OFFICIAL_URL_TEMPLATE.format(event_id=eid)
+                    web_url = WEB_DETAIL_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=eid)
+                    lines.append(f"购票链接：{official_url}")
+                    lines.append(f"网页详情：{web_url}")
                 
                 lines.append(f"更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 lines.append("")
@@ -324,8 +332,9 @@ class HulaquanFormatter:
             
             # 3. Build Header (Combined Prefixes)
             prefixes = []
-            # Sort types by priority/logic? Just consistent order
-            sorted_types = sorted(by_type.keys(), key=lambda k: ["new", "restock", "back", "decrease", "pending"].index(k) if k in ["new", "restock", "back", "decrease", "pending"] else 99)
+            # Sort types by priority/logic
+            type_order = ["new", "restock", "back", "decrease", "pending"]
+            sorted_types = sorted(by_type.keys(), key=lambda k: type_order.index(k) if k in type_order else 99)
             
             for ctype in sorted_types:
                 p = type_prefix_map.get(ctype, "📢动态")
@@ -341,8 +350,10 @@ class HulaquanFormatter:
             lines.append(f"剧名: {display_title}")
             
             if eid and eid != "unknown":
-                url = HLQ_EVENT_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=eid)
-                lines.append(f"购票链接: {url}")
+                official_url = HLQ_OFFICIAL_URL_TEMPLATE.format(event_id=eid)
+                web_url = WEB_DETAIL_URL_TEMPLATE.format(base_url=WEB_BASE_URL, event_id=eid)
+                lines.append(f"购票链接：{official_url}")
+                lines.append(f"网页详情：{web_url}")
             
             lines.append(f"更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             lines.append("")

@@ -281,8 +281,16 @@ from web.middleware.maintenance import MaintenanceMiddleware
 maintenance_page = static_path / "maintenance.html"
 app.add_middleware(MaintenanceMiddleware, maintenance_page_path=maintenance_page)
 
+# Static Files with No-Cache headers (Force ETag validation for all assets)
+class NoCacheStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        # Force browser to validate with server every time (Conditional Request / ETag)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
 # Static Files (mount after middleware)
-app.mount("/static", StaticFiles(directory=static_path), name="static")
+app.mount("/static", NoCacheStaticFiles(directory=static_path), name="static")
 
 
 # --- API Endpoints ---
@@ -417,6 +425,7 @@ async def read_root(request: Request):
         )
         
         response = HTMLResponse(content=content)
+        # Use no-cache for HTML to ensure ETag validation
         response.headers["Cache-Control"] = "no-cache"
         return response
         
@@ -429,10 +438,8 @@ async def help_page():
     if help_file.exists():
         content = help_file.read_text(encoding="utf-8")
         response = HTMLResponse(content=content)
-        # Prevent caching to ensure updates are seen immediately
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
+        # Consistent with index.html - force ETag validation
+        response.headers["Cache-Control"] = "no-cache"
         return response
     return HTMLResponse("<h1>Help Page Not Found</h1>", status_code=404)
 
