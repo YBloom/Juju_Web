@@ -286,131 +286,130 @@
         <h2>🔍 核心查询功能</h2>
 
         <div class="cmd-block">
-            <h3>1. 剧目与学生票查询 (`/hlq`)</h3>
-            <p>搜索剧目名称，查看具体的学生票场次、价格和卡司。</p>
-            <pre><code>/hlq [剧名] [模式参数]</code></pre>
+            <h3>1. 剧目余票查询</h3>
+            <pre><code>/hlq [剧名] [参数...]</code></pre>
+            <p>搜索呼啦圈平台上的学生票/折扣票信息，支持按城市、价格筛选。</p>
             <div class="arg-group">
-                <p><strong>常用场景：</strong></p>
                 <ul>
-                    <li>普通搜索：<code>/hlq 连璧</code></li>
-                    <li>精确筛选：<code>/hlq 时光代理人 上海</code> (支持城市/剧场名)</li>
-                    <li>显示所有场次 (含售罄)：<code>/hlq 连璧 -all</code></li>
-                    <li>按价格筛选：<code>/hlq 连璧 -219</code> (仅看219元的票)</li>
-                    <li>简写法：<code>查票 连璧</code></li>
+                    <li>基础查询：<code>/hlq 连璧</code></li>
+                    <li>指定城市：<code>/hlq 时光代理人 上海</code></li>
+                    <li>指定价格：<code>/hlq 连璧 -199</code> (仅看199元票档)</li>
+                    <li>忽略售罄：<code>/hlq 连璧 -i</code> (仅看有票场次)</li>
+                    <li>查看全部：<code>/hlq 连璧 -all</code> (查看全部排期)</li>
+                    <li>组合使用：<code>/hlq 连璧 上海 -219 -all</code></li>
                 </ul>
             </div>
         </div>
 
         <div class="cmd-block">
-            <h3>2. 日期排期查询 (`/date`)</h3>
-            <p>查看特定日期及之后的所有学生票演出信息。</p>
-            <pre><code>/date [YYYY-MM-DD] [城市] [-all]</code></pre>
+            <h3>2. 日期排期查询</h3>
+            <pre><code>/date [日期] [城市] [-all]</code></pre>
+            <p>按日期查看全站（或指定城市）的学生票演出排期。</p>
             <div class="arg-group">
-                <p><strong>示例：</strong></p>
                 <ul>
-                    <li>查询今天：<code>/date</code></li>
-                    <li>查询特定日：<code>/date 2026-02-14</code></li>
-                    <li>查询特定城市：<code>/date 2026-01-20 上海</code></li>
+                    <li>查今天：<code>/date</code></li>
+                    <li>查指定日期：<code>/date 2026-02-14</code></li>
+                    <li>查指定城市：<code>/date 2026-01-20 上海</code></li>
                 </ul>
             </div>
         </div>
 
         <div class="cmd-block">
-            <h3>3. 同场演员查询 (`/cast`)</h3>
-            <p>查询多位演员共同出演的音乐剧场次（聚合呼啦圈与扫剧系统数据）。</p>
-            <pre><code>/cast [演员1] [演员2] ... [模式参数]</code></pre>
+            <h3>3. 同场卡司查询</h3>
+            <pre><code>/cast [演员1] [演员2] ... [参数]</code></pre>
+            <p>搜索一位或多位演员的未来同场演出排期。（web端可以查看从20230101起的所有排期）</p>
             <div class="arg-group">
-                <p><strong>模式参数：</strong></p>
                 <ul>
-                    <li><code>-o</code>: 显示同场其他演员 (扫剧系统)</li>
-                    <li><code>-h</code>: 仅检索呼啦圈系统数据</li>
-                </ul>
-                <p><strong>示例：</strong></p>
-                <ul>
-                    <li>普通查询：<code>/cast 丁辰西 陈玉婷</code></li>
-                    <li>查看完整阵容：<code>/cast 毛二 -o</code></li>
+                    <li>双人同场：<code>/cast 丁辰西 陈玉婷</code></li>
+                    <li>显示同场其它卡司：<code>/cast 陈玉婷 -o</code></li>
+                    <li>仅查此演员在呼啦圈中的场次：<code>/cast 丁辰西 -h</code></li>
                 </ul>
             </div>
         </div>
 
         <hr>
 
-        <h2>🔔 智能订阅系统 (最新)</h2>
-        <p>实时监控学生票动向，第一时间通过私信推送通知。</p>
+        <h2>🔔 智能订阅系统</h2>
+        <p>实时监控呼啦圈学生票的上新、补票、回流动向。</p>
 
-        <div class="cmd-block">
-            <h3>1. 关注学生票 (`/关注学生票`)</h3>
-            <pre><code>/关注学生票 [关键词] [模式] [参数]</code></pre>
-            <div class="arg-group">
-                <p><strong>推送模式 (必填)：</strong></p>
-                <ul>
+        <div class="callout info" style="margin-top: 10px; margin-bottom: 20px;">
+            <div class="callout-content">
+                <strong>通知等级说明 (0-5级)：</strong>
+                <ul style="margin: 5px 0 0 0; padding-left: 20px;">
                     <li><code>0</code>: <b>无通知</b></li>
                     <li><code>1</code>: 仅通知 <b>上新</b></li>
-                    <li><code>2</code>: <b>上新 + 补票</b> <small>(推荐)</small></li>
+                    <li><code>2</code>: <b>上新 + 补票</b> <small>★推荐</small></li>
                     <li><code>3</code>: <b>上新 + 补票 + 回流</b></li>
                     <li><code>4</code>: <b>上新 + 补票 + 回流 + 票减</b></li>
-                    <li><code>5</code>: <b>上新 + 补票 + 回流 + 票增 + 票减</b></li>
+                    <li><code>5</code>: <b>上新 + 补票 + 回流 + 票增 + 票减</b> (全部变动)</li>
                 </ul>
-                <p><strong>关键词类型：</strong></p>
-                <ul>
-                    <li><code>-E [剧名]</code>: 关注特定剧目</li>
-                    <li><code>-A [演员]</code>: 关注该演员所有场次</li>
-                    <li><code>-T [Id]</code>: 关注特定场次 ID</li>
-                </ul>
-                <p><strong>高级筛选：</strong></p>
-                <ul>
-                    <li><code>-I [剧名]</code>: 白名单，仅推送这些剧</li>
-                    <li><code>-X [剧名]</code>: 黑名单，排除这些剧</li>
-                </ul>
-                <p><strong>混合示例：</strong></p>
-                <pre><code>/关注学生票 连璧 海雾 -E 3
-/关注学生票 张三 -A -I 幽灵,怪物 1 (关注张三的幽灵和怪物场次)
-/关注学生票 李四 -A -X 海雾 2 (关注李四除海雾外的所有场次)</code></pre>
             </div>
         </div>
 
         <div class="cmd-block">
-            <h3>2. 管理订阅</h3>
+            <h3>1. 全局推送设置</h3>
+            <pre><code>/呼啦圈通知 [等级]</code></pre>
+            <p>设置“总开关”。只有重要程度 <b>&ge; 该等级</b> 的消息才会推送给您。</p>
+            <div class="arg-group">
+                <ul>
+                    <li>设置推荐模式（上新+补票）：<code>/呼啦圈通知 2</code></li>
+                    <li>开启全部推送：<code>/呼啦圈通知 5</code></li>
+                    <li>一键静音：<code>/呼啦圈通知 0</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="cmd-block">
+            <h3>2. 关注订阅</h3>
+            <pre><code>/关注学生票 [关键词] [模式等级]</code></pre>
+            <p>订阅特定剧目或演员。</p>
+            <div class="arg-group">
+                <ul>
+                    <li>关注剧目(默认模式2)：<code>/关注学生票 时光代理人</code></li>
+                    <li>关注剧目(指定模式3)：<code>/关注学生票 时光代理人 3</code></li>
+                    <li>防歧义匹配：<code>/关注学生票 -E 剧院魅影</code></li>
+                    <li>关注演员：<code>/关注学生票 -A 陈玉婷</code></li>
+                    <li>关注演员(指定模式1)：<code>/关注学生票 -A 陈玉婷 1</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="cmd-block">
+            <h3>3. 订阅管理</h3>
+            <pre><code>/查看关注</code> / <code>/取消关注学生票</code></pre>
+            <p>查看列表或删除已有的订阅。</p>
+            <div class="arg-group">
+                <ul>
+                    <li>查看列表：<code>/查看关注</code></li>
+                    <li>取消剧目：<code>/取消关注学生票 连璧</code></li>
+                    <li>取消演员：<code>/取消关注学生票 -A 张三</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>💌 反馈与工具</h2>
+
+        <div class="cmd-block">
+            <h3>1. 故障反馈</h3>
+            <pre><code>/bug [描述]</code></pre>
+            <p>示例：<code>/bug 查排期一直没反应，显示超时</code></p>
+        </div>
+
+        <div class="cmd-block">
+            <h3>2. 功能建议</h3>
+            <pre><code>/suggest [建议]</code></pre>
+            <p>示例：<code>/suggest 希望增加一个按剧场搜索的功能</code></p>
+        </div>
+
+        <div class="cmd-block">
+            <h3>3. Web / 其他</h3>
             <ul>
-                <li>查看当前关注：<code>/查看关注</code></li>
-                <li>取消关注：<code>/取消关注学生票 [剧名/演员名] [-E/-A]</code></li>
-                <li>全局设置：<code>/呼啦圈通知 [0-5]</code> (设置全局推送等级)</li>
+                <li><strong>Web控制台</strong>: <code>/web</code> (获取免密登录链接)</li>
+                <li><strong>别名查询</strong>: <code>/aliases</code></li>
             </ul>
         </div>
-
-        <hr>
-
-        <h2>🛠️ 辅助功能</h2>
-        <ul>
-            <li><strong>别名管理</strong>：<code>/alias 搜索名 别名</code> (例如：<code>/alias 末日迷途 mrmt</code>)</li>
-            <li><strong>查看所有别名</strong>：<code>/aliases</code></li>
-            <li><strong>Repo 系统</strong>：跳转 Web 控制台查看盲盒票评价。</li>
-        </ul>
-
-        <hr>
-
-        <h2>🔐 Web 控制台</h2>
-        <div class="callout blue">
-            <span class="callout-icon">🚀</span>
-            <div class="callout-content">
-                <b>体验更完整的 UI 界面！</b><br>
-                在网页端您可以直观地查看排期日历、管理头像以及可视化配置所有的订阅项。
-            </div>
-        </div>
-        <p>发送以下指令获取 5 分钟有效的免密登录链接：</p>
-        <pre><code>/web</code></pre>
-        <a href="/" class="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors">剧剧 | 演出&票务小站</a>
-
-        <hr>
-
-        <div class="callout warning">
-            <span class="callout-icon">💌</span>
-            <div class="callout-content">
-                <strong>反馈与建议</strong><br>
-                如果您有任何功能建议或遇到了 Bug，请直接在 QQ 群内 @管理员。您的每一条反馈都能让 MusicalBot 变得更好！
-            </div>
-        </div>
-    </div>
 
 </body>
 

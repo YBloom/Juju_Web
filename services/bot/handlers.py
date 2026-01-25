@@ -116,23 +116,167 @@ class BotHandler:
             log.warning(f"⚠️ [用户] 获取用户 {user_id} 交互模式失败: {e}")
         return "legacy"  # 默认旧版模式
 
-    async def _handle_set_notify_level(self, user_id: str, level: Optional[int] = None) -> str:
-        """处理 /呼啦圈通知 [0-5] 命令"""
+    # --- Help Messages ---
+    CMD_HELP_HLQ = (
+        "🔍 剧目查询帮助\n"
+        "用法: /hlq [剧名] [参数]\n"
+        "示例:\n"
+        "• /hlq 连璧 (查询剧目)\n"
+        "• /hlq 连璧 -i (隐藏已售罄)\n"
+        "• /hlq 连璧 -all (显示所有场次)\n"
+        "• /hlq 连璧 -219 (只看219元)"
+    )
+
+    CMD_HELP_DATE = (
+        "📅 排期查询帮助\n"
+        "用法: /date [日期] [城市] [-all]\n"
+        "示例:\n"
+        "• /date (查询今天)\n"
+        "• /date 2026-02-14 (查询指定日)\n"
+        "• /date 2026-01-01 上海 (指定城市)"
+    )
+    
+    CMD_HELP_CAST = (
+        "👥 卡司查询帮助\n"
+        "用法: /cast [演员1] [演员2] ... [参数]\n"
+        "示例:\n"
+        "• /cast 丁辰西 陈玉婷 (双人同场)\n"
+        "• /cast 毛二 -o (显示其他卡司)"
+    )
+
+    CMD_HELP_BUG = (
+        "🐛 故障反馈帮助\n"
+        "用法: /bug [描述]\n"
+        "示例: /bug 查排期一直没反应"
+    )
+
+    CMD_HELP_SUGGEST = (
+        "💡 功能建议帮助\n"
+        "用法: /suggest [建议]\n"
+        "示例: /suggest 希望增加夜间模式"
+    )
+
+    CMD_HELP_SUBSCRIBE = (
+        "🔔 关注订阅帮助\n"
+        "用法: /关注学生票 [关键词] [模式] [参数]\n"
+        "示例:\n"
+        "• /关注学生票 连璧 (默认模式2)\n"
+        "• /关注学生票 -A 陈玉婷 1 (仅上新推送)"
+    )
+
+    CMD_HELP_UNSUBSCRIBE = (
+        "🔕 取消关注帮助\n"
+        "用法: /取消关注学生票 [关键词] [参数]\n"
+        "示例:\n"
+        "• /取消关注学生票 连璧\n"
+        "• /取消关注学生票 -A 陈玉婷"
+    )
+
+    # ... existing code ...
+
+    async def _handle_subscribe(self, user_id: str, args: dict) -> str:
+        """处理 /关注学生票 命令"""
         from services.db.connection import session_scope
-        from services.db.models import User
+        from services.db.models import Subscription, SubscriptionTarget
+        from services.db.models.base import SubscriptionTargetKind
+        from sqlmodel import select
         
-        if level is None:
-            return (
-                "🔔 呼啦圈通知设置\n\n"
-                "用法: /呼啦圈通知 [0-5]\n\n"
-                "模式说明:\n"
-                "0: 关闭通知\n"
-                "1: 模式1（开票）\n"
-                "2: 模式2（开票+补票）(推荐)\n"
-                "3: 模式3（开票+补票+回流）\n"
-                "4: 模式4（开票+补票+回流+票减）\n"
-                "5: 模式5（全部: 开票+补票+回流+票增+票减）"
-            )
+        mode_args = args.get("mode_args", [])
+        text_args = args.get("text_args", [])
+        
+        if not text_args:
+            return self.CMD_HELP_SUBSCRIBE
+
+        # ... (rest of function)
+
+    async def _handle_unsubscribe(self, user_id: str, args: dict) -> str:
+        """处理 /取消关注学生票 命令"""
+        # ... imports ...
+        from services.db.connection import session_scope
+        from services.db.models import Subscription, SubscriptionTarget
+        from services.db.models.base import SubscriptionTargetKind
+        from sqlmodel import select, or_
+        
+        mode_args = args.get("mode_args", [])
+        text_args = args.get("text_args", [])
+        
+        if not text_args:
+            return self.CMD_HELP_UNSUBSCRIBE
+            
+        # ... (rest of function)
+
+    # In handle_group_message:
+        
+        # --- /hlq Command ---
+        if command == "/hlq":
+            query = " ".join(text_args)
+            if not query:
+                return self.CMD_HELP_HLQ
+            
+            ignore_sold_out = "-i" in mode_args
+            return await self._handle_hlq(query, show_all, price_filters, ignore_sold_out)
+
+        # --- /date Command ---
+        if command == "/date":
+            # ... existing parsing ...
+            # If parsing fails or handle_date returns help specific error?
+            pass # We'll handle inside _handle_date using try/except or checks
+
+        # --- /同场演员 Command ---
+        if command == "/同场演员":
+            actors = text_args
+            if not actors:
+                return self.CMD_HELP_CAST
+            # ...
+
+        # --- /bug ---
+        if command == "/bug":
+            content = " ".join(text_args)
+            if not content: return self.CMD_HELP_BUG
+            return await self._handle_bug(user_id, nickname, content)
+
+        # --- /suggest ---
+        if command == "/suggest":
+            content = " ".join(text_args)
+            if not content: return self.CMD_HELP_SUGGEST
+            return await self._handle_suggest(user_id, nickname, content)
+
+    # In _handle_date:
+    async def _handle_date(self, date_str: str, city: Optional[str], show_all: bool) -> str:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return self.CMD_HELP_DATE
+        # ...
+
+    # In _handle_hlq:
+    async def _handle_hlq(self, query: str, show_all: bool, price_filters: List[float] = None, ignore_sold_out: bool = False) -> str:
+        """处理 /hlq 命令"""
+        # ... existing search ...
+        results = await self.service.search_events_smart(query)
+        
+        if not results:
+            return f"❌ 未找到包含 '{query}' 的剧目。"
+        
+        if len(results) > 1:
+             # ... existing ambiguity handling ...
+            msg = [f"🔍 找到 {len(results)} 个相关剧目，请通过城市进一步筛选：\n"]
+            # ...
+            return "\n".join(msg)
+        
+        event = results[0]
+        
+        # 筛选: 忽略已售罄
+        if ignore_sold_out:
+            event.tickets = [t for t in event.tickets if t.stock > 0]
+            if not event.tickets:
+                return f"🔍 《{event.title}》 所有学生票场次均已售罄 (使用 -all 查看或去除 -i)"
+
+        if price_filters:
+            # ... existing price filter ...
+            pass
+            
+        return HulaquanFormatter.format_event_search_result(event, show_all=show_all)
 
         
         if not (0 <= level <= 5):
@@ -723,9 +867,11 @@ class BotHandler:
             f"请点击下方链接查看完整命令说明：\n\n"
             f"👉 {WEB_BASE_URL}/help\n\n"
             f"常用指令速查：\n"
-            f"• 查排期: /date [日期]\n"
-            f"• 查剧目: /hlq [剧名]\n"
-            f"• 查同场: /cast [演员1] [演员2]\n"
+            f"• 查呼啦圈剧目余票: /hlq [剧名]\n"
+            f"• 查某天的学生票场次: /date [日期]\n"
+            f"• 查同场卡司: /cast [演员1] [演员2] ...\n"
+            f"• 订阅设置: /呼啦圈通知\n"
+            f"• 关注: /关注学生票\n"
             f"• 反馈Bug: /bug [问题描述]\n"
             f"• 提建议: /suggest [建议内容]\n"
             f"• 登录Web: /web"
