@@ -10,8 +10,8 @@ class NotificationLevel(IntEnum):
     NEW_ONLY = 1  # 仅通知 上新
     RECOMMENDED = 2  # 上新 + 补票 (★推荐)
     INCLUDE_RESTOCK = 3  # 上新 + 补票 + 回流
-    INCLUDE_DECREASE = 4  # 3 + 票减
-    ALL_CHANGES = 5  # 3 + 票增/票减 (全部变动)
+    INCLUDE_DECREASE = 4  # 上新 + 补票 + 回流 + 票减
+    ALL_CHANGES = 5  # 上新 + 补票 + 回流 + 票增 + 票减 (全部变动)
 
 # 模式描述 (用于帮助文档)
 MODE_DESCRIPTIONS: Dict[int, str] = {
@@ -19,8 +19,8 @@ MODE_DESCRIPTIONS: Dict[int, str] = {
     NotificationLevel.NEW_ONLY: "仅通知 上新",
     NotificationLevel.RECOMMENDED: "上新 + 补票 (★推荐)",
     NotificationLevel.INCLUDE_RESTOCK: "上新 + 补票 + 回流",
-    NotificationLevel.INCLUDE_DECREASE: "3 + 票减",
-    NotificationLevel.ALL_CHANGES: "3 + 票增/票减 (全部变动)"
+    NotificationLevel.INCLUDE_DECREASE: "上新 + 补票 + 回流 + 票减",
+    NotificationLevel.ALL_CHANGES: "上新 + 补票 + 回流 + 票增 + 票减 (全部变动)"
 }
 
 # 变更类型 -> 最低通知等级 映射
