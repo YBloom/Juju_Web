@@ -27,10 +27,10 @@ def extract_args(message: str) -> Dict:
     # 直接使用原始触发词，由 Registry 处理别名匹配
     raw_trigger = parts[0]
     
-    # 模式参数：以 - 开头且后面不是纯数字的 (如 -E, -A, -all)
-    # 文本参数：不以 - 开头，或者是类似 -3 这样的负数形式（用于指定级别或通过价格）
-    mode_args = [p.lower() for p in parts[1:] if p.startswith("-") and not p[1:].isdigit()]
-    text_args = [p for p in parts[1:] if not p.startswith("-") or p[1:].isdigit()]
+    # 模式参数：以 - 开头的所有参数 (如 -E, -A, -all, -99)
+    # 文本参数：不以 - 开头的所有参数 (如 剧名, 城市)
+    mode_args = [p.lower() for p in parts[1:] if p.startswith("-")]
+    text_args = [p for p in parts[1:] if not p.startswith("-")]
     
     return {"command": raw_trigger, "text_args": text_args, "mode_args": mode_args}
 
