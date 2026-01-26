@@ -491,7 +491,8 @@ class HulaquanService:
                      if musical_id:
                          role_orders = self._saoju.data.get("artist_indexes", {}).get("role_orders", {}).get(str(musical_id), {})
                      
-                     for c_item in t_enrich["casts"]:
+                     
+                     for idx, c_item in enumerate(t_enrich["casts"]):
                         artist_name = c_item.get("artist")
                         role_name = c_item.get("role")
                         if not artist_name: continue
@@ -503,8 +504,9 @@ class HulaquanService:
                             session.add(cast_obj)
                             session.flush() # Need ID
                         
-                        # 获取角色排序序号
-                        rank = role_orders.get(role_name, 999) if role_name else 999
+                        # Use source index as rank (0-based)
+                        # This guarantees storage order matches source string order
+                        rank = idx
                         
                         # Check exist
                         stmt_assoc = select(TicketCastAssociation).where(
@@ -522,7 +524,7 @@ class HulaquanService:
                             )
                             session.add(assoc)
                         elif existing_assoc.rank != rank:
-                            # 更新 rank（如果官方顺序变了）
+                            # Update rank if changed
                             existing_assoc.rank = rank
                             session.add(existing_assoc)
 

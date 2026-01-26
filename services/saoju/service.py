@@ -691,7 +691,7 @@ class SaojuService:
                             theatre = item.get("theatre", "")
                             
                             # CDC Check
-                            existing = session.get(SaojuShow, (full_dt, musical_name))
+                            existing = session.get(SaojuShow, (full_dt, musical_name, city))
                             
                             if not existing:
                                 # New Record
@@ -726,7 +726,7 @@ class SaojuService:
                                 if changes:
                                     existing.cast_str = cast_str
                                     existing.theatre = theatre
-                                    existing.city = city # Update city too just in case
+                                    # existing.city = city # city is PK now, can't change it here without delete/insert
                                     existing.source = "api_daily"
                                     existing.updated_at = timezone_now()
                                     session.add(existing)
@@ -846,7 +846,7 @@ class SaojuService:
                             theatre = item.get("theatre", "")
                             
                             # CDC Logic (duplicated for now given constraints)
-                            existing = session.get(SaojuShow, (full_dt, musical_name))
+                            existing = session.get(SaojuShow, (full_dt, musical_name, city))
                             
                             if not existing:
                                 show_db = SaojuShow(

@@ -84,7 +84,7 @@ class SaojuCache(SQLModel, table=True):
 class SaojuShow(SQLModel, table=True):
     date: datetime = Field(primary_key=True)
     musical_name: str = Field(primary_key=True)
-    city: str = Field(index=True)
+    city: str = Field(primary_key=True) # CHANGED: Added as PK
     cast_str: Optional[str] = None # "A / B / C"
     theatre: Optional[str] = None
     tour_name: Optional[str] = None
