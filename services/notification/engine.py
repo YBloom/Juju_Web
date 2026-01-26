@@ -19,8 +19,8 @@ from services.db.models import (
 )
 from services.db.models.base import SubscriptionTargetKind
 from services.hulaquan.tables import TicketUpdateLog, HulaquanCast, TicketCastAssociation
-from services.hulaquan.formatter import HulaquanFormatter
 from services.hulaquan.models import TicketUpdate
+from services.notification.config import CHANGE_TYPE_LEVEL_MAP
 
 log = logging.getLogger(__name__)
 
@@ -28,16 +28,7 @@ log = logging.getLogger(__name__)
 MAX_RETRY_COUNT = 3
 BACKFILL_HOURS = 24  #补发时限
 
-MODE_MAP = {
-    "new": 1,
-    "pending": 1,    # 待开票
-    "add": 2,        # 补票 (总票数增加) [推荐]
-    "restock": 3,    # 回流 (0->正) [重要]
-    "decrease": 4,   # 票减 (正->减少) [详细]
-    "back": 5,       # 票增 (正->更多) [次要]
-    "increase": 5,   # 票增 (同 back)
-    "sold_out": 99,  # 暂不推送售罄
-}
+
 
 
 class NotificationEngine:
@@ -55,6 +46,7 @@ class NotificationEngine:
             bot_api: ncatbot BotClient.api instance for sending messages
         """
         self.bot_api = bot_api
+        from services.hulaquan.formatter import HulaquanFormatter
         self.formatter = HulaquanFormatter
     
     async def process_updates(self, updates: List[TicketUpdate]) -> int:
@@ -73,68 +65,149 @@ class NotificationEngine:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._process_updates_sync, updates)
     
+    
     def _process_updates_sync(self, updates: List[TicketUpdate]) -> int:
-        """同步版本的处理逻辑。"""
+        """同步版本的处理逻辑 (Optimized with Reverse Index)."""
         enqueued = 0
         
+        # 1. Prepare Match Criteria
+        # 1. 准备匹配标准
+        # Filter updates that actually need notification
+        valid_updates = [u for u in updates if u.change_type in CHANGE_TYPE_LEVEL_MAP]
+        if not valid_updates:
+            return 0
+            
         with session_scope() as session:
-            # 1. 收集涉及的 event_ids 和 actor 名 (暂保留逻辑用于可能的扩展，但不再传给 match)
-            event_ids: Set[str] = set()
-            actor_names: Set[str] = set()
-            for u in updates:
-                if u.event_id:
-                    event_ids.add(str(u.event_id))
-                if u.cast_names:
-                    actor_names.update(u.cast_names)
+            # 2. Get Candidate Users (Inverted Index Lookup)
+            # 2. 获取候选用户（反向索引查找）
+            # Instead of iterating all users, we find users who MIGHT be interested
+            # 取代遍历所有用户，我们查找可能感兴趣的用户
+            candidate_users = self._get_candidate_users(session, valid_updates)
             
-            # 2. 获取所有“活跃”推送用户
-            # 定义：global_notification_level > 0 OR 拥有至少一个订阅
-            from sqlalchemy.orm import joinedload
-            from services.db.models import Subscription, User
+            log.info(f"NotificationEngine: identified {len(candidate_users)} candidate users for {len(valid_updates)} updates")
             
-            stmt = (
-                select(User)
-                .options(
-                    joinedload(User.subscriptions).joinedload(Subscription.targets),
-                )
-                .where(
-                    (User.global_notification_level > 0) | (User.subscriptions.any())
-                )
-                .distinct()
-            )
-            users = session.exec(stmt).unique().all()
-            
-            for user in users:
-                # --- 用户级全局过滤 ---
-                
-                # 检查静音
+            # 3. Process Only Candidates
+            # 3. 仅处理候选人
+            for user in candidate_users:
+                # --- User Level Global Filter ---
                 if user.is_muted:
                     continue
                 
-                # 检查静默时段
                 if user.silent_hours and self._is_silent_hour(user.silent_hours):
                     continue
                 
-                # 收集该用户所有订阅 targets
+                # Collect targets (Eager loaded)
                 all_targets = []
                 for s in user.subscriptions:
                     all_targets.extend(s.targets)
                 
-                # 匹配更新
+                # Match
+                # Note: We reuse the robust per-update match logic to ensure precise filtering
+                # (e.g., checking specific levels, flags, regex etc.)
                 user_updates = []
-                for u in updates:
+                for u in valid_updates:
                     if self._match_update(u, all_targets, global_level=user.global_notification_level):
                         user_updates.append(u)
                 
                 if user_updates:
-                    # 入队
                     enqueued += self._enqueue_notification(session, user.user_id, user_updates)
             
             session.commit()
 
-        
-        log.info(f"NotificationEngine: enqueued {enqueued} notifications for {len(updates)} updates")
+        log.info(f"NotificationEngine: enqueued {enqueued} notifications")
         return enqueued
+
+    def _get_candidate_users(self, session: Session, updates: List[TicketUpdate]) -> List[User]:
+        """
+        Efficiently find users who are interested in the given updates.
+        Returns a list of User objects with subscriptions eager loaded.
+        """
+        from sqlalchemy import or_, and_, distinct
+        from sqlalchemy.orm import joinedload
+        from services.db.models import Subscription, User
+        
+        # Criteria Extraction
+        event_ids = {str(u.event_id) for u in updates if u.event_id}
+        # Cast names: flattening list of lists
+        actor_names = set()
+        for u in updates:
+            if u.cast_names:
+                actor_names.update(u.cast_names)
+        
+        # Min level required for ANY update in this batch
+        # If a user has global_level >= min_level, they are a candidate regarding global sub
+        # BUT: Use caution. If batch has "new" (level 1) and "sold_out"(level 99),
+        # min is 1. We fetch all users with level >= 1.
+        # This is correct because if they have level 1, they *might* want the "new" update.
+        levels = [CHANGE_TYPE_LEVEL_MAP.get(u.change_type, 99) for u in updates]
+        min_level = min(levels) if levels else 99
+        
+        # 1. Global Subscribers Condition
+        # Users who want *some* notifications globally
+        # global_notification_level >= min_level required by batch
+        # Optim: Only if min_level is reasonable. If min_level is 99 (e.g. only sold_out), few users match.
+        cond_global = (User.global_notification_level >= min_level)
+        
+        # 2. Targeted Subscribers Condition
+        # Users who have a subscription matching event_id or actor_name
+        # Note: We join User -> Subscription -> SubscriptionTarget
+        
+        cond_targets = []
+        
+        # Play ID Match
+        if event_ids:
+            cond_targets.append(
+                and_(
+                    SubscriptionTarget.kind == SubscriptionTargetKind.PLAY,
+                    SubscriptionTarget.target_id.in_(event_ids)
+                )
+            )
+            
+        # Actor Name Match
+        if actor_names:
+            cond_targets.append(
+                and_(
+                    SubscriptionTarget.kind == SubscriptionTargetKind.ACTOR,
+                    SubscriptionTarget.name.in_(actor_names)
+                )
+            )
+            
+        # Keyword Match (Optional / Harder to reverse index purely)
+        # If we have keywords, we might skip optimizing them in SQL OR assume keywords are rare enough
+        # OR fetch users with *any* keyword subscription?
+        # For safety/completeness: Include users with ANY keyword subscription?
+        # Or better: check keyword logic.
+        # Let's assume for high performance valid_updates usually trigger Play/Actor.
+        # Adding "OR has keyword subscription" might select many users. 
+        # But let's add it if we want 100% correctness for keywords.
+        # Compromise: Users with keyword subscriptions are candidates, we filter in memory.
+        cond_targets.append(SubscriptionTarget.kind == SubscriptionTargetKind.KEYWORD)
+
+        
+        # Construct Query
+        # We need users meeting cond_global OR (having subscription meeting cond_targets)
+        
+        # SQLModel/SQLAlchemy construction
+        # Select User where (cond_global) OR (User.id IN (Select user_id from sub JOIN target where cond_target))
+        
+        stmt = (
+            select(User)
+            .where(User.active == True) # Basic filter
+            .outerjoin(User.subscriptions)
+            .outerjoin(Subscription.targets)
+            .options(
+                joinedload(User.subscriptions).joinedload(Subscription.targets)
+            )
+            .where(
+                or_(
+                    cond_global,
+                    or_(*cond_targets) if cond_targets else False
+                )
+            )
+            .distinct()
+        )
+
+        return session.exec(stmt).unique().all()
     
     def _match_update(
         self, 
@@ -143,7 +216,7 @@ class NotificationEngine:
         global_level: int = 0
     ) -> bool:
         """检查 update 是否匹配。逻辑：(全局达标) OR (特定关注匹配且关注等级达标)。"""
-        required_mode = MODE_MAP.get(update.change_type, 99)
+        required_mode = CHANGE_TYPE_LEVEL_MAP.get(update.change_type, 99)
         
         # 1. 检查全局基准 (Global Baseline)
         if global_level >= required_mode:

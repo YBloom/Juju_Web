@@ -8,7 +8,8 @@ from sqlalchemy import JSON, Column
 from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
 
-from .base import SoftDelete, TimeStamped, SubscriptionFrequency
+from .base import SoftDelete, TimeStamped, SubscriptionFrequency, InternalMetadata
+from services.db.connection import session_scope
 
 
 # 模块级别的ID生成器 (避免SQLModel元类干扰)
@@ -69,9 +70,8 @@ class User(TimeStamped, SoftDelete, SQLModel, table=True):
         跨进程安全的原子自增ID生成器。
         使用 internal_metadata 表进行状态同步。
         """
-        from services.db.connection import session_scope
-        from .base import InternalMetadata
         from sqlalchemy import text
+
         
         def _get_and_inc(s):
             # SQLite BEGIN IMMEDIATE 确保写锁,防止并发竞态
@@ -112,8 +112,7 @@ class User(TimeStamped, SoftDelete, SQLModel, table=True):
     @classmethod
     def set_id_counter(cls, start_from: int):
         """设置ID计数器起始值 (用于迁移或重置)。"""
-        from services.db.connection import session_scope
-        from .base import InternalMetadata
+        """设置ID计数器起始值 (用于迁移或重置)。"""
         with session_scope() as s:
             row = s.get(InternalMetadata, "last_user_id")
             if row:
