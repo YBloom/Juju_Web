@@ -368,28 +368,33 @@ class HulaquanFormatter:
 
         
         
+        
+        
         for eid, event_data in events.items():
             by_type = {}
-            for u in event_data["updates"]:
-                ctype = u.get("change_type", "other")
+            for u_dict in event_data["updates"]:
+                # [Refactor] 强制转换为 TicketUpdate 对象，提供类型安全和自动补全
+                try:
+                    u = TicketUpdate.model_validate(u_dict)
+                except Exception as e:
+                    # Fail safe: log error and skip or continue with best effort?
+                    # For now, skip this malformed update to avoid crashing the whole batch
+                    print(f"Error validating update payload: {e}")
+                    continue
+
+                ctype = u.change_type
                 if ctype not in by_type:
                     by_type[ctype] = []
                 
-                # Normalize time
-                session_time = None
-                ts = u.get("session_time")
-                if ts:
-                    try:
-                        session_time = datetime.fromisoformat(ts)
-                    except:
-                        pass
-
+                # Normalize time (Though TicketUpdate handles datetime, if it came from JSON dump it might need re-parsing if not using pydantic's parse)
+                # TicketUpdate.model_validate handles ISO strings to datetime automatically if the field is datetime
+                
                 by_type[ctype].append({
-                    "session_time": session_time,
-                    "price": u.get("price", 0),
-                    "stock": u.get("stock", 0),
-                    "total_ticket": u.get("total_ticket", "?"),
-                    "cast_names": u.get("cast_names"),
+                    "session_time": u.session_time,
+                    "price": u.price or 0,
+                    "stock": u.stock or 0,
+                    "total_ticket": u.total_ticket or "?",
+                    "cast_names": u.cast_names,
                     "change_type": ctype
                 })
 

@@ -275,20 +275,10 @@ class NotificationEngine:
         # 格式化消息
         messages = []
         for u in updates:
-            messages.append({
-                "event_id": u.event_id,
-                "event_title": u.event_title,
-                "change_type": u.change_type,
-                "message": u.message,
-                "ticket_id": u.ticket_id,
-                # Additional fields for rich formatting
-                "session_time": u.session_time.isoformat() if u.session_time else None,
-                "price": u.price,
-                "stock": u.stock,
-                "total_ticket": u.total_ticket,
-                "cast_names": u.cast_names,
-                "valid_from": u.valid_from,
-            })
+            # [Refactor] 使用 Pydantic model_dump 确保 schema 一致性，禁止手写 Dict
+            # 排除 None 值可能有助于减少 payload 大小，但为了前端/消费者能获取明确的 null，这里保留 defaults
+            # mode='json' 会自动处理 datetime 序列化
+            messages.append(u.model_dump(mode='json'))
         
         # 检查是否已存在相同 ref_id (防瞬时故障刷屏)
         # 修正：去重因子加入 change_type，且不再使用小时级限制，改为分钟级
