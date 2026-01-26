@@ -258,3 +258,5 @@ keys/
 config/napcat_test
 scripts/sync_prod_db.sh
 inspect*.py
+
+.claude/
