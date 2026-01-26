@@ -152,13 +152,20 @@
                 </div>
             </div>
 
-            <!-- Local Search Box -->
-            <div id="local-search-container" style="padding: 10px 20px 0;">
+            <!-- Local Search Box with Title -->
+            <div id="local-search-section"
+                style="padding: 15px 20px 5px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+                <h4 id="hlq-list-title"
+                    style="margin: 0; font-size: 1.1rem; color: var(--text-primary); white-space: nowrap;">
+                    呼啦圈上架剧目 <span id="hlq-list-count"
+                        style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 400;">(...)</span>
+                </h4>
                 <div class="input-wrapper"
-                    style="display: flex; align-items: center; background: #fff; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-                    <i class="material-icons" style="color: var(--text-secondary); margin-right: 8px;">search</i>
-                    <input type="text" id="local-show-search" placeholder="在列表中搜索剧名..."
-                        style="border: none; outline: none; flex: 1; font-size: 0.95rem; color: var(--text-primary); background: transparent;">
+                    style="display: flex; align-items: center; background: #fff; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.02); flex: 1; max-width: 400px;">
+                    <i class="material-icons"
+                        style="color: var(--text-secondary); margin-right: 8px; font-size: 1.2rem;">search</i>
+                    <input type="text" id="local-show-search" placeholder="搜索剧名..."
+                        style="border: none; outline: none; flex: 1; font-size: 0.9rem; color: var(--text-primary); background: transparent;">
                 </div>
             </div>
 

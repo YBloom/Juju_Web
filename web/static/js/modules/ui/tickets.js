@@ -148,6 +148,12 @@ export const applyFilters = debounce(_applyFiltersInternal, 250);
 
 export function renderEventTable(events) {
     const container = document.getElementById('hlq-list-container');
+    const countEl = document.getElementById('hlq-list-count');
+
+    if (countEl) {
+        countEl.innerText = `(${events ? events.length : 0}部)`;
+    }
+
     if (!events || events.length === 0) {
         container.innerHTML = '<div style="padding:50px;text-align:center;color:#aaa">暂无符合条件的演出</div>';
         return;
