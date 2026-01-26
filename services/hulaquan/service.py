@@ -244,6 +244,7 @@ class HulaquanService:
             return {
                 "exists": True,
                 "title": event.title,
+                "location": event.location, # Added location
                 "saoju_musical_id": event.saoju_musical_id,
                 "tickets": tickets_ctx
             }
@@ -259,7 +260,21 @@ class HulaquanService:
         title = b_info.get("title", "")
         if not title and ctx.get("title"):
              title = ctx.get("title", "")
-             
+        
+        # Determine Event-Level City Hints
+        # Try to detect city from Event Location or Event Title
+        # This serves as a fallback for tickets that don't satisfy self-resolution
+        event_city_hint = None
+        
+        # 1. From Location (Most reliable if present, e.g. "Shanghai Grand Theatre")
+        loc = b_info.get("location") or ctx.get("location")
+        if loc:
+            event_city_hint = self._city_resolver.resolve_from_text(loc)
+            
+        # 2. From Title (e.g. "【Shanghai】...")
+        if not event_city_hint:
+             event_city_hint = self._city_resolver.resolve_from_text(title)
+
         # 1. Auto-Link Musical ID if missing
         if not res["saoju_musical_id"]:
             try:
@@ -289,28 +304,50 @@ class HulaquanService:
             
             enrich_t = {}
             
-            # City Logic (Fallback to Saoju if missing locally)
+            # City Logic
+            # Priority: 1. Existing DB City -> 2. Ticket Title -> 3. Saoju Lookup -> 4. Event Hint
+            # Actually, if existing DB city is WRONG (poisoned), we might want to correct it?
+            # But we can't easily know if it's wrong unless we force re-eval.
+            # For now, let's assume if it's set, it's trusted, UNLESS we are in a 'reset' scenario where it's cleared.
+            
+            # If no city, try to resolve from Ticket Title first
+            # (Skipped here as logic 4&5 in _save handles title extraction fallback, but we need it for Saoju lookup NOW)
+            if not current_city:
+                 city_from_title = self._city_resolver.resolve_from_text(t_title)
+                 if city_from_title:
+                     current_city = city_from_title
+                     enrich_t["city"] = current_city
+            
+            # If still no city, try Saoju or Event Hint
             if not current_city and session_time and self._saoju:
                 try:
                     search_name = extract_text_in_brackets(title, keep_brackets=False)
                     date_str = session_time.strftime("%Y-%m-%d")
                     time_str = session_time.strftime("%H:%M")
                     
+                    # Use Event Hint if available to narrow search
+                    search_city = event_city_hint
+                    
                     saoju_match = await self._saoju.search_for_musical_by_date(
-                        search_name, date_str, time_str, city=None, musical_id=res["saoju_musical_id"]
+                        search_name, date_str, time_str, city=search_city, musical_id=res["saoju_musical_id"]
                     )
+                    
                     if saoju_match and saoju_match.get("city"):
                         enrich_t["city"] = saoju_match.get("city")
-                        current_city = enrich_t["city"] # Update local var for cast lookup
+                        current_city = enrich_t["city"]
                 except Exception as e:
                     pass
             
+            # Fallback: If we didn't find specific match but have an event hint, assume event city
+            if not current_city and event_city_hint:
+                current_city = event_city_hint
+                enrich_t["city"] = current_city
+                
             # Cast Logic
             if not has_casts and session_time:
                  try:
                     search_name = extract_text_in_brackets(title, keep_brackets=False)
                     # Use potentially newly found city
-                    # DB-Only Lookup (No Network I/O)
                     c_data = await self._saoju.get_cast_for_hulaquan_session(
                         search_name, session_time, current_city
                     )

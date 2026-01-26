@@ -60,3 +60,17 @@ class CityResolver:
                 if kw in title:
                     return city
         return None
+
+    def resolve_from_text(self, text: str) -> Optional[str]:
+        """Generic method to resolve city from any text (venue or title)."""
+        if not text:
+            return None
+        
+        # Try rules
+        c = self.from_venue(text)
+        if c: return c
+        
+        c = self.from_title(text)
+        if c: return c
+            
+        return None

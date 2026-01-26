@@ -103,7 +103,10 @@ async def perform_reset(dry_run: bool = False):
                             # But if API fails, we lose data.
                             # Safe bet: Don't clear city blindly, but let sync overwrite it.
                             # However, to fix "stuck" wrong cities, we rely on the generic sync logic.
-                            pass
+                            # Reset city to None to force re-discovery/update from Hulaquan API if possible
+                            # This is critical to fix "poisoned" city data (e.g. wrong city from earlier bugs)
+                            t.city = None
+                            session.add(t)
 
                         # Clear associations
                         # session.exec(delete(TicketCastAssociation)...)

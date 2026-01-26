@@ -109,20 +109,34 @@ function _applyFiltersInternal() {
     }
 
     const currentCity = state.cityFilter;
-    const searchInput = document.getElementById('global-search');
-    const searchValue = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const globalSearchInput = document.getElementById('global-search');
+    const globalSearchValue = globalSearchInput ? globalSearchInput.value.trim().toLowerCase() : '';
+
+    const localSearchInput = document.getElementById('local-show-search');
+    const localSearchValue = localSearchInput ? localSearchInput.value.trim().toLowerCase() : '';
 
     const filtered = events.filter(e => {
         if (currentCity && e.city !== currentCity) return false;
 
-        if (searchValue) {
+        // Global Search Logic (Broad)
+        if (globalSearchValue) {
             const title = e.title ? e.title.toLowerCase() : '';
             const city = e.city ? e.city.toLowerCase() : '';
             const location = e.location ? e.location.toLowerCase() : '';
-            if (!title.includes(searchValue) && !city.includes(searchValue) && !location.includes(searchValue)) {
+            if (!title.includes(globalSearchValue) && !city.includes(globalSearchValue) && !location.includes(globalSearchValue)) {
                 return false;
             }
         }
+
+        // Local Search Logic (Specific to List)
+        if (localSearchValue) {
+            const title = e.title ? e.title.toLowerCase() : '';
+            // Only search title for local search as requested ("search show name")
+            if (!title.includes(localSearchValue)) {
+                return false;
+            }
+        }
+
         return true;
     });
 

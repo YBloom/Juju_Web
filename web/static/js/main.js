@@ -118,6 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
         globalSearchEl.addEventListener('input', ui.applyFilters);
     }
 
+    // Local show search hook
+    const localSearchEl = document.getElementById('local-show-search');
+    if (localSearchEl) {
+        localSearchEl.addEventListener('input', ui.applyFilters);
+    }
+
     // Global click for closing dropdowns (Autocomplete & Column Filters)
     document.addEventListener('click', (e) => {
         // Autocomplete
