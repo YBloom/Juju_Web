@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { UI } from './ui_shared.js';
-import AnimalAvatarRaw from 'animal-avatar-generator';
+import AnimalAvatarRaw from 'https://esm.sh/animal-avatar-generator@1.2.0';
 
 /**
  * 头像模块 - 处理随机头像生成、裁切与上传 S3
