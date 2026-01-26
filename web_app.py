@@ -3,6 +3,8 @@ import logging
 import time
 import sys
 import os
+import json
+import re
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
@@ -405,14 +407,43 @@ async def get_public_config():
         "turnstile_site_key": get_site_key()
     }
 
+def get_import_map(static_path: Path, version: str) -> str:
+    """
+    扫描 static/js 目录,生成带版本号的 importmap 内容。
+    """
+    js_dir = static_path / "js"
+    imports = {}
+    
+    if js_dir.exists():
+        for root, _, files in os.walk(js_dir):
+            for file in files:
+                if file.endswith(".js"):
+                    full_path = Path(root) / file
+                    # 获取相对于 static 的路径,并转换为 URL 格式
+                    rel_path = full_path.relative_to(static_path)
+                    url_path = f"/static/{rel_path.as_posix()}"
+                    
+                    # 映射原始路径到带参数的路径
+                    imports[url_path] = f"{url_path}?v={version}"
+    
+    return json.dumps({"imports": imports}, indent=4)
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     index_file = static_path / "index.html"
     if index_file.exists():
         content = index_file.read_text(encoding="utf-8")
         
-        # Cache Busting
-        import re
+        # 1. 注入全量 Import Map (核心解决 ES Module 深度缓存问题)
+        import_map_json = get_import_map(static_path, SERVER_VERSION)
+        content = re.sub(
+            r'<script type="importmap">.*?</script>',
+            f'<script type="importmap">\n{import_map_json}\n</script>',
+            content,
+            flags=re.DOTALL
+        )
+        
+        # 2. Legacy CSS/JS Cache Busting (针对非模块方式加载的资源)
         content = re.sub(
             r'href="(/static/css/[^"]+\.css)(?:\?v=[^"]*)?"', 
             f'href="\\1?v={SERVER_VERSION}"', 
