@@ -9,6 +9,8 @@ except ImportError:
 
 from services.bot.commands.base import CommandHandler, CommandContext
 from services.bot.commands.registry import register_command
+from services.db.models import UserAuthMethod
+from sqlmodel import select
 
 # Configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "musicalbot-dev-secret-change-in-prod")
@@ -36,20 +38,22 @@ class WebLoginCommand(CommandHandler):
     def help_text(self) -> str:
         return "获取 Web 控制台登录链接 (Magic Link)"
 
-    async def handle(self, ctx: CommandContext) -> Union[str, List[str]]:
-        # For login token, we act on the raw QQ ID (if available context) or User ID.
-        # handlers.py passed user_id as argument, which for new users is 6 digits.
-        # But for magic link we often want to bind the QQ ID.
-        # ctx.user_id is the canonical ID.
-        # ctx.nickname is available.
+        # FIX: Resolve real QQ ID from database
+        # ctx.user_id is the internal 6-digit ID. We need the QQ number (provider_user_id) for the token.
+        real_qq_id = ctx.user_id
+        try:
+            with ctx.session_maker() as session:
+                stmt = select(UserAuthMethod.provider_user_id).where(
+                    UserAuthMethod.user_id == ctx.user_id,
+                    UserAuthMethod.provider == "qq"
+                )
+                auth_val = session.exec(stmt).first()
+                if auth_val:
+                    real_qq_id = auth_val
+        except Exception:
+            pass
         
-        # However, create_magic_link_token expects `qq_id`.
-        # If the user is already authenticated/standardized, `ctx.user_id` might be the mapped 6-digit ID.
-        # The frontend/auth service needs to handle this token.
-        # The original code: token = create_magic_link_token(uid_str, nickname)
-        # where uid_str was str(user_id) passed from handle_group_message.
-        
-        token = create_magic_link_token(ctx.user_id, ctx.nickname)
+        token = create_magic_link_token(real_qq_id, ctx.nickname)
         link = f"{WEB_BASE_URL}/auth/magic-link?token={token}"
         return [
             (
