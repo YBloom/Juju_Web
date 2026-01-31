@@ -40,6 +40,7 @@ class WebLoginCommand(CommandHandler):
 
         # FIX: Resolve real QQ ID from database
         # ctx.user_id is the internal 6-digit ID. We need the QQ number (provider_user_id) for the token.
+    async def handle(self, ctx: CommandContext) -> Union[str, List[str]]:
         real_qq_id = ctx.user_id
         try:
             with ctx.session_maker() as session:
