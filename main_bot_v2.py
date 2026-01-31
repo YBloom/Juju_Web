@@ -25,6 +25,46 @@ def main():
     logging.info("🚀 [启动] 正在初始化数据库...")
     init_db()
     
+    # --- Logging Permission Check ---
+    # ncatbot initializes logging on import using os.getenv("LOG_FILE_PATH", "./logs")
+    # We must check if we can write to ./logs BEFORE importing ncatbot config.
+    log_dir = os.getenv("LOG_FILE_PATH", "./logs")
+    abs_log_dir = os.path.abspath(log_dir)
+    
+    try:
+        os.makedirs(abs_log_dir, exist_ok=True)
+        # Try creating a dummy file to test write permissions
+        test_file = os.path.join(abs_log_dir, ".perm_test")
+        with open(test_file, 'w') as f:
+            f.write("test")
+        os.remove(test_file)
+        logging.info(f"✅ [LogCheck] Log directory is writable: {abs_log_dir}")
+    except PermissionError:
+        import tempfile
+        # Fallback to a temporary directory
+        temp_log_dir = os.path.join(tempfile.gettempdir(), "MusicalBot", "logs")
+        logging.warning(f"⚠️ [LogCheck] Permission denied for {abs_log_dir}!")
+        logging.warning(f"⚠️ [LogCheck] Redirecting logs to temporary directory: {temp_log_dir}")
+        
+        # Determine the user/Group for instructions
+        try:
+            import getpass
+            current_user = getpass.getuser()
+        except:
+            current_user = "user"
+            
+        logging.warning("💡 [Fix Hint] To fix this permanently on your server, run:")
+        logging.warning(f"    sudo chown -R {current_user}:{current_user} {os.path.dirname(abs_log_dir)}")
+        logging.warning(f"    chmod -R 755 {os.path.dirname(abs_log_dir)}")
+        
+        # Override the ncatbot logging path environment variable BEFORE import
+        os.environ["LOG_FILE_PATH"] = temp_log_dir
+        os.makedirs(temp_log_dir, exist_ok=True)
+    except Exception as e:
+        logging.error(f"❌ [LogCheck] Unexpected error checking log permissions: {e}")
+        # Let it proceed, maybe it will work, or fail later at ncatbot init
+    # --------------------------------
+
     # Force Config
     from ncatbot.utils.config import ncatbot_config
     bot_uin = os.getenv("BOT_UIN", "3044829389")
