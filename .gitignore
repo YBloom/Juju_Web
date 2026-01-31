@@ -195,23 +195,24 @@ cython_debug/
 .cursorindexingignore
 napcat
 napcat/
-logs/
-logs
-!logs/
-!logs/__init__.py
-!logs/metrics/
-!logs/metrics/__init__.py
-.vscode/
-data/G_access.json
-data/U_access.json
-data/
+/data/*
+!/data/history_data/
+!/data/history_data/**
 ubuntu_code.txt
-NcatBot/
+/NcatBot/
+/logs/
+/logs/**
+!/logs/__init__.py
+!/logs/metrics/
+!/logs/metrics/**
+!/logs/metrics/__init__.py
 testment.py
 # ========== MusicalBot 项目特定忽略 ==========
 
 # Legacy 代码 (保留本地作为 AI 参考，不提交到远程)
 legacy/
+plugins_legacy/
+
 
 # 开发测试文件
 web/responsive_test.html
@@ -260,3 +261,4 @@ scripts/sync_prod_db.sh
 inspect*.py
 
 .claude/
+data/history_data/.DS_Store

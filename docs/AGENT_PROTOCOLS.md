@@ -12,7 +12,7 @@ chmod +x scripts/install_hooks.sh
 ./scripts/install_hooks.sh
 ```
 
-**效果**：当你（或代理）尝试 `git commit` 时，如果代码包含了“Bot 写爬虫”或“Engine 手写 Dict”等违规行为，提交会被自动拦截。
+**效果**：当你（或代理）尝试 `git commit` 时，如果代码包含了“Bot 写爬虫”或“Engine 手写 Dict”等违规行为，提交会被自动拦截。 
 
 ---
 
