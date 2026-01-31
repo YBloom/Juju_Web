@@ -262,3 +262,6 @@ inspect*.py
 
 .claude/
 data/history_data/.DS_Store
+
+# Crawler Submodules
+services/crawler/youzan-yyj-spider
